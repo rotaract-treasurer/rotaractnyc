@@ -97,7 +97,17 @@ const Footer = () => {
 
         <div className="border-t border-gray-100 mt-10 pt-8 text-center text-gray-600">
           <p>&copy; {new Date().getFullYear()} Rotaract Club at the United Nations. All rights reserved.</p>
-          <p className="mt-2 text-gray-500">Sponsored by The Rotary Club of New York</p>
+          <p className="mt-2 text-gray-500">
+            Sponsored by{' '}
+            <a
+              href="https://www.nyrotary.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-gray-700 hover:text-rotaract-pink transition-colors"
+            >
+              The Rotary Club of New York
+            </a>
+          </p>
         </div>
       </div>
     </footer>
