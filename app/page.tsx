@@ -18,7 +18,7 @@ export default function Home() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative pt-40 md:pt-48 pb-24 md:pb-36 overflow-hidden bg-white">
+      <section className="relative pt-52 md:pt-64 pb-32 md:pb-48 overflow-hidden bg-white">
         <div className="absolute inset-0 z-0">
           <HeroCarousel images={activityImages} variant="background" />
         </div>
