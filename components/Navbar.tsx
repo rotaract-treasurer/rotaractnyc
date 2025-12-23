@@ -41,17 +41,14 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
+          <Link href="/" className="flex items-center">
             <Image
               src="/logo.jpg"
               alt="Rotaract Logo"
               width={50}
               height={50}
-              className="rounded-full"
+              className=""
             />
-            <span className="text-xl font-bold text-rotaract-darkpink hidden md:block">
-              Rotaract at the UN
-            </span>
           </Link>
 
           {/* Desktop Menu */}
