@@ -18,7 +18,7 @@ export default function Home() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative pt-28 md:pt-32 pb-16 md:pb-24 overflow-hidden bg-white">
+      <section className="relative pt-40 md:pt-48 pb-24 md:pb-36 overflow-hidden bg-white">
         <div className="absolute inset-0 z-0">
           <HeroCarousel images={activityImages} variant="background" />
         </div>
@@ -40,7 +40,7 @@ export default function Home() {
           </h1>
           
           <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed text-white/90">
-            Service, Fellowship, Diversity, <span className="font-bold tracking-wide">EQUITY</span>
+            Service, Fellowship, Diversity, <span className="font-bold tracking-wide">Equity</span>
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

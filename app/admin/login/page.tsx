@@ -45,7 +45,7 @@ export default function AdminLogin() {
             alt="Rotaract Logo"
             width={100}
             height={100}
-            className="mx-auto rounded-full"
+            className="mx-auto"
           />
           <h2 className="mt-6 text-3xl font-bold text-rotaract-darkpink">
             Admin Portal
