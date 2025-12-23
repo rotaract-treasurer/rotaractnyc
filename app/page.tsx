@@ -20,28 +20,12 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="relative z-20 text-center px-4 max-w-5xl mx-auto"
         >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="mb-8"
-          >
-            <Image
-              src="/logo.jpg"
-              alt="Rotaract Logo"
-              width={200}
-              height={200}
-              className="mx-auto rounded-full shadow-xl border border-gray-200"
-              priority
-            />
-          </motion.div>
+          <p className="text-sm md:text-base font-semibold tracking-wide text-rotaract-pink mb-4">
+            Welcome to
+          </p>
 
-          <div className="mx-auto mb-6 inline-flex items-center rounded-full border border-rotaract-pink/20 bg-white px-4 py-1 text-sm text-rotaract-darkpink shadow-sm">
-            Rotaract Club of New York at the United Nations
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight text-rotaract-darkpink">
-            Service. Fellowship. Leadership.
+          <h1 className="text-4xl md:text-6xl font-bold mb-5 tracking-tight text-rotaract-darkpink">
+            the Rotaract Club of New York at the United Nations
           </h1>
           
           <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed">
