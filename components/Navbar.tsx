@@ -57,8 +57,8 @@ const Navbar = () => {
             <Image
               src="/Rotaract%20Logo%20(1).png"
               alt="Rotaract Logo"
-              width={200}
-              height={200}
+              width={300}
+              height={300}
               className=""
             />
           </Link>
