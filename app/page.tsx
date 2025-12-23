@@ -5,7 +5,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FaHandshake, FaUsers, FaGlobeAmericas, FaArrowRight } from 'react-icons/fa'
 
+import { HeroCarousel } from '@/components/HeroCarousel'
+
 export default function Home() {
+  const activityImages = [
+    { src: '/53cde13b1a312d32c08a429715695a65.jpg', alt: 'Activity 1' },
+    { src: '/b220fe440206d474a74b2a2467d410ac.jpg', alt: 'Activity 2' },
+    { src: '/ce9ea973f79cb6988ad3e2945e3a87ae.jpg', alt: 'Activity 3' },
+    { src: '/f16b74a04b626f30222c37c4d15d7c80.jpg', alt: 'Activity 4' },
+  ]
+
   return (
     <div className="bg-white">
       {/* Hero Section */}
@@ -32,6 +41,10 @@ export default function Home() {
             A Rotary-sponsored service club for young professionals ages 18 to 30,
             developing leadership skills by helping local and international communities.
           </p>
+
+          <div className="mx-auto mb-10 max-w-4xl">
+            <HeroCarousel images={activityImages} />
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -118,7 +131,7 @@ export default function Home() {
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            {['/53cde13b1a312d32c08a429715695a65.jpg', '/b220fe440206d474a74b2a2467d410ac.jpg', '/ce9ea973f79cb6988ad3e2945e3a87ae.jpg', '/f16b74a04b626f30222c37c4d15d7c80.jpg'].map((img, index) => (
+            {activityImages.map((img, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -128,7 +141,7 @@ export default function Home() {
                 className="relative group overflow-hidden rounded-xl shadow-lg aspect-square"
               >
                 <Image
-                  src={img}
+                  src={img.src}
                   alt={`Activity ${index + 1}`}
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-500"
