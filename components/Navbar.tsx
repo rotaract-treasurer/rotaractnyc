@@ -13,13 +13,13 @@ const Navbar = () => {
     { name: 'Home', href: '/' },
     {
       name: 'About',
-      href: '/about',
+      href: '/mission',
       submenu: [
-        { name: 'Mission', href: '/about/mission' },
-        { name: 'Membership', href: '/about/membership' },
-        { name: 'Board Members', href: '/about/board' },
-        { name: 'FAQ', href: '/about/faq' },
-        { name: 'Sister Clubs', href: '/about/sister-clubs' },
+        { name: 'Mission', href: '/mission' },
+        { name: 'Membership', href: '/membership-requirements' },
+        { name: 'Board Members', href: '/leadership' },
+        { name: 'Frequently Asked Questions', href: '/frequently-asked-questions' },
+        { name: 'Sister-Clubs', href: '/sisterclubs' },
       ],
     },
     {
@@ -27,26 +27,13 @@ const Navbar = () => {
       href: '/events',
       submenu: [
         { name: 'Upcoming Events', href: '/events' },
-        { name: 'General Meetings', href: '/events/meetings' },
+        { name: 'General Meetings', href: '/meetings' },
       ],
     },
-    {
-      name: 'Gallery',
-      href: '/gallery',
-    },
-    {
-      name: 'News',
-      href: '/news',
-    },
-    {
-      name: 'Contact',
-      href: '/contact',
-      submenu: [
-        { name: 'Contact Us', href: '/contact' },
-        { name: 'Follow Us', href: '/contact/follow' },
-        { name: 'Newsletter', href: '/contact/newsletter' },
-      ],
-    },
+    { name: 'News', href: '/rcun-news' },
+    { name: 'Follow Us', href: '/follow-us' },
+    { name: 'Newsletter Sign Up', href: '/newsletter-sign-up' },
+    { name: 'Contact Us', href: '/contact-us' },
   ]
 
   return (
@@ -103,7 +90,7 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden text-rotaract-navy text-2xl"
+            className="lg:hidden text-rotaract-darkpink text-2xl"
           >
             {isOpen ? <FaTimes /> : <FaBars />}
           </button>

@@ -9,15 +9,16 @@ export default function Home() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-rotaract-pink to-rotaract-darkpink opacity-95 z-0" />
-        <div className="absolute inset-0 bg-black/20 z-10" />
+      <section className="relative pt-28 md:pt-32 pb-16 md:pb-24 overflow-hidden bg-white">
+        {/* subtle accent */}
+        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-pink/10 blur-3xl" />
+        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-darkpink/10 blur-3xl" />
         
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="relative z-20 text-center text-white px-4 max-w-5xl mx-auto"
+          className="relative z-20 text-center px-4 max-w-5xl mx-auto"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -30,19 +31,18 @@ export default function Home() {
               alt="Rotaract Logo"
               width={200}
               height={200}
-              className="mx-auto rounded-full shadow-2xl border-4 border-white"
+              className="mx-auto rounded-full shadow-xl border border-gray-200"
               priority
             />
           </motion.div>
+
+          <div className="mx-auto mb-6 inline-flex items-center rounded-full border border-rotaract-pink/20 bg-white px-4 py-1 text-sm text-rotaract-darkpink shadow-sm">
+            Rotaract Club of New York at the United Nations
+          </div>
           
-          <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tight">
-            Rotaract Club at the
-            <span className="block text-white">United Nations</span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight text-rotaract-darkpink">
+            Service. Fellowship. Leadership.
           </h1>
-          
-          <p className="text-2xl md:text-3xl mb-8 font-light">
-            Service · Fellowship · Diversity
-          </p>
           
           <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed">
             A Rotary-sponsored service club for young professionals ages 18 to 30,
@@ -51,32 +51,17 @@ export default function Home() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/about"
-              className="px-8 py-4 bg-white hover:bg-gray-100 text-rotaract-pink font-semibold rounded-lg shadow-lg transition-all transform hover:scale-105"
+              href="/mission"
+              className="px-8 py-4 bg-rotaract-pink hover:bg-rotaract-darkpink text-white font-semibold rounded-lg shadow-sm transition-colors"
             >
               Learn More
             </Link>
             <Link
-              href="/contact"
-              className="px-8 py-4 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-2 border-white text-white font-semibold rounded-lg transition-all"
+              href="/contact-us"
+              className="px-8 py-4 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink font-semibold rounded-lg transition-colors"
             >
               Get Involved
             </Link>
-          </div>
-        </motion.div>
-        
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20"
-        >
-          <div className="text-white text-sm">Scroll Down</div>
-          <div className="w-6 h-10 border-2 border-white rounded-full mx-auto mt-2 relative">
-            <motion.div
-              animate={{ y: [0, 12, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              className="w-2 h-2 bg-white rounded-full absolute left-1/2 transform -translate-x-1/2 top-2"
-            />
           </div>
         </motion.div>
       </section>
@@ -174,7 +159,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-rotaract-pink to-rotaract-darkpink text-white">
+      <section className="py-24 bg-white">
         <div className="container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -182,17 +167,29 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-5xl font-bold mb-6">Ready to Make a Difference?</h2>
-            <p className="text-xl mb-12 max-w-2xl mx-auto">
-              Join us for our weekly meetings every Thursday from 7 PM to 8 PM
-            </p>
+            <div className="mx-auto max-w-3xl rounded-2xl border border-rotaract-pink/20 bg-white p-10 shadow-sm">
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-rotaract-darkpink">
+                Ready to Make a Difference?
+              </h2>
+              <p className="text-lg md:text-xl mb-8 text-gray-700">
+                Join us for our general meetings every 2nd and 4th Thursday.
+              </p>
             <Link
-              href="/membership"
-              className="inline-flex items-center gap-3 px-10 py-5 bg-white hover:bg-gray-100 text-rotaract-pink font-bold rounded-lg shadow-xl transition-all transform hover:scale-105 text-lg"
+              href="/membership-requirements"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-rotaract-pink hover:bg-rotaract-darkpink text-white font-bold rounded-lg shadow-sm transition-colors text-lg"
             >
               Become a Member
               <FaArrowRight />
             </Link>
+              <div className="mt-4">
+                <Link
+                  href="/meetings"
+                  className="text-sm font-semibold text-rotaract-pink hover:text-rotaract-darkpink transition-colors"
+                >
+                  View meeting details
+                </Link>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
