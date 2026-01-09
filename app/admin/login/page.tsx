@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { signInWithEmailAndPassword } from 'firebase/auth'
-import { getFirebaseAuth, isFirebaseClientConfigured } from '@/lib/firebase/client'
+import {
+  getFirebaseAuth,
+  getMissingFirebaseClientEnvVars,
+  isFirebaseClientConfigured,
+} from '@/lib/firebase/client'
 
 export default function AdminLogin() {
   const router = useRouter()
@@ -20,7 +24,11 @@ export default function AdminLogin() {
 
     try {
       if (!isFirebaseClientConfigured()) {
-        setError('Firebase is not configured. Missing NEXT_PUBLIC_FIREBASE_* env vars.')
+        const missing = getMissingFirebaseClientEnvVars()
+        const missingText = missing.length ? `Missing: ${missing.join(', ')}` : 'Missing Firebase env vars.'
+        setError(
+          `Firebase is not configured. ${missingText} (Set these in .env.local for local dev, or in Vercel Project Settings → Environment Variables, then redeploy.)`
+        )
         return
       }
 
