@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DEFAULT_PAGES, type CmsPageDoc, type CmsPageSlug } from '@/lib/content/pages'
 import { getFirebaseAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
 
+export const dynamic = 'force-dynamic'
+
 function coerceSlug(v: unknown): CmsPageSlug | null {
   if (v === 'faq' || v === 'mission' || v === 'membership' || v === 'sisterclubs') return v
   return null

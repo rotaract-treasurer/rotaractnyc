@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFirebaseAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
+export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest, ctx: { params: { slug: string } }) {
   if (!isFirebaseAdminConfigured()) {

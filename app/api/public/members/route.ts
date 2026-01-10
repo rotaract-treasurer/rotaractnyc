@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DEFAULT_BOARD_MEMBERS, type MemberGroup, type SiteMember } from '@/lib/content/members'
 import { getFirebaseAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
 
+export const dynamic = 'force-dynamic'
+
 function coerceGroup(v: unknown): MemberGroup {
   return v === 'member' ? 'member' : 'board'
 }

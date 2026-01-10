@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { DEFAULT_SETTINGS } from '@/lib/content/settings'
 import { getFirebaseAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
 
+export const dynamic = 'force-dynamic'
+
 const DOC_ID = 'site'
 
 export async function GET() {
