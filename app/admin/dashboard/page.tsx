@@ -1,11 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
 
 export default function AdminDashboard() {
-  const router = useRouter()
   const session = useAdminSession()
   
   const stats = {

@@ -87,11 +87,11 @@ export default function AdminLayout({
 
             <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 p-3">
               <div className="size-9 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-semibold">
-                {session.email?.[0]?.toUpperCase() || 'A'}
+                {session.status === 'authenticated' && session.email?.[0]?.toUpperCase() || 'A'}
               </div>
               <div className="flex-1 flex flex-col overflow-hidden">
                 <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                  {session.email || 'Admin'}
+                  {session.status === 'authenticated' ? session.email || 'Admin' : 'Admin'}
                 </span>
                 <span className="truncate text-xs text-slate-500">Administrator</span>
               </div>
