@@ -1,9 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { FaArrowLeft, FaSignOutAlt, FaUsers } from 'react-icons/fa'
-import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { useAdminSession } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import DragDropFile from '@/components/admin/DragDropFile'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -20,7 +18,6 @@ type MemberRow = {
 }
 
 export default function AdminMembersPage() {
-  const router = useRouter()
   const session = useAdminSession()
 
   const [loadingData, setLoadingData] = useState(true)
@@ -29,6 +26,7 @@ export default function AdminMembersPage() {
   const [error, setError] = useState<string | null>(null)
   const [members, setMembers] = useState<MemberRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
   const [headshotFile, setHeadshotFile] = useState<File | null>(null)
   const [form, setForm] = useState<Omit<MemberRow, 'id'>>({
     group: 'board',
@@ -84,8 +82,10 @@ export default function AdminMembersPage() {
   }, [])
 
   useEffect(() => {
-    if (session.status === 'unauthenticated') router.push('/admin/login')
-  }, [router, session.status])
+    if (session.status === 'unauthenticated') {
+      window.location.href = '/admin/login'
+    }
+  }, [session.status])
 
   useEffect(() => {
     if (session.status === 'authenticated') refresh()
@@ -105,6 +105,7 @@ export default function AdminMembersPage() {
 
   const startEdit = (row: MemberRow) => {
     setEditingId(row.id)
+    setShowForm(true)
     setHeadshotFile(null)
     setForm({
       group: row.group,
@@ -117,8 +118,24 @@ export default function AdminMembersPage() {
     })
   }
 
+  const startNew = () => {
+    setEditingId(null)
+    setShowForm(true)
+    setHeadshotFile(null)
+    setForm({
+      group: 'board',
+      title: '',
+      name: '',
+      role: '',
+      photoUrl: '',
+      order: 1,
+      active: true,
+    })
+  }
+
   const resetForm = () => {
     setEditingId(null)
+    setShowForm(false)
     setHeadshotFile(null)
     setForm({
       group: 'board',
@@ -230,209 +247,198 @@ export default function AdminMembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-rotaract-darkpink flex items-center gap-2">
-                <FaUsers /> Members
-              </h1>
-              <p className="text-gray-600 mt-1">Manage board members</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg transition-colors"
-              >
-                <FaArrowLeft /> Dashboard
-              </Link>
+    <div className="p-4 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Breadcrumbs & Heading */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <nav className="mb-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <Link href="/admin/dashboard" className="hover:text-primary">Dashboard</Link>
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              <span className="font-medium text-slate-900 dark:text-white">Members</span>
+            </nav>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Board Members</h2>
+            <p className="text-slate-500 dark:text-slate-400">Manage board members and leadership team.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {!showForm && (
               <button
-                onClick={async () => {
-                  await adminSignOut()
-                  router.push('/')
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                onClick={startNew}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition-colors"
               >
-                <FaSignOutAlt /> Sign Out
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                Add Member
               </button>
-            </div>
+            )}
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <h2 className="text-xl font-bold text-rotaract-darkpink">Board Members</h2>
+      <div className="space-y-6">
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {showForm && (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">
+              {editingId ? 'Edit Member' : 'Add New Member'}
+            </h3>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Title</label>
+                  <input
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                    placeholder="Club President"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name</label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                    placeholder="Jane Doe"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Role / Description</label>
+                <textarea
+                  value={form.role}
+                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Headshot</label>
+                <div className="flex flex-col gap-2">
+                  <DragDropFile
+                    label="Upload headshot"
+                    accept="image/*"
+                    file={headshotFile}
+                    onFile={setHeadshotFile}
+                    uploadedUrl={form.photoUrl || undefined}
+                    hint="PNG/JPG recommended."
+                  />
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={uploadHeadshot}
+                      disabled={!headshotFile || uploading}
+                      className="px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {uploading ? 'Uploading…' : 'Upload'}
+                    </button>
+                  </div>
+
+                  <input
+                    value={form.photoUrl || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Order</label>
+                  <input
+                    type="number"
+                    value={form.order}
+                    onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={form.active}
+                      onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked })}
+                      className="rounded"
+                    />
+                    Active
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  onClick={save}
+                  disabled={saving || !form.title.trim() || !form.name.trim()}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                >
+                  {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Member'}
+                </button>
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">All Board Members</h3>
             <button
               onClick={seed}
-              className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+              className="px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
             >
               Seed Defaults
             </button>
           </div>
 
-          {error ? (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <div className="md:w-1/2">
-              <h3 className="text-lg font-semibold text-rotaract-darkpink mb-3">
-                {editingId ? 'Edit Member' : 'Add Member'}
-              </h3>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Title</label>
-                    <input
-                      value={form.title}
-                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Club President"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                    <input
-                      value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Jane Doe"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Role / Description</label>
-                  <textarea
-                    value={form.role}
-                    onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                    rows={3}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Headshot</label>
-                  <div className="mt-1 flex flex-col gap-2">
-                    <DragDropFile
-                      label="Upload headshot"
-                      accept="image/*"
-                      file={headshotFile}
-                      onFile={setHeadshotFile}
-                      uploadedUrl={form.photoUrl || undefined}
-                      hint="PNG/JPG recommended."
-                    />
-
-                    <div>
+          {loadingData ? (
+            <div className="text-slate-600 dark:text-slate-400">Loading…</div>
+          ) : sorted.length === 0 ? (
+            <div className="text-slate-600 dark:text-slate-400">No members yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {sorted.map((m) => (
+                <div key={m.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                        order {m.order} · {m.active ? 'active' : 'inactive'}
+                      </div>
+                      <div className="text-lg font-semibold text-slate-900 dark:text-white">{m.title}</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400">{m.name}</div>
+                      {m.role && <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm">{m.role}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
-                        type="button"
-                        onClick={uploadHeadshot}
-                        disabled={!headshotFile || uploading}
-                        className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        onClick={() => startEdit(m)}
+                        className="px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        {uploading ? 'Uploading…' : 'Upload'}
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => remove(m.id)}
+                        className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
+                      >
+                        Delete
                       </button>
                     </div>
-
-                    <input
-                      value={form.photoUrl || ''}
-                      onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="https://..."
-                    />
-
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Order</label>
-                    <input
-                      type="number"
-                      value={form.order}
-                      onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={form.active}
-                        onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                      />
-                      Active
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={save}
-                    disabled={saving || !form.title.trim() || !form.name.trim()}
-                    className="px-4 py-2 bg-rotaract-pink text-white rounded-lg hover:bg-rotaract-darkpink disabled:opacity-50"
-                  >
-                    {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Member'}
-                  </button>
-                  {editingId ? (
-                    <button
-                      onClick={resetForm}
-                      className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+              ))}
             </div>
-
-            <div className="md:w-1/2">
-              <h3 className="text-lg font-semibold text-rotaract-darkpink mb-3">All Board Members</h3>
-
-              {loadingData ? (
-                <div className="text-gray-600">Loading…</div>
-              ) : sorted.length === 0 ? (
-                <div className="text-gray-600">No members yet.</div>
-              ) : (
-                <div className="space-y-3">
-                  {sorted.map((m) => (
-                    <div key={m.id} className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">
-                            order {m.order} · {m.active ? 'active' : 'inactive'}
-                          </div>
-                          <div className="text-lg font-semibold text-rotaract-darkpink">{m.title}</div>
-                          <div className="text-sm text-gray-600">{m.name}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => startEdit(m)}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => remove(m.id)}
-                            className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      {m.role ? <p className="mt-2 text-gray-700 text-sm">{m.role}</p> : null}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
