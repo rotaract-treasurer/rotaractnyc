@@ -19,15 +19,15 @@ type MembershipApplicationBody = {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isFirebaseAdminConfigured()) {
-    return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 500 })
-  }
-
   const body = (await req.json().catch(() => null)) as MembershipApplicationBody | null
 
   const honeypot = (body?.company || '').trim()
   if (honeypot) {
     return NextResponse.json({ ok: true })
+  }
+
+  if (!isFirebaseAdminConfigured()) {
+    return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 500 })
   }
 
   const fullName = (body?.fullName || '').trim()
