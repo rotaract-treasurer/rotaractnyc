@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaImages, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
+import DragDropFile from '@/components/admin/DragDropFile'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type GalleryRow = {
@@ -165,6 +166,11 @@ export default function AdminGalleryPage() {
     try {
       const upload = await uploadIfNeeded()
 
+      if (upload) {
+        setForm((f) => ({ ...f, imageUrl: upload.url, storagePath: upload.path }))
+        setFile(null)
+      }
+
       const payload = {
         ...(editingId ? { id: editingId } : {}),
         title: form.title,
@@ -309,16 +315,14 @@ export default function AdminGalleryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Upload image</label>
-                    <input
-                      type="file"
+                    <DragDropFile
+                      label="Upload image"
                       accept="image/*"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="mt-1 w-full"
+                      file={file}
+                      onFile={setFile}
+                      uploadedUrl={form.imageUrl || undefined}
+                      hint="Optional: upload to Firebase Storage."
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Optional: upload to Firebase Storage.
-                    </p>
                   </div>
                 </div>
 

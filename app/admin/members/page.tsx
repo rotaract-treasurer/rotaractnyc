@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaSignOutAlt, FaUsers } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
+import DragDropFile from '@/components/admin/DragDropFile'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type MemberRow = {
@@ -319,13 +320,16 @@ export default function AdminMembersPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Headshot</label>
                   <div className="mt-1 flex flex-col gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setHeadshotFile(e.target.files?.[0] ?? null)}
-                        className="w-full"
-                      />
+                    <DragDropFile
+                      label="Upload headshot"
+                      accept="image/*"
+                      file={headshotFile}
+                      onFile={setHeadshotFile}
+                      uploadedUrl={form.photoUrl || undefined}
+                      hint="PNG/JPG recommended."
+                    />
+
+                    <div>
                       <button
                         type="button"
                         onClick={uploadHeadshot}
@@ -343,16 +347,6 @@ export default function AdminMembersPage() {
                       placeholder="https://..."
                     />
 
-                    {form.photoUrl ? (
-                      <a
-                        href={form.photoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-rotaract-darkpink hover:underline"
-                      >
-                        View current headshot
-                      </a>
-                    ) : null}
                   </div>
                 </div>
 

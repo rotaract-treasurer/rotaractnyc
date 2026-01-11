@@ -7,6 +7,10 @@ export type EventDoc = {
   title: string
   date: string
   time?: string
+  startDate?: string
+  startTime?: string
+  endTime?: string
+  timezone?: string
   location?: string
   description: string
   category: 'upcoming' | 'past'
@@ -59,6 +63,10 @@ export async function POST(req: NextRequest) {
     title: body.title,
     date: body.date,
     time: body.time || '',
+    startDate: body.startDate || '',
+    startTime: body.startTime || '',
+    endTime: body.endTime || '',
+    timezone: body.timezone || 'America/New_York',
     location: body.location || '',
     description: body.description,
     category: body.category,
@@ -85,6 +93,10 @@ export async function PUT(req: NextRequest) {
     ...(body.title !== undefined ? { title: body.title } : {}),
     ...(body.date !== undefined ? { date: body.date } : {}),
     ...(body.time !== undefined ? { time: body.time } : {}),
+    ...(body.startDate !== undefined ? { startDate: body.startDate } : {}),
+    ...(body.startTime !== undefined ? { startTime: body.startTime } : {}),
+    ...(body.endTime !== undefined ? { endTime: body.endTime } : {}),
+    ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
     ...(body.location !== undefined ? { location: body.location } : {}),
     ...(body.description !== undefined ? { description: body.description } : {}),
     ...(body.category !== undefined ? { category: body.category } : {}),

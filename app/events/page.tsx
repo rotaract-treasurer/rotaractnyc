@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { FaCalendar, FaMapMarkerAlt, FaClock } from 'react-icons/fa'
 import Link from 'next/link'
 import { DEFAULT_EVENTS, type EventCategory, type SiteEvent } from '@/lib/content/events'
+import { getGoogleCalendarUrl } from '@/lib/calendar/eventCalendar'
 import { useEffect, useState } from 'react'
 
 type EventsResponseRow = Record<string, unknown>
@@ -39,6 +40,10 @@ export default function EventsPage() {
                   title: String(obj.title ?? ''),
                   date: String(obj.date ?? ''),
                   time: obj.time ? String(obj.time) : '',
+                  startDate: obj.startDate ? String(obj.startDate) : '',
+                  startTime: obj.startTime ? String(obj.startTime) : '',
+                  endTime: obj.endTime ? String(obj.endTime) : '',
+                  timezone: obj.timezone ? String(obj.timezone) : 'America/New_York',
                   location: obj.location ? String(obj.location) : '',
                   description: String(obj.description ?? ''),
                   order: Number.isFinite(order) ? order : 1,
@@ -120,6 +125,40 @@ export default function EventsPage() {
                   ) : null}
                 </div>
                 <p className="text-gray-700">{event.description}</p>
+
+                {event.startDate ? (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                    {(() => {
+                      const url = getGoogleCalendarUrl({
+                        id: event.id,
+                        title: event.title,
+                        description: event.description,
+                        location: event.location,
+                        startDate: event.startDate,
+                        startTime: event.startTime,
+                        endTime: event.endTime,
+                        timezone: event.timezone,
+                      })
+                      return url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center rounded-full border border-rotaract-pink/30 bg-white px-4 py-2 font-semibold text-rotaract-darkpink hover:bg-rotaract-pink/5"
+                        >
+                          Add to Google Calendar
+                        </a>
+                      ) : null
+                    })()}
+
+                    <a
+                      href={`/api/public/events/ics?id=${encodeURIComponent(event.id)}`}
+                      className="inline-flex items-center justify-center rounded-full border border-rotaract-pink/30 bg-white px-4 py-2 font-semibold text-rotaract-darkpink hover:bg-rotaract-pink/5"
+                    >
+                      Download .ics
+                    </a>
+                  </div>
+                ) : null}
               </motion.div>
             ))}
           </div>

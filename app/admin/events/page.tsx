@@ -12,6 +12,10 @@ type EventRow = {
   title: string
   date: string
   time?: string
+  startDate?: string
+  startTime?: string
+  endTime?: string
+  timezone?: string
   location?: string
   description: string
   category: 'upcoming' | 'past'
@@ -31,6 +35,10 @@ export default function AdminEventsPage() {
     title: '',
     date: '',
     time: '',
+    startDate: '',
+    startTime: '',
+    endTime: '',
+    timezone: 'America/New_York',
     location: '',
     description: '',
     category: 'upcoming',
@@ -65,6 +73,10 @@ export default function AdminEventsPage() {
               title: String(obj.title ?? ''),
               date: String(obj.date ?? ''),
               time: String(obj.time ?? ''),
+              startDate: obj.startDate ? String(obj.startDate) : '',
+              startTime: obj.startTime ? String(obj.startTime) : '',
+              endTime: obj.endTime ? String(obj.endTime) : '',
+              timezone: obj.timezone ? String(obj.timezone) : 'America/New_York',
               location: String(obj.location ?? ''),
               description: String(obj.description ?? ''),
               category,
@@ -111,6 +123,10 @@ export default function AdminEventsPage() {
       title: row.title,
       date: row.date,
       time: row.time || '',
+      startDate: row.startDate || '',
+      startTime: row.startTime || '',
+      endTime: row.endTime || '',
+      timezone: row.timezone || 'America/New_York',
       location: row.location || '',
       description: row.description,
       category: row.category,
@@ -124,6 +140,10 @@ export default function AdminEventsPage() {
       title: '',
       date: '',
       time: '',
+      startDate: '',
+      startTime: '',
+      endTime: '',
+      timezone: 'America/New_York',
       location: '',
       description: '',
       category: 'upcoming',
@@ -310,6 +330,54 @@ export default function AdminEventsPage() {
                       className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
                       placeholder="Manhattan, NY"
                     />
+                  </div>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-4 bg-gray-50">
+                  <div className="text-sm font-semibold text-gray-800">Calendar (optional)</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Add these fields to enable “Add to Google Calendar” and “Download .ics”.
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Start date</label>
+                      <input
+                        type="date"
+                        value={form.startDate}
+                        onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Start time</label>
+                      <input
+                        type="time"
+                        value={form.startTime}
+                        onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Leave blank for all-day events.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">End time</label>
+                      <input
+                        type="time"
+                        value={form.endTime}
+                        onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Optional; defaults to +1 hour.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Timezone</label>
+                      <input
+                        value={form.timezone}
+                        onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="America/New_York"
+                      />
+                    </div>
                   </div>
                 </div>
 

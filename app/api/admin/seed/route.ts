@@ -13,9 +13,10 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req)
   if (!admin.ok) return NextResponse.json({ error: admin.message }, { status: admin.status })
 
-  const db = getFirebaseAdminDb()
+  try {
+    const db = getFirebaseAdminDb()
 
-  const batch = db.batch()
+    const batch = db.batch()
 
   for (const e of DEFAULT_EVENTS) {
     const ref = db.collection('events').doc(e.id)
@@ -125,7 +126,18 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  await batch.commit()
+    await batch.commit()
 
-  return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json(
+      {
+        error: 'Seed failed. Check Firebase Admin / Firestore configuration.',
+        details: message,
+        code: 'SEED_FAILED',
+      },
+      { status: 500 }
+    )
+  }
 }

@@ -6,6 +6,11 @@ export type SiteEvent = {
   title: string
   date: string
   time?: string
+  /** Calendar fields (optional). Use these for Google Calendar/ICS. */
+  startDate?: string // YYYY-MM-DD
+  startTime?: string // HH:MM (24h)
+  endTime?: string // HH:MM (24h)
+  timezone?: string // IANA tz, default America/New_York
   location?: string
   description: string
   order: number

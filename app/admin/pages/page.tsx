@@ -6,14 +6,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FaArrowLeft, FaFileAlt, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
+import {
+  DEFAULT_PAGES,
+  type EmphasisText,
+  type FaqItem,
+  type MembershipData,
+  type SisterClubsData,
+} from '@/lib/content/pages'
 
 type CmsPageSlug = 'faq' | 'mission' | 'membership' | 'sisterclubs'
+
+type FaqData = { faqs: FaqItem[] }
 
 type CmsPageState = {
   slug: CmsPageSlug
   heroTitle: string
   heroSubtitle: string
-  dataText: string
+  data: unknown
 }
 
 const SLUGS: { slug: CmsPageSlug; label: string }[] = [
@@ -27,7 +36,125 @@ function safePrettyJson(value: unknown) {
   try {
     return JSON.stringify(value ?? {}, null, 2)
   } catch {
-    return '{}' 
+    return '{}'
+  }
+}
+
+function coerceFaqData(input: unknown, fallback: FaqData): FaqData {
+  const obj = typeof input === 'object' && input ? (input as Record<string, unknown>) : {}
+  const faqsRaw = obj.faqs
+  const faqs: FaqItem[] = Array.isArray(faqsRaw)
+    ? faqsRaw
+        .map((f) => {
+          const ff = typeof f === 'object' && f ? (f as Record<string, unknown>) : {}
+          return {
+            question: String(ff.question ?? ''),
+            answer: String(ff.answer ?? ''),
+          }
+        })
+        .filter((f) => f.question || f.answer)
+    : fallback.faqs
+
+  return { faqs }
+}
+
+function coerceMembershipData(input: unknown, fallback: MembershipData): MembershipData {
+  const obj = typeof input === 'object' && input ? (input as Record<string, unknown>) : {}
+
+  const benefitsRaw = obj.benefits
+  const benefits = Array.isArray(benefitsRaw)
+    ? benefitsRaw.map((b) => String(b ?? '')).filter(Boolean)
+    : fallback.benefits
+
+  const membershipFormUrl = String(obj.membershipFormUrl ?? fallback.membershipFormUrl)
+  const eligibilityIntro = String(obj.eligibilityIntro ?? fallback.eligibilityIntro)
+
+  const reqsRaw = obj.eligibilityRequirements
+  const eligibilityRequirements: EmphasisText[] = Array.isArray(reqsRaw)
+    ? reqsRaw
+        .map((r) => {
+          const rr = typeof r === 'object' && r ? (r as Record<string, unknown>) : {}
+          return {
+            prefix: String(rr.prefix ?? ''),
+            strong: String(rr.strong ?? ''),
+            suffix: rr.suffix === undefined ? undefined : String(rr.suffix ?? ''),
+          }
+        })
+        .filter((r) => r.strong || r.prefix || r.suffix)
+    : fallback.eligibilityRequirements
+
+  const duesIntro = String(obj.duesIntro ?? fallback.duesIntro)
+
+  const typesRaw = obj.membershipTypes
+  const membershipTypes = Array.isArray(typesRaw)
+    ? typesRaw.map((t) => String(t ?? '')).filter(Boolean)
+    : fallback.membershipTypes
+
+  const duesOutro = String(obj.duesOutro ?? fallback.duesOutro)
+  const treasurerEmail = String(obj.treasurerEmail ?? fallback.treasurerEmail)
+
+  const pm =
+    typeof obj.paymentMethods === 'object' && obj.paymentMethods
+      ? (obj.paymentMethods as Record<string, unknown>)
+      : {}
+  const paymentMethods = {
+    venmoLabel: String(pm.venmoLabel ?? fallback.paymentMethods.venmoLabel),
+    venmoHandle: String(pm.venmoHandle ?? fallback.paymentMethods.venmoHandle),
+  }
+
+  return {
+    benefits,
+    membershipFormUrl,
+    eligibilityIntro,
+    eligibilityRequirements,
+    duesIntro,
+    membershipTypes,
+    duesOutro,
+    treasurerEmail,
+    paymentMethods,
+  }
+}
+
+function coerceSisterClubsData(input: unknown, fallback: SisterClubsData): SisterClubsData {
+  const obj = typeof input === 'object' && input ? (input as Record<string, unknown>) : {}
+
+  const introRaw = obj.introParagraphs
+  const introParagraphs = Array.isArray(introRaw)
+    ? introRaw.map((p) => String(p ?? '')).filter(Boolean)
+    : fallback.introParagraphs
+
+  const clubsRaw = obj.clubs
+  const clubs = Array.isArray(clubsRaw)
+    ? clubsRaw
+        .map((c) => {
+          const cc = typeof c === 'object' && c ? (c as Record<string, unknown>) : {}
+          return {
+            name: String(cc.name ?? ''),
+            sinceYear: String(cc.sinceYear ?? ''),
+            location: String(cc.location ?? ''),
+            presidents: String(cc.presidents ?? ''),
+          }
+        })
+        .filter((c) => c.name || c.location || c.sinceYear || c.presidents)
+    : fallback.clubs
+
+  const benefitsRaw = obj.benefits
+  const benefits = Array.isArray(benefitsRaw)
+    ? benefitsRaw
+        .map((b) => {
+          const bb = typeof b === 'object' && b ? (b as Record<string, unknown>) : {}
+          return {
+            title: String(bb.title ?? ''),
+            description: String(bb.description ?? ''),
+          }
+        })
+        .filter((b) => b.title || b.description)
+    : fallback.benefits
+
+  return {
+    introParagraphs,
+    clubs,
+    benefits,
   }
 }
 
@@ -38,12 +165,13 @@ export default function AdminPagesPage() {
   const [selected, setSelected] = useState<CmsPageSlug>('faq')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<CmsPageState>({
     slug: 'faq',
     heroTitle: '',
     heroSubtitle: '',
-    dataText: '{\n  "faqs": []\n}',
+    data: { faqs: [] } satisfies FaqData,
   })
 
   const load = useCallback(async (slug: CmsPageSlug) => {
@@ -73,7 +201,21 @@ export default function AdminPagesPage() {
         slug,
         heroTitle: String(page.heroTitle ?? ''),
         heroSubtitle: String(page.heroSubtitle ?? ''),
-        dataText: safePrettyJson(page.data),
+        data: (() => {
+          if (slug === 'faq') {
+            const fallback = DEFAULT_PAGES.faq.data as FaqData
+            return coerceFaqData(page.data, fallback)
+          }
+          if (slug === 'membership') {
+            const fallback = DEFAULT_PAGES.membership.data as MembershipData
+            return coerceMembershipData(page.data, fallback)
+          }
+          if (slug === 'sisterclubs') {
+            const fallback = DEFAULT_PAGES.sisterclubs.data as SisterClubsData
+            return coerceSisterClubsData(page.data, fallback)
+          }
+          return {}
+        })(),
       })
     } catch {
       setError('Unable to load page content.')
@@ -106,14 +248,6 @@ export default function AdminPagesPage() {
     setSaving(true)
     setError(null)
     try {
-      let parsed: unknown = {}
-      try {
-        parsed = JSON.parse(state.dataText || '{}')
-      } catch {
-        setError('Invalid JSON in Data field.')
-        return
-      }
-
       const res = await fetch('/api/admin/pages', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -121,7 +255,7 @@ export default function AdminPagesPage() {
           slug: state.slug,
           heroTitle: state.heroTitle,
           heroSubtitle: state.heroSubtitle,
-          data: parsed,
+          data: state.data,
         }),
       })
 
@@ -237,17 +371,539 @@ export default function AdminPagesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Data (JSON)</label>
-                <textarea
-                  value={state.dataText}
-                  onChange={(e) => setState((s) => ({ ...s, dataText: e.target.value }))}
-                  rows={16}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm"
-                />
-                <p className="mt-2 text-sm text-gray-600">
-                  For FAQ, set {`{"faqs": [{"question": "...", "answer": "..."}]}`}.
-                </p>
+              {state.slug === 'faq' ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-rotaract-darkpink">FAQs</h3>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setState((s) => {
+                          const data = coerceFaqData(s.data, { faqs: [] })
+                          return {
+                            ...s,
+                            data: { faqs: [...data.faqs, { question: '', answer: '' }] } satisfies FaqData,
+                          }
+                        })
+                      }
+                      className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                    >
+                      Add FAQ
+                    </button>
+                  </div>
+
+                  {(coerceFaqData(state.data, { faqs: [] }).faqs.length ?? 0) === 0 ? (
+                    <p className="text-gray-600 text-sm">No FAQs yet.</p>
+                  ) : null}
+
+                  <div className="space-y-4">
+                    {coerceFaqData(state.data, { faqs: [] }).faqs.map((f, idx) => (
+                      <div key={idx} className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="text-sm font-medium text-gray-700">FAQ #{idx + 1}</div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setState((s) => {
+                                const data = coerceFaqData(s.data, { faqs: [] })
+                                return {
+                                  ...s,
+                                  data: { faqs: data.faqs.filter((_, i) => i !== idx) } satisfies FaqData,
+                                }
+                              })
+                            }
+                            className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Question</label>
+                            <input
+                              value={f.question}
+                              onChange={(e) =>
+                                setState((s) => {
+                                  const data = coerceFaqData(s.data, { faqs: [] })
+                                  const next = [...data.faqs]
+                                  next[idx] = { ...next[idx], question: e.target.value }
+                                  return { ...s, data: { faqs: next } satisfies FaqData }
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Answer</label>
+                            <textarea
+                              value={f.answer}
+                              onChange={(e) =>
+                                setState((s) => {
+                                  const data = coerceFaqData(s.data, { faqs: [] })
+                                  const next = [...data.faqs]
+                                  next[idx] = { ...next[idx], answer: e.target.value }
+                                  return { ...s, data: { faqs: next } satisfies FaqData }
+                                })
+                              }
+                              rows={3}
+                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {state.slug === 'membership' ? (
+                (() => {
+                  const fallback = DEFAULT_PAGES.membership.data as MembershipData
+                  const data = coerceMembershipData(state.data, fallback)
+
+                  const setData = (next: MembershipData) => setState((s) => ({ ...s, data: next }))
+
+                  return (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-rotaract-darkpink">Membership Content</h3>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Membership Form URL</label>
+                        <input
+                          value={data.membershipFormUrl}
+                          onChange={(e) => setData({ ...data, membershipFormUrl: e.target.value })}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Benefits</div>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, benefits: [...data.benefits, ''] })}
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Benefit
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {data.benefits.map((b, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <input
+                                value={b}
+                                onChange={(e) => {
+                                  const next = [...data.benefits]
+                                  next[idx] = e.target.value
+                                  setData({ ...data, benefits: next })
+                                }}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = data.benefits.filter((_, i) => i !== idx)
+                                  setData({ ...data, benefits: next })
+                                }}
+                                className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Eligibility Intro</label>
+                        <textarea
+                          value={data.eligibilityIntro}
+                          onChange={(e) => setData({ ...data, eligibilityIntro: e.target.value })}
+                          rows={3}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Eligibility Requirements</div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData({
+                                ...data,
+                                eligibilityRequirements: [
+                                  ...data.eligibilityRequirements,
+                                  { prefix: '', strong: '', suffix: '' },
+                                ],
+                              })
+                            }
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Requirement
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {data.eligibilityRequirements.map((r, idx) => (
+                            <div key={idx} className="border border-gray-100 rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="text-sm font-medium text-gray-700">Requirement #{idx + 1}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = data.eligibilityRequirements.filter((_, i) => i !== idx)
+                                    setData({ ...data, eligibilityRequirements: next })
+                                  }}
+                                  className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Prefix</label>
+                                  <input
+                                    value={r.prefix}
+                                    onChange={(e) => {
+                                      const next = [...data.eligibilityRequirements]
+                                      next[idx] = { ...next[idx], prefix: e.target.value }
+                                      setData({ ...data, eligibilityRequirements: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Bold Text</label>
+                                  <input
+                                    value={r.strong}
+                                    onChange={(e) => {
+                                      const next = [...data.eligibilityRequirements]
+                                      next[idx] = { ...next[idx], strong: e.target.value }
+                                      setData({ ...data, eligibilityRequirements: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Suffix</label>
+                                  <input
+                                    value={r.suffix ?? ''}
+                                    onChange={(e) => {
+                                      const next = [...data.eligibilityRequirements]
+                                      next[idx] = { ...next[idx], suffix: e.target.value }
+                                      setData({ ...data, eligibilityRequirements: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Dues Intro</label>
+                        <textarea
+                          value={data.duesIntro}
+                          onChange={(e) => setData({ ...data, duesIntro: e.target.value })}
+                          rows={3}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Membership Types</div>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, membershipTypes: [...data.membershipTypes, ''] })}
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Type
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {data.membershipTypes.map((t, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <input
+                                value={t}
+                                onChange={(e) => {
+                                  const next = [...data.membershipTypes]
+                                  next[idx] = e.target.value
+                                  setData({ ...data, membershipTypes: next })
+                                }}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = data.membershipTypes.filter((_, i) => i !== idx)
+                                  setData({ ...data, membershipTypes: next })
+                                }}
+                                className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Dues Outro</label>
+                        <textarea
+                          value={data.duesOutro}
+                          onChange={(e) => setData({ ...data, duesOutro: e.target.value })}
+                          rows={3}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Treasurer Email</label>
+                          <input
+                            value={data.treasurerEmail}
+                            onChange={(e) => setData({ ...data, treasurerEmail: e.target.value })}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Venmo Handle</label>
+                          <input
+                            value={data.paymentMethods.venmoHandle}
+                            onChange={(e) =>
+                              setData({
+                                ...data,
+                                paymentMethods: { ...data.paymentMethods, venmoHandle: e.target.value },
+                              })
+                            }
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : null}
+
+              {state.slug === 'sisterclubs' ? (
+                (() => {
+                  const fallback = DEFAULT_PAGES.sisterclubs.data as SisterClubsData
+                  const data = coerceSisterClubsData(state.data, fallback)
+                  const setData = (next: SisterClubsData) => setState((s) => ({ ...s, data: next }))
+
+                  return (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-rotaract-darkpink">Sister Clubs Content</h3>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Intro Paragraphs</div>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, introParagraphs: [...data.introParagraphs, ''] })}
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Paragraph
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {data.introParagraphs.map((p, idx) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <textarea
+                                value={p}
+                                onChange={(e) => {
+                                  const next = [...data.introParagraphs]
+                                  next[idx] = e.target.value
+                                  setData({ ...data, introParagraphs: next })
+                                }}
+                                rows={2}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = data.introParagraphs.filter((_, i) => i !== idx)
+                                  setData({ ...data, introParagraphs: next })
+                                }}
+                                className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Clubs</div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData({
+                                ...data,
+                                clubs: [...data.clubs, { name: '', sinceYear: '', location: '', presidents: '' }],
+                              })
+                            }
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Club
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {data.clubs.map((club, idx) => (
+                            <div key={idx} className="border border-gray-100 rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="text-sm font-medium text-gray-700">Club #{idx + 1}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = data.clubs.filter((_, i) => i !== idx)
+                                    setData({ ...data, clubs: next })
+                                  }}
+                                  className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Name</label>
+                                  <input
+                                    value={club.name}
+                                    onChange={(e) => {
+                                      const next = [...data.clubs]
+                                      next[idx] = { ...next[idx], name: e.target.value }
+                                      setData({ ...data, clubs: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Since Year</label>
+                                  <input
+                                    value={club.sinceYear}
+                                    onChange={(e) => {
+                                      const next = [...data.clubs]
+                                      next[idx] = { ...next[idx], sinceYear: e.target.value }
+                                      setData({ ...data, clubs: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Location</label>
+                                  <input
+                                    value={club.location}
+                                    onChange={(e) => {
+                                      const next = [...data.clubs]
+                                      next[idx] = { ...next[idx], location: e.target.value }
+                                      setData({ ...data, clubs: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Presidents</label>
+                                  <input
+                                    value={club.presidents}
+                                    onChange={(e) => {
+                                      const next = [...data.clubs]
+                                      next[idx] = { ...next[idx], presidents: e.target.value }
+                                      setData({ ...data, clubs: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-gray-100 rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="font-medium text-gray-800">Benefits</div>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, benefits: [...data.benefits, { title: '', description: '' }] })}
+                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                          >
+                            Add Benefit
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {data.benefits.map((b, idx) => (
+                            <div key={idx} className="border border-gray-100 rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="text-sm font-medium text-gray-700">Benefit #{idx + 1}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = data.benefits.filter((_, i) => i !== idx)
+                                    setData({ ...data, benefits: next })
+                                  }}
+                                  className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Title</label>
+                                  <input
+                                    value={b.title}
+                                    onChange={(e) => {
+                                      const next = [...data.benefits]
+                                      next[idx] = { ...next[idx], title: e.target.value }
+                                      setData({ ...data, benefits: next })
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600">Description</label>
+                                  <textarea
+                                    value={b.description}
+                                    onChange={(e) => {
+                                      const next = [...data.benefits]
+                                      next[idx] = { ...next[idx], description: e.target.value }
+                                      setData({ ...data, benefits: next })
+                                    }}
+                                    rows={2}
+                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : null}
+
+              <div className="border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="text-sm text-rotaract-darkpink hover:underline"
+                >
+                  {showAdvanced ? 'Hide' : 'Show'} advanced JSON preview
+                </button>
+                {showAdvanced ? (
+                  <pre className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs overflow-auto">
+                    {safePrettyJson(state.data)}
+                  </pre>
+                ) : null}
               </div>
 
               <div className="flex items-center gap-3">
