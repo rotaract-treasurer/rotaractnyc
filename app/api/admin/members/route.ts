@@ -42,14 +42,25 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const group = coerceGroup(searchParams.get('group'))
 
-  const db = getFirebaseAdminDb()
-  let query: FirebaseFirestore.Query = db.collection('members')
-  query = query.where('group', '==', group)
+  try {
+    const db = getFirebaseAdminDb()
+    // Avoid composite index requirements (e.g. where(group==...)+orderBy(order)).
+    const snap = await db.collection('members').where('group', '==', group).limit(500).get()
+    const members = snap.docs.map((d) => ({ id: d.id, ...(d.data() as MemberDoc) }))
+    members.sort((a, b) => {
+      const ao = Number.isFinite(a.order as number) ? Number(a.order) : 0
+      const bo = Number.isFinite(b.order as number) ? Number(b.order) : 0
+      return ao - bo
+    })
 
-  const snap = await query.orderBy('order', 'asc').limit(500).get()
-  const members = snap.docs.map((d) => ({ id: d.id, ...(d.data() as MemberDoc) }))
-
-  return NextResponse.json({ members })
+    return NextResponse.json({ members })
+  } catch (err) {
+    const e = err as { message?: string; code?: string }
+    return NextResponse.json(
+      { error: 'Failed to load members', details: e?.message || String(err), code: e?.code },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(req: NextRequest) {

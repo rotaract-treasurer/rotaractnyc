@@ -19,11 +19,28 @@ export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req)
   if (!admin.ok) return NextResponse.json({ error: admin.message }, { status: admin.status })
 
-  const db = getFirebaseAdminDb()
-  const snap = await db.collection('events').orderBy('category').orderBy('order').get()
+  try {
+    const db = getFirebaseAdminDb()
+    // Avoid composite index requirements (e.g. orderBy(category)+orderBy(order)).
+    const snap = await db.collection('events').get()
 
-  const events = snap.docs.map((d) => ({ id: d.id, ...(d.data() as EventDoc) }))
-  return NextResponse.json({ events })
+    const events = snap.docs.map((d) => ({ id: d.id, ...(d.data() as EventDoc) }))
+    events.sort((a, b) => {
+      const cat = String(a.category ?? '').localeCompare(String(b.category ?? ''))
+      if (cat !== 0) return cat
+      const ao = Number.isFinite(a.order as number) ? Number(a.order) : 0
+      const bo = Number.isFinite(b.order as number) ? Number(b.order) : 0
+      return ao - bo
+    })
+
+    return NextResponse.json({ events })
+  } catch (err) {
+    const e = err as { message?: string; code?: string }
+    return NextResponse.json(
+      { error: 'Failed to load events', details: e?.message || String(err), code: e?.code },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(req: NextRequest) {
