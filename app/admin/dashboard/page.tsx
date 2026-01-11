@@ -2,33 +2,23 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
-  FaUsers,
-  FaCalendar,
-  FaNewspaper,
-  FaImages,
-  FaCog,
-  FaFileAlt,
-  FaSignOutAlt,
-  FaChartLine,
-  FaEnvelope,
-} from 'react-icons/fa'
-import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { useAdminSession } from '@/lib/admin/useAdminSession'
 
 export default function AdminDashboard() {
   const router = useRouter()
   const session = useAdminSession()
+  
   const stats = {
-    members: 45,
-    events: 12,
+    members: 142,
+    events: 8,
     posts: 28,
-    gallery: 156,
+    fundsRaised: 12450,
   }
 
   if (session.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-pink"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -37,150 +27,228 @@ export default function AdminDashboard() {
     return null
   }
 
-  const menuItems = [
-    { name: 'Members', icon: <FaUsers />, href: '/admin/members', count: stats.members },
-    { name: 'Events', icon: <FaCalendar />, href: '/admin/events', count: stats.events },
-    { name: 'News & Articles', icon: <FaNewspaper />, href: '/admin/posts', count: stats.posts },
-    { name: 'Gallery', icon: <FaImages />, href: '/admin/gallery', count: stats.gallery },
-    { name: 'Messages', icon: <FaEnvelope />, href: '/admin/messages', count: 8 },
-    { name: 'Settings', icon: <FaCog />, href: '/admin/settings', count: null },
-    { name: 'Pages', icon: <FaFileAlt />, href: '/admin/pages', count: null },
-  ]
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Admin Header */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-rotaract-darkpink">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome back, {session.email || 'Admin'}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="px-4 py-2 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg transition-colors"
-              >
-                View Site
-              </Link>
-              <button
-                onClick={async () => {
-                  await adminSignOut()
-                  router.push('/')
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-              >
-                <FaSignOutAlt />
-                Sign Out
-              </button>
-            </div>
+    <div className="p-4 lg:p-8">
+      <div className="mx-auto max-w-6xl space-y-8">
+        {/* Breadcrumbs & Heading */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <nav className="mb-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <Link href="/admin" className="hover:text-primary">Home</Link>
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              <span className="font-medium text-slate-900 dark:text-white">Dashboard</span>
+            </nav>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back, Admin</h2>
+            <p className="text-slate-500 dark:text-slate-400">Here is an overview of your club&apos;s performance.</p>
           </div>
         </div>
-      </div>
 
-      {/* Dashboard Content */}
-      <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Card 1 */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Total Members</p>
-                <p className="text-3xl font-bold text-rotaract-pink mt-1">{stats.members}</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Members</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{stats.members}</p>
               </div>
-              <div className="text-4xl text-rotaract-pink">
-                <FaUsers />
+              <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <span className="material-symbols-outlined">group</span>
               </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                <span className="material-symbols-outlined text-[14px]">trending_up</span>
+                +12 New
+              </span>
+              <span className="text-xs text-slate-400">this month</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          {/* Card 2 */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Events</p>
-                <p className="text-3xl font-bold text-rotaract-pink mt-1">{stats.events}</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Active Projects</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{stats.events}</p>
               </div>
-              <div className="text-4xl text-rotaract-pink">
-                <FaCalendar />
+              <div className="flex size-12 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
+                <span className="material-symbols-outlined">assignment</span>
               </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                Stable
+              </span>
+              <span className="text-xs text-slate-400">vs last quarter</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          {/* Card 3 */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">News & Articles</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{stats.posts}</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Funds Raised</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">${stats.fundsRaised.toLocaleString()}</p>
               </div>
-              <div className="text-4xl text-green-600">
-                <FaNewspaper />
+              <div className="flex size-12 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
+                <span className="material-symbols-outlined">attach_money</span>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Gallery Items</p>
-                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.gallery}</p>
-              </div>
-              <div className="text-4xl text-purple-600">
-                <FaImages />
-              </div>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                <span className="material-symbols-outlined text-[14px]">trending_up</span>
+                +5%
+              </span>
+              <span className="text-xs text-slate-400">vs last month</span>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {menuItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:-translate-y-1"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-rotaract-darkpink mb-2">{item.name}</h3>
-                  {item.count !== null && (
-                    <p className="text-gray-600">
-                      {item.count} {item.count === 1 ? 'item' : 'items'}
+        {/* Main Grid: Events Table & Activity Feed */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Events Column (2/3 width) */}
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Upcoming Events</h3>
+              <Link href="/admin/events" className="text-sm font-medium text-primary hover:underline">View all</Link>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <tr>
+                      <th scope="col" className="px-6 py-4 font-semibold">Event Name</th>
+                      <th scope="col" className="px-6 py-4 font-semibold">Date</th>
+                      <th scope="col" className="px-6 py-4 font-semibold">Location</th>
+                      <th scope="col" className="px-6 py-4 font-semibold">Status</th>
+                      <th scope="col" className="px-6 py-4 text-right font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-primary">celebration</span>
+                          </div>
+                          <span className="font-semibold text-slate-900 dark:text-white">Annual Gala</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">Jan 25, 2026</td>
+                      <td className="px-6 py-4 text-slate-500">The Plaza</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900/30 dark:text-blue-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>
+                          Published
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link href="/admin/events" className="text-slate-400 hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-[20px]">edit_square</span>
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-orange-500">volunteer_activism</span>
+                          </div>
+                          <span className="font-semibold text-slate-900 dark:text-white">Community Service</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">Jan 28, 2026</td>
+                      <td className="px-6 py-4 text-slate-500">Brooklyn Shelter</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-900/30 dark:text-green-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
+                          Published
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link href="/admin/events" className="text-slate-400 hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-[20px]">edit_square</span>
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+                            <span className="material-symbols-outlined">meeting_room</span>
+                          </div>
+                          <span className="font-semibold text-slate-900 dark:text-white">Board Meeting</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">Feb 01, 2026</td>
+                      <td className="px-6 py-4 text-slate-500">Zoom</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                          Draft
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link href="/admin/events" className="text-slate-400 hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-[20px]">edit_square</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Feed Column (1/3 width) */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Activity</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 h-full max-h-[400px] overflow-y-auto">
+              <div className="relative pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-8">
+                {/* Feed Item 1 */}
+                <div className="relative">
+                  <span className="absolute -left-[23px] top-1 flex size-4 items-center justify-center rounded-full bg-primary ring-4 ring-white dark:ring-slate-900"></span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-slate-900 dark:text-white">
+                      <span className="font-semibold">Sarah J.</span> paid annual dues.
                     </p>
-                  )}
+                    <span className="text-xs text-slate-500">2 mins ago</span>
+                  </div>
                 </div>
-                <div className="text-4xl text-rotaract-pink">{item.icon}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
 
-        {/* Recent Activity */}
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-rotaract-darkpink mb-4 flex items-center gap-2">
-            <FaChartLine />
-            Recent Activity
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="font-semibold">New member joined</p>
-                <p className="text-sm text-gray-600">John Doe registered for membership - 2 hours ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="font-semibold">Event published</p>
-                <p className="text-sm text-gray-600">Annual Fundraiser event created - 5 hours ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="font-semibold">New gallery images</p>
-                <p className="text-sm text-gray-600">12 photos added to 2024 Gallery - 1 day ago</p>
+                {/* Feed Item 2 */}
+                <div className="relative">
+                  <span className="absolute -left-[23px] top-1 flex size-4 items-center justify-center rounded-full bg-slate-300 ring-4 ring-white dark:ring-slate-900 dark:bg-slate-700"></span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-slate-900 dark:text-white">
+                      New member application received from <span className="font-semibold">Mike R.</span>
+                    </p>
+                    <span className="text-xs text-slate-500">1 hour ago</span>
+                  </div>
+                </div>
+
+                {/* Feed Item 3 */}
+                <div className="relative">
+                  <span className="absolute -left-[23px] top-1 flex size-4 items-center justify-center rounded-full bg-green-500 ring-4 ring-white dark:ring-slate-900"></span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-slate-900 dark:text-white">
+                      Event <span className="font-medium text-primary">Annual Gala</span> was published.
+                    </p>
+                    <span className="text-xs text-slate-500">5 hours ago</span>
+                  </div>
+                </div>
+
+                {/* Feed Item 4 */}
+                <div className="relative">
+                  <span className="absolute -left-[23px] top-1 flex size-4 items-center justify-center rounded-full bg-slate-300 ring-4 ring-white dark:ring-slate-900 dark:bg-slate-700"></span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-slate-900 dark:text-white">
+                      Board meeting minutes uploaded.
+                    </p>
+                    <span className="text-xs text-slate-500">Yesterday</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
