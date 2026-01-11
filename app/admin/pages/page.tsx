@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FaArrowLeft, FaFileAlt, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 
 type CmsPageSlug = 'faq' | 'mission' | 'membership' | 'sisterclubs'
 
@@ -51,7 +52,7 @@ export default function AdminPagesPage() {
     try {
       const res = await fetch(`/api/admin/pages?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load page content.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load page content.'))
         return
       }
       const json: unknown = await res.json()
@@ -125,7 +126,7 @@ export default function AdminPagesPage() {
       })
 
       if (!res.ok) {
-        setError('Unable to save page content.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to save page content.'))
         return
       }
 
@@ -142,12 +143,12 @@ export default function AdminPagesPage() {
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
       if (!res.ok) {
-        setError('Seed failed. Check Firebase Admin credentials.')
+        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
         return
       }
       await load(selected)
     } catch {
-      setError('Seed failed. Check Firebase Admin credentials.')
+      setError('Seed failed.')
     }
   }
 

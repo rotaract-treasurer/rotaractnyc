@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaEnvelope, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useEffect, useState } from 'react'
 
 type MessageRow = {
@@ -32,7 +33,7 @@ export default function AdminMessagesPage() {
     try {
       const res = await fetch('/api/admin/messages', { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load messages.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load messages.'))
         return
       }
       const json: unknown = await res.json()
@@ -77,7 +78,7 @@ export default function AdminMessagesPage() {
         method: 'DELETE',
       })
       if (!res.ok) {
-        setError('Unable to delete message.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to delete message.'))
         return
       }
       await refresh()

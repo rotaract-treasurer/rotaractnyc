@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaCog, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useState } from 'react'
 
 type SiteSettings = {
@@ -41,7 +42,7 @@ export default function AdminSettingsPage() {
     try {
       const res = await fetch('/api/admin/settings', { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load settings.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load settings.'))
         return
       }
 
@@ -105,7 +106,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(cleaned),
       })
       if (!res.ok) {
-        setError('Unable to save settings.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to save settings.'))
         return
       }
       await refresh()
@@ -121,12 +122,12 @@ export default function AdminSettingsPage() {
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
       if (!res.ok) {
-        setError('Seed failed. Check Firebase Admin credentials.')
+        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
         return
       }
       await refresh()
     } catch {
-      setError('Seed failed. Check Firebase Admin credentials.')
+      setError('Seed failed.')
     }
   }
 

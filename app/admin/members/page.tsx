@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaSignOutAlt, FaUsers } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type MemberRow = {
@@ -44,7 +45,7 @@ export default function AdminMembersPage() {
     try {
       const res = await fetch('/api/admin/members?group=board', { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load members.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load members.'))
         return
       }
       const json: unknown = await res.json()
@@ -144,7 +145,7 @@ export default function AdminMembersPage() {
       })
 
       if (!res.ok) {
-        setError('Unable to upload headshot.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to upload headshot.'))
         return
       }
 
@@ -183,7 +184,7 @@ export default function AdminMembersPage() {
       })
 
       if (!res.ok) {
-        setError('Unable to save member.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to save member.'))
         return
       }
 
@@ -204,7 +205,7 @@ export default function AdminMembersPage() {
         method: 'DELETE',
       })
       if (!res.ok) {
-        setError('Unable to delete member.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to delete member.'))
         return
       }
       await refresh()
@@ -218,12 +219,12 @@ export default function AdminMembersPage() {
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
       if (!res.ok) {
-        setError('Seed failed. Check Firebase Admin credentials.')
+        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
         return
       }
       await refresh()
     } catch {
-      setError('Seed failed. Check Firebase Admin credentials.')
+      setError('Seed failed.')
     }
   }
 

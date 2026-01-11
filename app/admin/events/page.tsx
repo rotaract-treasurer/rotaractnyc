@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaCalendar, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type EventRow = {
@@ -42,7 +43,7 @@ export default function AdminEventsPage() {
     try {
       const res = await fetch('/api/admin/events', { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load events.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load events.'))
         return
       }
       const json: unknown = await res.json()
@@ -146,7 +147,7 @@ export default function AdminEventsPage() {
       })
 
       if (!res.ok) {
-        setError('Unable to save event.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to save event.'))
         return
       }
 
@@ -167,7 +168,7 @@ export default function AdminEventsPage() {
         method: 'DELETE',
       })
       if (!res.ok) {
-        setError('Unable to delete event.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to delete event.'))
         return
       }
       await refresh()
@@ -181,12 +182,12 @@ export default function AdminEventsPage() {
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
       if (!res.ok) {
-        setError('Seed failed. Check Firebase Admin credentials.')
+        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
         return
       }
       await refresh()
     } catch {
-      setError('Seed failed. Check Firebase Admin credentials.')
+      setError('Seed failed.')
     }
   }
 

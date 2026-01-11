@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft, FaImages, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
+import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type GalleryRow = {
@@ -40,7 +41,7 @@ export default function AdminGalleryPage() {
     try {
       const res = await fetch('/api/admin/gallery', { cache: 'no-store' })
       if (!res.ok) {
-        setError('Unable to load gallery.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to load gallery.'))
         return
       }
       const json: unknown = await res.json()
@@ -133,7 +134,7 @@ export default function AdminGalleryPage() {
       })
 
       if (!res.ok) {
-        setError('Upload failed. Check Firebase Storage config.')
+        setError(await getFriendlyAdminApiError(res, 'Upload failed.'))
         return null
       }
 
@@ -180,7 +181,7 @@ export default function AdminGalleryPage() {
       })
 
       if (!res.ok) {
-        setError('Unable to save gallery item.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to save gallery item.'))
         return
       }
 
@@ -201,7 +202,7 @@ export default function AdminGalleryPage() {
         method: 'DELETE',
       })
       if (!res.ok) {
-        setError('Unable to delete gallery item.')
+        setError(await getFriendlyAdminApiError(res, 'Unable to delete gallery item.'))
         return
       }
       await refresh()
@@ -215,12 +216,12 @@ export default function AdminGalleryPage() {
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
       if (!res.ok) {
-        setError('Seed failed. Check Firebase Admin credentials.')
+        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
         return
       }
       await refresh()
     } catch {
-      setError('Seed failed. Check Firebase Admin credentials.')
+      setError('Seed failed.')
     }
   }
 
