@@ -3,6 +3,17 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { requireAdmin } from '@/app/api/admin/_utils'
 import { getFirebaseAdminDb } from '@/lib/firebase/admin'
 
+const DEFAULT_AUTHOR = 'Rotaract Club of New York at the United Nations'
+
+function formatPublishedDate(date: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
+}
+
 export type PostDoc = {
   slug: string
   title: string
@@ -38,11 +49,14 @@ export async function POST(req: NextRequest) {
   const db = getFirebaseAdminDb()
   const ref = db.collection('posts').doc(body.slug)
 
+  const normalizedAuthor = body.author?.trim()
+  const normalizedDate = body.date?.trim()
+
   const doc: PostDoc = {
     slug: body.slug,
     title: body.title,
-    date: body.date || '',
-    author: body.author || 'Rotaract NYC',
+    date: normalizedDate ? normalizedDate : formatPublishedDate(new Date()),
+    author: normalizedAuthor ? normalizedAuthor : DEFAULT_AUTHOR,
     category: body.category || 'News',
     excerpt: body.excerpt || '',
     content: Array.isArray(body.content) ? body.content : [],
@@ -66,13 +80,23 @@ export async function PUT(req: NextRequest) {
 
   const updates: Partial<PostDoc> = {
     ...(body.title !== undefined ? { title: body.title } : {}),
-    ...(body.date !== undefined ? { date: body.date } : {}),
-    ...(body.author !== undefined ? { author: body.author } : {}),
     ...(body.category !== undefined ? { category: body.category } : {}),
     ...(body.excerpt !== undefined ? { excerpt: body.excerpt } : {}),
     ...(body.content !== undefined ? { content: body.content } : {}),
     ...(body.published !== undefined ? { published: body.published } : {}),
     updatedAt: FieldValue.serverTimestamp(),
+  }
+
+  if (body.author !== undefined) {
+    const normalizedAuthor = body.author?.trim()
+    updates.author = normalizedAuthor ? normalizedAuthor : DEFAULT_AUTHOR
+  }
+
+  if (body.date !== undefined) {
+    const normalizedDate = body.date?.trim()
+    if (normalizedDate) {
+      updates.date = normalizedDate
+    }
   }
 
   const db = getFirebaseAdminDb()

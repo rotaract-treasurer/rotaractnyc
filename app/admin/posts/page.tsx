@@ -6,21 +6,17 @@ import { FaArrowLeft, FaNewspaper, FaSignOutAlt } from 'react-icons/fa'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { slugify } from '@/lib/slugify'
 
-function slugifyTitle(input: string): string {
-  const normalized = (input || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
+const DEFAULT_AUTHOR = 'Rotaract Club of New York at the United Nations'
 
-  const slug = normalized
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
-    .replace(/-{2,}/g, '-')
-
-  return slug.length > 80 ? slug.slice(0, 80).replace(/-+$/, '') : slug
+function formatPublishedDate(dt: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'America/New_York',
+  }).format(dt)
 }
 
 type PostRow = {
@@ -43,12 +39,14 @@ export default function AdminPostsPage() {
   const [error, setError] = useState<string | null>(null)
   const [posts, setPosts] = useState<PostRow[]>([])
   const [editingSlug, setEditingSlug] = useState<string | null>(null)
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
+  const [mode, setMode] = useState<'list' | 'new' | 'edit'>('list')
 
   const [form, setForm] = useState({
     slug: '',
     title: '',
     date: '',
-    author: 'Rotaract NYC',
+    author: DEFAULT_AUTHOR,
     category: 'Club News',
     excerpt: '',
     contentText: '',
@@ -82,7 +80,7 @@ export default function AdminPostsPage() {
               slug,
               title: String(obj.title ?? ''),
               date: String(obj.date ?? ''),
-              author: String(obj.author ?? 'Rotaract NYC'),
+              author: String(obj.author ?? DEFAULT_AUTHOR),
               category: String(obj.category ?? 'News'),
               excerpt: String(obj.excerpt ?? ''),
               content: Array.isArray(contentRaw) ? contentRaw.map((x) => String(x)) : [],
@@ -122,6 +120,8 @@ export default function AdminPostsPage() {
 
   const startEdit = (row: PostRow) => {
     setEditingSlug(row.slug)
+    setSlugManuallyEdited(true)
+    setMode('edit')
     setForm({
       slug: row.slug,
       title: row.title,
@@ -134,13 +134,31 @@ export default function AdminPostsPage() {
     })
   }
 
-  const resetForm = () => {
+  const startNew = () => {
     setEditingSlug(null)
+    setSlugManuallyEdited(false)
+    setMode('new')
+    setForm({
+      slug: '',
+      title: '',
+      date: formatPublishedDate(new Date()),
+      author: DEFAULT_AUTHOR,
+      category: 'Club News',
+      excerpt: '',
+      contentText: '',
+      published: true,
+    })
+  }
+
+  const backToList = () => {
+    setEditingSlug(null)
+    setSlugManuallyEdited(false)
+    setMode('list')
     setForm({
       slug: '',
       title: '',
       date: '',
-      author: 'Rotaract NYC',
+      author: DEFAULT_AUTHOR,
       category: 'Club News',
       excerpt: '',
       contentText: '',
@@ -157,15 +175,15 @@ export default function AdminPostsPage() {
         .map((p) => p.trim())
         .filter(Boolean)
 
-      const method = editingSlug ? 'PUT' : 'POST'
+      const isEdit = mode === 'edit' && Boolean(editingSlug)
       const res = await fetch('/api/admin/posts', {
-        method,
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           slug: form.slug.trim(),
           title: form.title,
-          date: form.date,
-          author: form.author,
+          date: form.date.trim() ? form.date : formatPublishedDate(new Date()),
+          author: form.author.trim() ? form.author : DEFAULT_AUTHOR,
           category: form.category,
           excerpt: form.excerpt,
           content,
@@ -178,43 +196,12 @@ export default function AdminPostsPage() {
         return
       }
 
-      resetForm()
+      backToList()
       await refresh()
     } catch {
       setError('Unable to save post.')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const remove = async (slug: string) => {
-    if (!confirm('Delete this post?')) return
-    setError(null)
-    try {
-      const res = await fetch(`/api/admin/posts?slug=${encodeURIComponent(slug)}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        setError(await getFriendlyAdminApiError(res, 'Unable to delete post.'))
-        return
-      }
-      await refresh()
-    } catch {
-      setError('Unable to delete post.')
-    }
-  }
-
-  const seed = async () => {
-    setError(null)
-    try {
-      const res = await fetch('/api/admin/seed', { method: 'POST' })
-      if (!res.ok) {
-        setError(await getFriendlyAdminApiError(res, 'Seed failed.'))
-        return
-      }
-      await refresh()
-    } catch {
-      setError('Seed failed.')
     }
   }
 
@@ -225,9 +212,9 @@ export default function AdminPostsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-rotaract-darkpink flex items-center gap-2">
-                <FaNewspaper /> News Posts
+                <FaNewspaper /> News & Articles
               </h1>
-              <p className="text-gray-600 mt-1">Create, edit, and publish news posts</p>
+              <p className="text-gray-600 mt-1">Create, edit, and publish news and article updates</p>
             </div>
             <div className="flex items-center gap-3">
               <Link
@@ -252,25 +239,69 @@ export default function AdminPostsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <div className="md:w-1/2">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <h2 className="text-xl font-bold text-rotaract-darkpink">All Articles</h2>
+            <button
+              onClick={startNew}
+              className="px-4 py-2 bg-rotaract-pink text-white rounded-lg hover:bg-rotaract-darkpink"
+            >
+              New Article
+            </button>
+          </div>
+
+          {error ? (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          ) : null}
+
+          {mode === 'list' ? (
+            loadingData ? (
+              <div className="text-gray-600">Loading…</div>
+            ) : sorted.length === 0 ? (
+              <div className="text-gray-600">No posts yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {sorted.map((p) => (
+                  <button
+                    key={p.slug}
+                    type="button"
+                    onClick={() => startEdit(p)}
+                    className="w-full text-left border border-gray-100 rounded-lg p-4 bg-white shadow-sm hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          {p.published ? 'published' : 'draft'} · {p.category}
+                        </div>
+                        <div className="text-lg font-semibold text-rotaract-darkpink">{p.title}</div>
+                        <div className="mt-1 text-sm text-gray-600">
+                          {p.date ? <span>{p.date}</span> : <span className="italic">No publish date</span>} · {p.author}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">/{p.slug}</div>
+                      </div>
+                      <div className="shrink-0 px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg">
+                        Edit
+                      </div>
+                    </div>
+                    {p.excerpt ? <p className="mt-2 text-gray-700 text-sm">{p.excerpt}</p> : null}
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            <div>
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="text-xl font-bold text-rotaract-darkpink">
-                  {editingSlug ? 'Edit Post' : 'Add Post'}
-                </h2>
+                <h3 className="text-lg font-bold text-rotaract-darkpink">
+                  {mode === 'edit' ? 'Edit Article' : 'New Article'}
+                </h3>
                 <button
-                  onClick={seed}
-                  className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                  onClick={backToList}
+                  className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  Seed Defaults
+                  Back to List
                 </button>
               </div>
-
-              {error ? (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              ) : null}
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -278,7 +309,11 @@ export default function AdminPostsPage() {
                     <label className="block text-sm font-medium text-gray-700">Slug</label>
                     <input
                       value={form.slug}
-                      onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setSlugManuallyEdited(true)
+                        setForm((f) => ({ ...f, slug: value }))
+                      }}
                       className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
                       placeholder="my-post-slug"
                       disabled={Boolean(editingSlug)}
@@ -304,7 +339,9 @@ export default function AdminPostsPage() {
                       const title = e.target.value
                       setForm((f) => {
                         if (editingSlug) return { ...f, title }
-                        return { ...f, title, slug: slugifyTitle(title) }
+                        const nextAutoSlug = slugify(title)
+                        const shouldAutoUpdateSlug = !slugManuallyEdited || !f.slug.trim()
+                        return shouldAutoUpdateSlug ? { ...f, title, slug: nextAutoSlug } : { ...f, title }
                       })
                     }}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -313,12 +350,12 @@ export default function AdminPostsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Date (text)</label>
+                    <label className="block text-sm font-medium text-gray-700">Publish Date</label>
                     <input
                       value={form.date}
                       onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                       className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="December 2023"
+                      placeholder={formatPublishedDate(new Date())}
                     />
                   </div>
                   <div>
@@ -355,7 +392,7 @@ export default function AdminPostsPage() {
                   <textarea
                     value={form.contentText}
                     onChange={(e) => setForm((f) => ({ ...f, contentText: e.target.value }))}
-                    rows={8}
+                    rows={10}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
                     placeholder="Write paragraphs separated by a blank line"
                   />
@@ -364,67 +401,15 @@ export default function AdminPostsPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={save}
-                    disabled={saving || !form.slug.trim() || !form.title.trim()}
+                    disabled={saving || !form.title.trim() || (!editingSlug && !form.slug.trim())}
                     className="px-4 py-2 bg-rotaract-pink text-white rounded-lg hover:bg-rotaract-darkpink disabled:opacity-50"
                   >
-                    {saving ? 'Saving…' : editingSlug ? 'Save Changes' : 'Create Post'}
+                    {saving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Create Article'}
                   </button>
-                  {editingSlug ? (
-                    <button
-                      onClick={resetForm}
-                      className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
                 </div>
               </div>
             </div>
-
-            <div className="md:w-1/2">
-              <h2 className="text-xl font-bold text-rotaract-darkpink mb-4">All Posts</h2>
-
-              {loadingData ? (
-                <div className="text-gray-600">Loading…</div>
-              ) : sorted.length === 0 ? (
-                <div className="text-gray-600">No posts yet.</div>
-              ) : (
-                <div className="space-y-3">
-                  {sorted.map((p) => (
-                    <div
-                      key={p.slug}
-                      className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">
-                            {p.published ? 'published' : 'draft'} · {p.category}
-                          </div>
-                          <div className="text-lg font-semibold text-rotaract-darkpink">{p.title}</div>
-                          <div className="text-sm text-gray-600">/{p.slug}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => startEdit(p)}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => remove(p.slug)}
-                            className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      {p.excerpt ? <p className="mt-2 text-gray-700 text-sm">{p.excerpt}</p> : null}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   const menuItems = [
     { name: 'Members', icon: <FaUsers />, href: '/admin/members', count: stats.members },
     { name: 'Events', icon: <FaCalendar />, href: '/admin/events', count: stats.events },
-    { name: 'News Posts', icon: <FaNewspaper />, href: '/admin/posts', count: stats.posts },
+    { name: 'News & Articles', icon: <FaNewspaper />, href: '/admin/posts', count: stats.posts },
     { name: 'Gallery', icon: <FaImages />, href: '/admin/gallery', count: stats.gallery },
     { name: 'Messages', icon: <FaEnvelope />, href: '/admin/messages', count: 8 },
     { name: 'Settings', icon: <FaCog />, href: '/admin/settings', count: null },
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">News Posts</p>
+                <p className="text-gray-600 text-sm">News & Articles</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">{stats.posts}</p>
               </div>
               <div className="text-4xl text-green-600">
