@@ -67,6 +67,21 @@ export default function MembershipPage() {
   const [heroSubtitle, setHeroSubtitle] = useState(defaults.heroSubtitle)
   const [data, setData] = useState<MembershipData>(fallbackData)
 
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [membershipType, setMembershipType] = useState('')
+  const [location, setLocation] = useState('')
+  const [occupationOrSchool, setOccupationOrSchool] = useState('')
+  const [interests, setInterests] = useState('')
+  const [whyJoin, setWhyJoin] = useState('')
+  const [hearAboutUs, setHearAboutUs] = useState('')
+  const [company, setCompany] = useState('')
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccessId, setSubmitSuccessId] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
@@ -101,6 +116,80 @@ export default function MembershipPage() {
       cancelled = true
     }
   }, [defaults.heroSubtitle, defaults.heroTitle, fallbackData])
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setSubmitError(null)
+    setSubmitSuccessId(null)
+
+    const safeName = fullName.trim()
+    const safeEmail = email.trim()
+
+    if (!safeName || !safeEmail) {
+      setSubmitError('Please provide your name and email.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/public/membership', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: safeName,
+          email: safeEmail,
+          phone,
+          membershipType,
+          location,
+          occupationOrSchool,
+          interests,
+          whyJoin,
+          hearAboutUs,
+          company,
+        }),
+      })
+
+      const json: unknown = await res.json().catch(() => null)
+      const error =
+        typeof json === 'object' &&
+        json &&
+        'error' in json &&
+        typeof (json as { error?: unknown }).error === 'string'
+          ? (json as { error: string }).error
+          : null
+
+      if (!res.ok) {
+        setSubmitError(error || 'Something went wrong. Please try again.')
+        return
+      }
+
+      const id =
+        typeof json === 'object' &&
+        json &&
+        'id' in json &&
+        typeof (json as { id?: unknown }).id === 'string'
+          ? (json as { id: string }).id
+          : null
+
+      setSubmitSuccessId(id || 'ok')
+      setFullName('')
+      setEmail('')
+      setPhone('')
+      setMembershipType('')
+      setLocation('')
+      setOccupationOrSchool('')
+      setInterests('')
+      setWhyJoin('')
+      setHearAboutUs('')
+      setCompany('')
+    } catch {
+      setSubmitError('Something went wrong. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen">
@@ -149,14 +238,182 @@ export default function MembershipPage() {
             <h2 className="text-3xl font-bold mb-8 text-rotaract-darkpink text-center">Joining Our Club</h2>
             <div className="bg-white p-8 rounded-lg shadow-md mb-8">
               <p className="text-lg text-gray-700 mb-6">
-                Please fill out this Google form if you wish to become a member of the Rotaract Club at the United Nations:
+                Interested in joining? Fill out the form below and we’ll follow up with next steps.
               </p>
-              <a
-                href={data.membershipFormUrl || '#'}
-                className="inline-block bg-rotaract-pink text-white font-semibold px-8 py-3 rounded-full hover:bg-rotaract-darkpink transition-all"
-              >
-                Membership Form
-              </a>
+
+              {submitError ? (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+                  {submitError}
+                </div>
+              ) : null}
+
+              {submitSuccessId ? (
+                <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+                  Thanks — your application has been received.
+                </div>
+              ) : null}
+
+              <form onSubmit={onSubmit} className="space-y-5">
+                {/* Honeypot */}
+                <div className="hidden">
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="company">
+                    Company
+                  </label>
+                  <input
+                    id="company"
+                    name="company"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="fullName">
+                      Full name <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="email">
+                      Email <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="phone">
+                      Phone (optional)
+                    </label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="membershipType">
+                      Membership type (optional)
+                    </label>
+                    <select
+                      id="membershipType"
+                      name="membershipType"
+                      value={membershipType}
+                      onChange={(e) => setMembershipType(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    >
+                      <option value="">Select…</option>
+                      {data.membershipTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="location">
+                      Location (optional)
+                    </label>
+                    <input
+                      id="location"
+                      name="location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                      placeholder="e.g., Manhattan, Brooklyn, Queens"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="occupationOrSchool">
+                      Occupation / School (optional)
+                    </label>
+                    <input
+                      id="occupationOrSchool"
+                      name="occupationOrSchool"
+                      value={occupationOrSchool}
+                      onChange={(e) => setOccupationOrSchool(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="interests">
+                    Interests (optional)
+                  </label>
+                  <textarea
+                    id="interests"
+                    name="interests"
+                    rows={3}
+                    value={interests}
+                    onChange={(e) => setInterests(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                    placeholder="Service areas, causes you care about, professional interests…"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="whyJoin">
+                    Why do you want to join? (optional)
+                  </label>
+                  <textarea
+                    id="whyJoin"
+                    name="whyJoin"
+                    rows={3}
+                    value={whyJoin}
+                    onChange={(e) => setWhyJoin(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="hearAboutUs">
+                    How did you hear about us? (optional)
+                  </label>
+                  <input
+                    id="hearAboutUs"
+                    name="hearAboutUs"
+                    value={hearAboutUs}
+                    onChange={(e) => setHearAboutUs(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-block bg-rotaract-pink text-white font-semibold px-8 py-3 rounded-full hover:bg-rotaract-darkpink transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Submitting…' : 'Submit Application'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -199,7 +456,7 @@ export default function MembershipPage() {
               </p>
               
               <div className="mb-8">
-                <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">We have three different types of membership:</h3>
+                <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">We have different types of membership:</h3>
                 <ul className="space-y-3 text-lg text-gray-700 ml-6">
                   {data.membershipTypes.map((t, idx) => (
                     <li key={idx} className="list-disc">
@@ -218,7 +475,7 @@ export default function MembershipPage() {
                 <p className="text-gray-700 mb-4">Our preferred methods of payments are listed below:</p>
                 
                 <div className="bg-gray-50 p-6 rounded-lg mb-4">
-                  <p className="text-lg font-semibold text-rotaract-darkpink mb-2">Venmo:</p>
+                  <p className="text-lg font-semibold text-rotaract-darkpink mb-2">{data.paymentMethods.venmoLabel}</p>
                   <p className="text-gray-700">{data.paymentMethods.venmoHandle}</p>
                 </div>
 
