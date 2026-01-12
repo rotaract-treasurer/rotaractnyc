@@ -26,7 +26,7 @@ export default function AdminGalleryPage() {
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<GalleryRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(false) // Form hidden by default
   const [file, setFile] = useState<File | null>(null)
   const [form, setForm] = useState<Omit<GalleryRow, 'id'>>({
     title: '',

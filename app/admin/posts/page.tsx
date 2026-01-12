@@ -5,6 +5,10 @@ import { useAdminSession } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { slugify } from '@/lib/slugify'
+import dynamic from 'next/dynamic'
+import 'react-quill/dist/quill.snow.css'
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
 
 const DEFAULT_AUTHOR = 'Rotaract Club of New York at the United Nations'
 
@@ -15,6 +19,20 @@ function formatPublishedDate(dt: Date) {
     year: 'numeric',
     timeZone: 'America/New_York',
   }).format(dt)
+}
+
+function generateExcerpt(htmlContent: string): string {
+  // Strip HTML tags and get first 150 characters
+  const text = htmlContent.replace(/<[^>]*>/g, '').trim()
+  return text.length > 150 ? text.substring(0, 150) + '...' : text
+}
+
+function htmlToContentArray(html: string): string[] {
+  // Split by paragraph tags and clean up
+  return html
+    .split(/<\/p>|<br\s*\/?>/i)
+    .map(p => p.replace(/<[^>]*>/g, '').trim())
+    .filter(Boolean)
 }
 
 type PostRow = {
@@ -36,17 +54,12 @@ export default function AdminPostsPage() {
   const [error, setError] = useState<string | null>(null)
   const [posts, setPosts] = useState<PostRow[]>([])
   const [editingSlug, setEditingSlug] = useState<string | null>(null)
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [mode, setMode] = useState<'list' | 'new' | 'edit'>('list')
 
   const [form, setForm] = useState({
-    slug: '',
     title: '',
-    date: '',
-    author: DEFAULT_AUTHOR,
     category: 'Club News',
-    excerpt: '',
-    contentText: '',
+    contentHtml: '',
     published: true,
   })
 
@@ -119,48 +132,33 @@ export default function AdminPostsPage() {
 
   const startEdit = (row: PostRow) => {
     setEditingSlug(row.slug)
-    setSlugManuallyEdited(true)
     setMode('edit')
     setForm({
-      slug: row.slug,
       title: row.title,
-      date: row.date,
-      author: row.author,
       category: row.category,
-      excerpt: row.excerpt,
-      contentText: row.content.join('\n\n'),
+      contentHtml: row.content.join('<br><br>'),
       published: row.published,
     })
   }
 
   const startNew = () => {
     setEditingSlug(null)
-    setSlugManuallyEdited(false)
     setMode('new')
     setForm({
-      slug: '',
       title: '',
-      date: formatPublishedDate(new Date()),
-      author: DEFAULT_AUTHOR,
       category: 'Club News',
-      excerpt: '',
-      contentText: '',
+      contentHtml: '',
       published: true,
     })
   }
 
   const backToList = () => {
     setEditingSlug(null)
-    setSlugManuallyEdited(false)
     setMode('list')
     setForm({
-      slug: '',
       title: '',
-      date: '',
-      author: DEFAULT_AUTHOR,
       category: 'Club News',
-      excerpt: '',
-      contentText: '',
+      contentHtml: '',
       published: true,
     })
   }
@@ -169,22 +167,32 @@ export default function AdminPostsPage() {
     setSaving(true)
     setError(null)
     try {
-      const content = form.contentText
-        .split(/\n\s*\n/g)
-        .map((p) => p.trim())
-        .filter(Boolean)
+      // Auto-generate slug from title
+      const slug = editingSlug || slugify(form.title)
+      
+      // Auto-generate excerpt from content
+      const excerpt = generateExcerpt(form.contentHtml)
+      
+      // Convert HTML to content array
+      const content = htmlToContentArray(form.contentHtml)
+      
+      // Get author from session or use default
+      const author = session.email || DEFAULT_AUTHOR
+      
+      // Get current date
+      const date = formatPublishedDate(new Date())
 
       const isEdit = mode === 'edit' && Boolean(editingSlug)
       const res = await fetch('/api/admin/posts', {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          slug: form.slug.trim(),
+          slug,
           title: form.title,
-          date: form.date.trim() ? form.date : formatPublishedDate(new Date()),
-          author: form.author.trim() ? form.author : DEFAULT_AUTHOR,
+          date,
+          author,
           category: form.category,
-          excerpt: form.excerpt,
+          excerpt,
           content,
           published: form.published,
         }),
@@ -290,17 +298,12 @@ export default function AdminPostsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Slug</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
                     <input
-                      value={form.slug}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        setSlugManuallyEdited(true)
-                        setForm((f) => ({ ...f, slug: value }))
-                      }}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                      placeholder="my-post-slug"
-                      disabled={Boolean(editingSlug)}
+                      value={form.category}
+                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
+                      placeholder="Club News"
                     />
                   </div>
                   <div className="flex items-end gap-2">
@@ -309,7 +312,7 @@ export default function AdminPostsPage() {
                         type="checkbox"
                         checked={form.published}
                         onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))}
-                        className="rounded"
+                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary"
                       />
                       Published
                     </label>
@@ -317,79 +320,65 @@ export default function AdminPostsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Title</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Title</label>
                   <input
                     value={form.title}
-                    onChange={(e) => {
-                      const title = e.target.value
-                      setForm((f) => {
-                        if (editingSlug) return { ...f, title }
-                        const nextAutoSlug = slugify(title)
-                        const shouldAutoUpdateSlug = !slugManuallyEdited || !f.slug.trim()
-                        return shouldAutoUpdateSlug ? { ...f, title, slug: nextAutoSlug } : { ...f, title }
-                      })
-                    }}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
+                    placeholder="Enter article title..."
                   />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Publish Date</label>
-                    <input
-                      value={form.date}
-                      onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                      placeholder={formatPublishedDate(new Date())}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                    <input
-                      value={form.category}
-                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Author</label>
-                    <input
-                      value={form.author}
-                      onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Excerpt</label>
-                    <input
-                      value={form.excerpt}
-                      onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content (paragraphs)</label>
-                  <textarea
-                    value={form.contentText}
-                    onChange={(e) => setForm((f) => ({ ...f, contentText: e.target.value }))}
-                    rows={10}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700"
-                    placeholder="Write paragraphs separated by a blank line"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Content
+                  </label>
+                  <div className="rounded-lg border border-slate-300 overflow-hidden dark:border-slate-700">
+                    <ReactQuill
+                      theme="snow"
+                      value={form.contentHtml}
+                      onChange={(value) => setForm((f) => ({ ...f, contentHtml: value }))}
+                      modules={{
+                        toolbar: [
+                          [{ header: [1, 2, 3, false] }],
+                          ['bold', 'italic', 'underline', 'strike'],
+                          [{ list: 'ordered' }, { list: 'bullet' }],
+                          ['blockquote', 'code-block'],
+                          ['link', 'image'],
+                          ['clean'],
+                        ],
+                      }}
+                      className="bg-white dark:bg-slate-800"
+                      style={{ height: '400px' }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Use the toolbar to format your text. Slug and excerpt will be auto-generated.
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-3 pt-4">
+                <div className="flex items-center gap-3 pt-16">
                   <button
                     onClick={save}
-                    disabled={saving || !form.title.trim() || (!editingSlug && !form.slug.trim())}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                    disabled={saving || !form.title.trim() || !form.contentHtml.trim()}
+                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {saving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Create Article'}
+                    {saving ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Saving...
+                      </>
+                    ) : mode === 'edit' ? (
+                      'Save Changes'
+                    ) : (
+                      'Create Article'
+                    )}
+                  </button>
+                  <button
+                    onClick={backToList}
+                    className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>
