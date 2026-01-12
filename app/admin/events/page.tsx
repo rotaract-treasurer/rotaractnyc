@@ -31,6 +31,7 @@ export default function AdminEventsPage() {
   const [error, setError] = useState<string | null>(null)
   const [events, setEvents] = useState<EventRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Omit<EventRow, 'id'>>({
     title: '',
     date: '',
@@ -154,6 +155,11 @@ export default function AdminEventsPage() {
 
   if (session.status !== 'authenticated') return null
 
+  const startNew = () => {
+    resetForm()
+    setShowForm(true)
+  }
+
   const startEdit = (row: EventRow) => {
     setEditingId(row.id)
     setForm({
@@ -169,10 +175,12 @@ export default function AdminEventsPage() {
       category: row.category,
       order: row.order,
     })
+    setShowForm(true)
   }
 
   const resetForm = () => {
     setEditingId(null)
+    setShowForm(false)
     setForm({
       title: '',
       date: '',
@@ -292,25 +300,42 @@ export default function AdminEventsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <div className="md:w-1/2">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="text-xl font-bold text-rotaract-darkpink">
-                  {editingId ? 'Edit Event' : 'Add Event'}
-                </h2>
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl font-bold text-rotaract-darkpink">Events Management</h2>
+            <div className="flex items-center gap-3">
+              {!showForm && (
                 <button
-                  onClick={seed}
-                  className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                  onClick={startNew}
+                  className="px-4 py-2 bg-rotaract-pink text-white rounded-lg hover:bg-rotaract-darkpink transition-colors"
                 >
-                  Seed Defaults
+                  New Event
                 </button>
+              )}
+              <button
+                onClick={seed}
+                className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+              >
+                Seed Defaults
+              </button>
+            </div>
+          </div>
+
+          {error ? (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          ) : null}
+
+          {showForm && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <h3 className="text-lg font-semibold text-rotaract-darkpink">
+                  {editingId ? 'Edit Event' : 'Add Event'}
+                </h3>
               </div>
 
-              {error ? (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              ) : null}
+              <div className="flex flex-col md:flex-row md:items-start gap-6">
+                <div className="md:w-1/2">
 
               <div className="space-y-4">
                 <div>
@@ -460,59 +485,60 @@ export default function AdminEventsPage() {
                   >
                     {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Event'}
                   </button>
-                  {editingId ? (
-                    <button
-                      onClick={resetForm}
-                      className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
+                  <button
+                    onClick={resetForm}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="md:w-1/2">
-              <h2 className="text-xl font-bold text-rotaract-darkpink mb-4">All Events</h2>
+          <div>
+            <h3 className="text-xl font-bold text-rotaract-darkpink mb-4">All Events</h3>
 
-              {loadingData ? (
-                <div className="text-gray-600">Loading…</div>
-              ) : sorted.length === 0 ? (
-                <div className="text-gray-600">No events yet.</div>
-              ) : (
-                <div className="space-y-3">
-                  {sorted.map((e) => (
-                    <div
-                      key={e.id}
-                      className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">{e.category} · order {e.order}</div>
-                          <div className="text-lg font-semibold text-rotaract-darkpink">{e.title}</div>
-                          <div className="text-sm text-gray-600">{e.date}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => startEdit(e)}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => remove(e.id)}
-                            className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
+            <div>
+            <h3 className="text-xl font-bold text-rotaract-darkpink mb-4">All Events</h3>
+
+            {loadingData ? (
+              <div className="text-gray-600">Loading…</div>
+            ) : sorted.length === 0 ? (
+              <div className="text-gray-600">No events yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {sorted.map((e) => (
+                  <div
+                    key={e.id}
+                    className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-sm text-gray-500">{e.category} · order {e.order}</div>
+                        <div className="text-lg font-semibold text-rotaract-darkpink">{e.title}</div>
+                        <div className="text-sm text-gray-600">{e.date}</div>
                       </div>
-                      <p className="mt-2 text-gray-700 text-sm">{e.description}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => startEdit(e)}
+                          className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => remove(e.id)}
+                          className="px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <p className="mt-2 text-gray-700 text-sm">{e.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
