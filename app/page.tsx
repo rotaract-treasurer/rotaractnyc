@@ -32,8 +32,8 @@ export default function Home() {
             <span className="text-accent text-xs font-bold uppercase tracking-widest">Est. New York City</span>
           </div>
           
-          <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.1] drop-shadow-sm">
-            Service <br />
+          <h1 className="text-white text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] drop-shadow-sm">
+            Service{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">
               Above Self
             </span>
