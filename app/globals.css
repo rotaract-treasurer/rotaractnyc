@@ -9,6 +9,9 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 255, 255, 255;
   --background-end-rgb: 255, 255, 255;
+
+  /* Used to offset fixed navbar so content isn't hidden behind it */
+  --nav-height: 64px;
 }
 
 body {
@@ -26,6 +29,7 @@ body {
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: var(--nav-height);
 }
 
 /* Premium animations */

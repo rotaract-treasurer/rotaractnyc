@@ -33,7 +33,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Navbar />
-        <main className="min-h-screen">{children}</main>
+        <main className="min-h-screen pt-[var(--nav-height)]">{children}</main>
         <Footer />
         <Analytics />
       </body>

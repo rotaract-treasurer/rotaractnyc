@@ -49,17 +49,18 @@ const Navbar = () => {
   ]
 
   return (
-    <nav className="fixed w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+    <nav className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center py-4">
+        <div className="flex justify-between items-center h-[var(--nav-height)]">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
               src="/Rotaract%20Logo%20(1).png"
               alt="Rotaract Logo"
-              width={300}
-              height={300}
-              className=""
+              width={180}
+              height={48}
+              className="h-10 w-auto"
+              priority
             />
           </Link>
 
