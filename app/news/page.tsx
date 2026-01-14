@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { FaCalendar, FaUser, FaClock, FaArrowRight, FaSearch, FaTimes } from 'react-icons/fa'
+import { FaUser, FaClock, FaArrowRight, FaSearch, FaTimes } from 'react-icons/fa'
 import { RCUN_NEWS } from '@/lib/rcunNews'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'

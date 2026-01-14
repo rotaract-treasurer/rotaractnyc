@@ -6,6 +6,8 @@ export type RcunNewsArticle = {
   category: string
   excerpt: string
   content: string[]
+  imageUrl?: string
+  readTime?: string
 }
 
 export const RCUN_NEWS: RcunNewsArticle[] = [
