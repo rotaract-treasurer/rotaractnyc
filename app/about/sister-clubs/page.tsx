@@ -100,11 +100,6 @@ export default function SisterClubsPage() {
 
   return (
     <main className="flex-grow">
-      <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet"
-      />
-      
       {/* Hero Section */}
       <div className="relative bg-background-light dark:bg-background-dark pb-12 pt-12 md:pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
