@@ -1,498 +1,241 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { FaCheckCircle } from 'react-icons/fa'
-import { useEffect, useState } from 'react'
-import { DEFAULT_PAGES, type EmphasisText, type MembershipData } from '@/lib/content/pages'
-
-function coerceMembershipData(input: unknown, fallback: MembershipData): MembershipData {
-  const obj = typeof input === 'object' && input ? (input as Record<string, unknown>) : {}
-
-  const benefitsRaw = obj.benefits
-  const benefits = Array.isArray(benefitsRaw)
-    ? benefitsRaw.map((b) => String(b ?? '')).filter(Boolean)
-    : fallback.benefits
-
-  const membershipFormUrl = String(obj.membershipFormUrl ?? fallback.membershipFormUrl)
-
-  const eligibilityIntro = String(obj.eligibilityIntro ?? fallback.eligibilityIntro)
-
-  const reqsRaw = obj.eligibilityRequirements
-  const eligibilityRequirements: EmphasisText[] = Array.isArray(reqsRaw)
-    ? reqsRaw
-        .map((r) => {
-          const rr = typeof r === 'object' && r ? (r as Record<string, unknown>) : {}
-          return {
-            prefix: String(rr.prefix ?? ''),
-            strong: String(rr.strong ?? ''),
-            suffix: rr.suffix === undefined ? undefined : String(rr.suffix ?? ''),
-          }
-        })
-        .filter((r) => r.strong)
-    : fallback.eligibilityRequirements
-
-  const duesIntro = String(obj.duesIntro ?? fallback.duesIntro)
-
-  const typesRaw = obj.membershipTypes
-  const membershipTypes = Array.isArray(typesRaw)
-    ? typesRaw.map((t) => String(t ?? '')).filter(Boolean)
-    : fallback.membershipTypes
-
-  const duesOutro = String(obj.duesOutro ?? fallback.duesOutro)
-  const treasurerEmail = String(obj.treasurerEmail ?? fallback.treasurerEmail)
-
-  const pm = typeof obj.paymentMethods === 'object' && obj.paymentMethods ? (obj.paymentMethods as Record<string, unknown>) : {}
-  const paymentMethods = {
-    venmoLabel: String(pm.venmoLabel ?? fallback.paymentMethods.venmoLabel),
-    venmoHandle: String(pm.venmoHandle ?? fallback.paymentMethods.venmoHandle),
-  }
-
-  return {
-    benefits,
-    membershipFormUrl,
-    eligibilityIntro,
-    eligibilityRequirements,
-    duesIntro,
-    membershipTypes,
-    duesOutro,
-    treasurerEmail,
-    paymentMethods,
-  }
-}
+import { useState } from 'react'
 
 export default function MembershipPage() {
-  const defaults = DEFAULT_PAGES.membership
-  const fallbackData = defaults.data as MembershipData
-  const [heroTitle, setHeroTitle] = useState(defaults.heroTitle)
-  const [heroSubtitle, setHeroSubtitle] = useState(defaults.heroSubtitle)
-  const [data, setData] = useState<MembershipData>(fallbackData)
+  const [openAccordion, setOpenAccordion] = useState<number | null>(null)
 
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [membershipType, setMembershipType] = useState('')
-  const [location, setLocation] = useState('')
-  const [occupationOrSchool, setOccupationOrSchool] = useState('')
-  const [interests, setInterests] = useState('')
-  const [whyJoin, setWhyJoin] = useState('')
-  const [hearAboutUs, setHearAboutUs] = useState('')
-  const [company, setCompany] = useState('')
-
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [submitSuccessId, setSubmitSuccessId] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function run() {
-      try {
-        const res = await fetch('/api/public/pages/membership')
-        if (!res.ok) return
-
-        const json: unknown = await res.json()
-        const page =
-          typeof json === 'object' &&
-          json &&
-          typeof (json as { page?: unknown }).page === 'object' &&
-          (json as { page?: unknown }).page
-            ? ((json as { page: unknown }).page as Record<string, unknown>)
-            : null
-
-        if (!page || cancelled) return
-
-        setHeroTitle(String(page.heroTitle ?? defaults.heroTitle))
-        setHeroSubtitle(String(page.heroSubtitle ?? defaults.heroSubtitle))
-
-        const nextData = coerceMembershipData(page.data, fallbackData)
-        setData(nextData)
-      } catch {
-        // keep defaults
-      }
-    }
-
-    run()
-    return () => {
-      cancelled = true
-    }
-  }, [defaults.heroSubtitle, defaults.heroTitle, fallbackData])
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSubmitError(null)
-    setSubmitSuccessId(null)
-
-    const safeName = fullName.trim()
-    const safeEmail = email.trim()
-
-    if (!safeName || !safeEmail) {
-      setSubmitError('Please provide your name and email.')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/public/membership', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName: safeName,
-          email: safeEmail,
-          phone,
-          membershipType,
-          location,
-          occupationOrSchool,
-          interests,
-          whyJoin,
-          hearAboutUs,
-          company,
-        }),
-      })
-
-      const json: unknown = await res.json().catch(() => null)
-      const error =
-        typeof json === 'object' &&
-        json &&
-        'error' in json &&
-        typeof (json as { error?: unknown }).error === 'string'
-          ? (json as { error: string }).error
-          : null
-
-      if (!res.ok) {
-        setSubmitError(error || 'Something went wrong. Please try again.')
-        return
-      }
-
-      const id =
-        typeof json === 'object' &&
-        json &&
-        'id' in json &&
-        typeof (json as { id?: unknown }).id === 'string'
-          ? (json as { id: string }).id
-          : null
-
-      setSubmitSuccessId(id || 'ok')
-      setFullName('')
-      setEmail('')
-      setPhone('')
-      setMembershipType('')
-      setLocation('')
-      setOccupationOrSchool('')
-      setInterests('')
-      setWhyJoin('')
-      setHearAboutUs('')
-      setCompany('')
-    } catch {
-      setSubmitError('Something went wrong. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
+  const toggleAccordion = (index: number) => {
+    setOpenAccordion(openAccordion === index ? null : index)
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="bg-background-light dark:bg-background-dark text-text-main dark:text-stone-200 font-display transition-colors duration-300 antialiased pb-24">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-14 overflow-hidden bg-white">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-pink/10 blur-3xl" />
-        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-darkpink/10 blur-3xl" />
-        <div className="container mx-auto px-4 relative">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-rotaract-darkpink tracking-tight">{heroTitle}</h1>
-            <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-700">{heroSubtitle}</p>
-          </motion.div>
+      <div className="relative w-full overflow-hidden bg-surface-dark group">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 to-background-dark/40 z-10"></div>
+          <img
+            alt="Community members gathering"
+            className="w-full h-full object-cover opacity-60 mix-blend-overlay"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhQiqUs_yxik4j_Lv7uQr5_U8pRTRGtBksUKIkC-5TAN_IEbvwGkW-fpKhutRRhUn0DnI-nDbNsHWYD3Zra4nJdDEtXgYQ3LgHWh1gLLjErjldmafUdCBB4BceZxr0DoyR6-9cAhEW8W5V-_rdbfB2qdGvD2dR7QbuFd6qcjbYd6WZKTATtUQyEO8DaeA-no851yaMNJIra7W4IGas-q2wu0keM13qHxw7ta2ZX9LcudQlrurzv5wXLGu1B4E9a8eRSwyuOrNu8gU"
+          />
         </div>
-      </section>
+        <div className="relative z-20 max-w-4xl mx-auto px-6 py-24 sm:py-32 text-center sm:text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary-light border border-primary/30 text-xs font-bold uppercase tracking-wider mb-6 text-white backdrop-blur-sm">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            Membership Guide
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-[1.1] mb-6 tracking-tight">
+            Your Roadmap to <br />
+            <span className="text-primary">Impact &amp; Community</span>
+          </h1>
+          <p className="text-lg sm:text-xl text-stone-300 max-w-2xl font-light leading-relaxed">
+            From guest to official member. A clear, step-by-step path to joining New York City&apos;s most vibrant
+            young professional service club.
+          </p>
+        </div>
+      </div>
 
-      {/* Benefits */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-12 text-rotaract-darkpink text-center">Membership Benefits</h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {data.benefits.map((benefit, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-start space-x-4"
+      {/* Main Content Container */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+        {/* Introduction Header */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-text-main dark:text-white mb-2">The Journey</h2>
+          <p className="text-text-muted dark:text-stone-400">
+            Complete these four milestones to become an inducted member.
+          </p>
+        </div>
+
+        {/* Vertical Timeline */}
+        <div className="relative flex flex-col gap-0 ml-4 sm:ml-0">
+          {/* Step 1 */}
+          <div className="relative pl-12 pb-12 group">
+            {/* Vertical Spine */}
+            <div className="absolute left-[11px] top-10 h-full w-[2px] bg-stone-200 dark:bg-stone-700"></div>
+            {/* Icon Indicator */}
+            <div className="absolute left-0 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary ring-4 ring-background-light dark:ring-background-dark z-10">
+              <span className="text-white text-[10px] font-bold">1</span>
+            </div>
+            {/* Card */}
+            <div className="relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl p-6 sm:p-8 shadow-soft border border-stone-100 dark:border-stone-800 transition-all hover:shadow-soft-hover">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 mb-2">
+                    Prerequisite
+                  </span>
+                  <h3 className="text-xl font-bold text-text-main dark:text-white flex items-center gap-2">
+                    Eligibility Check
+                  </h3>
+                </div>
+                <span className="material-symbols-outlined text-primary text-3xl opacity-20">verified_user</span>
+              </div>
+              <p className="text-text-muted dark:text-stone-400 text-sm leading-relaxed mb-6">
+                Before diving in, let&apos;s make sure you meet the basic criteria set by Rotary International for
+                Rotaract membership.
+              </p>
+              {/* Accordion for Details */}
+              <details
+                className="group/accordion border-t border-stone-100 dark:border-stone-700 pt-4"
+                open={openAccordion === 1}
+                onToggle={() => toggleAccordion(1)}
               >
-                <FaCheckCircle className="text-rotaract-pink text-2xl flex-shrink-0 mt-1" />
-                <p className="text-lg text-gray-700">{benefit}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Joining Our Club */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-rotaract-darkpink text-center">Joining Our Club</h2>
-            <div className="bg-white p-8 rounded-lg shadow-md mb-8">
-              <p className="text-lg text-gray-700 mb-6">
-                Interested in joining? Fill out the form below and we’ll follow up with next steps.
-              </p>
-
-              {submitError ? (
-                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-                  {submitError}
+                <summary className="flex cursor-pointer items-center gap-2 text-sm font-bold text-primary hover:text-primary-dark transition-colors select-none">
+                  <span className="material-symbols-outlined text-lg transition-transform duration-300 group-open/accordion:rotate-90">
+                    arrow_right
+                  </span>
+                  View Detailed Criteria
+                </summary>
+                <div className="mt-3 pl-7 text-sm text-text-muted dark:text-stone-400 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Must be between the ages of 18 and 30.</li>
+                    <li>Living, working, or studying in the NYC metropolitan area.</li>
+                    <li>Commitment to attend at least 50% of meetings annually.</li>
+                    <li>Passion for community service and professional development.</li>
+                  </ul>
                 </div>
-              ) : null}
-
-              {submitSuccessId ? (
-                <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-                  Thanks — your application has been received.
-                </div>
-              ) : null}
-
-              <form onSubmit={onSubmit} className="space-y-5">
-                {/* Honeypot */}
-                <div className="hidden">
-                  <label className="block text-sm font-medium text-gray-700" htmlFor="company">
-                    Company
-                  </label>
-                  <input
-                    id="company"
-                    name="company"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="fullName">
-                      Full name <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      id="fullName"
-                      name="fullName"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="email">
-                      Email <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="phone">
-                      Phone (optional)
-                    </label>
-                    <input
-                      id="phone"
-                      name="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="membershipType">
-                      Membership type (optional)
-                    </label>
-                    <select
-                      id="membershipType"
-                      name="membershipType"
-                      value={membershipType}
-                      onChange={(e) => setMembershipType(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    >
-                      <option value="">Select…</option>
-                      {data.membershipTypes.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="location">
-                      Location (optional)
-                    </label>
-                    <input
-                      id="location"
-                      name="location"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                      placeholder="e.g., Manhattan, Brooklyn, Queens"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700" htmlFor="occupationOrSchool">
-                      Occupation / School (optional)
-                    </label>
-                    <input
-                      id="occupationOrSchool"
-                      name="occupationOrSchool"
-                      value={occupationOrSchool}
-                      onChange={(e) => setOccupationOrSchool(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700" htmlFor="interests">
-                    Interests (optional)
-                  </label>
-                  <textarea
-                    id="interests"
-                    name="interests"
-                    rows={3}
-                    value={interests}
-                    onChange={(e) => setInterests(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                    placeholder="Service areas, causes you care about, professional interests…"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700" htmlFor="whyJoin">
-                    Why do you want to join? (optional)
-                  </label>
-                  <textarea
-                    id="whyJoin"
-                    name="whyJoin"
-                    rows={3}
-                    value={whyJoin}
-                    onChange={(e) => setWhyJoin(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700" htmlFor="hearAboutUs">
-                    How did you hear about us? (optional)
-                  </label>
-                  <input
-                    id="hearAboutUs"
-                    name="hearAboutUs"
-                    value={hearAboutUs}
-                    onChange={(e) => setHearAboutUs(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rotaract-pink"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-block bg-rotaract-pink text-white font-semibold px-8 py-3 rounded-full hover:bg-rotaract-darkpink transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? 'Submitting…' : 'Submit Application'}
-                  </button>
-                </div>
-              </form>
+              </details>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Requirements for Membership Eligibility */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-rotaract-darkpink text-center">Requirements for Membership Eligibility</h2>
-            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
-              <p className="text-lg text-gray-700 mb-6">
-                {data.eligibilityIntro}
+          {/* Step 2 */}
+          <div className="relative pl-12 pb-12 group">
+            <div className="absolute left-[11px] top-10 h-full w-[2px] bg-stone-200 dark:bg-stone-700"></div>
+            <div className="absolute left-0 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-stone-800 border-2 border-primary ring-4 ring-background-light dark:ring-background-dark z-10">
+              <span className="text-primary text-[10px] font-bold">2</span>
+            </div>
+            <div className="relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl p-6 sm:p-8 shadow-soft border border-stone-100 dark:border-stone-800 transition-all hover:shadow-soft-hover">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300 mb-2">
+                    Action Required
+                  </span>
+                  <h3 className="text-xl font-bold text-text-main dark:text-white">Experience the Club</h3>
+                </div>
+                <span className="material-symbols-outlined text-primary text-3xl opacity-20">groups</span>
+              </div>
+              <p className="text-text-muted dark:text-stone-400 text-sm leading-relaxed mb-4">
+                We want you to feel at home before you commit. Join us for our regular programming to meet the members
+                and see what we do.
               </p>
-              <ul className="space-y-4 text-lg text-gray-700">
-                {data.eligibilityRequirements.map((req, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <FaCheckCircle className="text-rotaract-pink text-xl mr-3 mt-1 flex-shrink-0" />
-                    <span>
-                      {req.prefix}
-                      <strong>{req.strong}</strong>
-                      {req.suffix || ''}
+              <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-black/20 rounded-lg border border-stone-100 dark:border-stone-700 flex-1">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary">
+                    <span className="material-symbols-outlined text-lg">event</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-text-muted">Requirement</p>
+                    <p className="text-sm font-semibold">Attend 3 Meetings</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-black/20 rounded-lg border border-stone-100 dark:border-stone-700 flex-1">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary">
+                    <span className="material-symbols-outlined text-lg">handshake</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-text-muted">Requirement</p>
+                    <p className="text-sm font-semibold">Meet the Board</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="relative pl-12 pb-12 group">
+            <div className="absolute left-[11px] top-10 h-full w-[2px] bg-stone-200 dark:bg-stone-700"></div>
+            <div className="absolute left-0 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-stone-800 border-2 border-primary ring-4 ring-background-light dark:ring-background-dark z-10">
+              <span className="text-primary text-[10px] font-bold">3</span>
+            </div>
+            <div className="relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl p-6 sm:p-8 shadow-soft border border-stone-100 dark:border-stone-800 transition-all hover:shadow-soft-hover">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300 mb-2">
+                    Investment
+                  </span>
+                  <h3 className="text-xl font-bold text-text-main dark:text-white">Financial Commitment</h3>
+                </div>
+                <span className="material-symbols-outlined text-primary text-3xl opacity-20">payments</span>
+              </div>
+              <p className="text-text-muted dark:text-stone-400 text-sm leading-relaxed mb-6">
+                Membership dues support our service projects, club operations, and your membership in the international
+                Rotary network.
+              </p>
+              {/* Accordion for Dues */}
+              <details
+                className="group/accordion border-t border-stone-100 dark:border-stone-700 pt-4"
+                open={openAccordion === 3}
+                onToggle={() => toggleAccordion(3)}
+              >
+                <summary className="flex cursor-pointer items-center justify-between text-sm font-bold text-text-main dark:text-white hover:text-primary transition-colors select-none p-2 rounded hover:bg-stone-50 dark:hover:bg-stone-800">
+                  <span>Annual Dues Breakdown</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary font-bold">$120/year</span>
+                    <span className="material-symbols-outlined text-lg transition-transform duration-300 group-open/accordion:rotate-180">
+                      expand_more
                     </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Membership Dues */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-rotaract-darkpink text-center">Membership Dues</h2>
-            <div className="bg-white p-8 rounded-lg shadow-md">
-              <p className="text-lg text-gray-700 mb-6">
-                {data.duesIntro}
-              </p>
-              
-              <div className="mb-8">
-                <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">We have different types of membership:</h3>
-                <ul className="space-y-3 text-lg text-gray-700 ml-6">
-                  {data.membershipTypes.map((t, idx) => (
-                    <li key={idx} className="list-disc">
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <p className="text-gray-700 mb-8">
-                {data.duesOutro}
-              </p>
-
-              <div className="border-t pt-6">
-                <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">Looking to pay your dues?</h3>
-                <p className="text-gray-700 mb-4">Our preferred methods of payments are listed below:</p>
-                
-                <div className="bg-gray-50 p-6 rounded-lg mb-4">
-                  <p className="text-lg font-semibold text-rotaract-darkpink mb-2">{data.paymentMethods.venmoLabel}</p>
-                  <p className="text-gray-700">{data.paymentMethods.venmoHandle}</p>
+                  </div>
+                </summary>
+                <div className="mt-2 p-4 bg-background-light dark:bg-black/20 rounded-lg text-sm space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex justify-between border-b border-stone-200 dark:border-stone-700 pb-2">
+                    <span className="text-text-muted dark:text-stone-400">Rotary International Fees</span>
+                    <span className="font-medium">$40.00</span>
+                  </div>
+                  <div className="flex justify-between border-b border-stone-200 dark:border-stone-700 pb-2">
+                    <span className="text-text-muted dark:text-stone-400">District 7230 Dues</span>
+                    <span className="font-medium">$20.00</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-text-muted dark:text-stone-400">Club Operations &amp; Events</span>
+                    <span className="font-medium">$60.00</span>
+                  </div>
+                  <p className="text-xs text-text-muted dark:text-stone-500 italic mt-2">
+                    * Payment plans available for students.
+                  </p>
                 </div>
+              </details>
+            </div>
+          </div>
 
-                <p className="text-gray-600 text-sm">
-                  If you have any questions about paying dues please email{' '}
-                  <a 
-                    href={`mailto:${data.treasurerEmail}`}
-                    className="text-rotaract-pink hover:text-rotaract-darkpink font-semibold"
-                  >
-                    {data.treasurerEmail}
-                  </a>
-                </p>
+          {/* Step 4 */}
+          <div className="relative pl-12 group">
+            {/* No connector line for last item */}
+            <div className="absolute left-0 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-stone-800 border-2 border-stone-300 dark:border-stone-600 ring-4 ring-background-light dark:ring-background-dark z-10">
+              <span className="text-stone-400 text-[10px] font-bold">4</span>
+            </div>
+            <div className="relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl p-6 sm:p-8 shadow-soft border border-stone-100 dark:border-stone-800 transition-all hover:shadow-soft-hover opacity-90">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-stone-100 text-stone-600 dark:bg-stone-700 dark:text-stone-300 mb-2">
+                    Final Step
+                  </span>
+                  <h3 className="text-xl font-bold text-text-main dark:text-white">Formal Application</h3>
+                </div>
+                <span className="material-symbols-outlined text-primary text-3xl opacity-20">assignment_add</span>
               </div>
+              <p className="text-text-muted dark:text-stone-400 text-sm leading-relaxed">
+                Once you&apos;ve completed the steps above, submit your official application. The board reviews
+                applications monthly. Upon acceptance, you&apos;ll be invited to an induction ceremony!
+              </p>
             </div>
           </div>
         </div>
-      </section>
+      </main>
+
+      {/* Sticky CTA Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-lg border-t border-stone-200 dark:border-stone-800 p-4 sm:px-8 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="hidden sm:block">
+            <p className="text-sm font-bold text-text-main dark:text-white">Ready to make an impact?</p>
+            <p className="text-xs text-text-muted dark:text-stone-400">Join a network of 200+ young leaders.</p>
+          </div>
+          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-lg transition-all transform active:scale-95 shadow-lg shadow-primary/20">
+            <span>Start Application</span>
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

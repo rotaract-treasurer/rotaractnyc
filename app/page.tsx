@@ -3,267 +3,276 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { FaHandshake, FaUsers, FaLightbulb, FaArrowRight, FaCalendar, FaMapMarkerAlt } from 'react-icons/fa'
-
-import { HeroCarousel } from '@/components/HeroCarousel'
 
 export default function Home() {
-  const activityImages = [
-    { src: '/53cde13b1a312d32c08a429715695a65.jpg', alt: 'Activity 1' },
-    { src: '/b220fe440206d474a74b2a2467d410ac.jpg', alt: 'Activity 2' },
-    { src: '/ce9ea973f79cb6988ad3e2945e3a87ae.jpg', alt: 'Activity 3' },
-    { src: '/f16b74a04b626f30222c37c4d15d7c80.jpg', alt: 'Activity 4' },
-  ]
-
-  const stats = [
-    { label: 'Active Members', value: '50+' },
-    { label: 'Service Projects', value: '25+' },
-    { label: 'Community Impact', value: '1000+' },
-  ]
-
-  const pillars = [
-    {
-      icon: <FaHandshake className="text-5xl" />,
-      title: 'Service',
-      description:
-        'Making a meaningful difference in our communities through impactful service projects that address real-world challenges and create lasting positive change.',
-    },
-    {
-      icon: <FaLightbulb className="text-5xl" />,
-      title: 'Professional Development',
-      description:
-        'Expanding your skills and network through leadership opportunities, workshops, and mentorship designed to accelerate your professional growth.',
-    },
-    {
-      icon: <FaUsers className="text-5xl" />,
-      title: 'Fellowship',
-      description:
-        'Building lasting connections with like-minded young professionals and becoming part of a global network committed to positive impact.',
-    },
-  ]
-
   return (
-    <div className="bg-white">
+    <div className="bg-background-light dark:bg-background-dark">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image Carousel */}
+      <header className="relative w-full h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+        {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
-          <HeroCarousel images={activityImages} variant="background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 z-10"></div>
+          <Image
+            src="/53cde13b1a312d32c08a429715695a65.jpg"
+            alt="Diverse group of young professionals collaborating"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 z-10" />
-
-        {/* Content */}
-        <motion.div
+        
+        <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
-          className="relative z-20 container mx-auto px-4 text-center text-white py-32"
+          className="relative z-20 max-w-[1280px] px-6 text-center flex flex-col items-center gap-6"
         >
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            the Rotaract Club of
-            <br />
-            <span className="bg-gradient-to-r from-rotaract-pink to-pink-400 bg-clip-text text-transparent">
-              New York at the United Nations
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 border border-accent/40 backdrop-blur-sm mb-4">
+            <span className="material-symbols-outlined text-accent text-sm">star</span>
+            <span className="text-accent text-xs font-bold uppercase tracking-widest">Est. New York City</span>
+          </div>
+          
+          <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.1] drop-shadow-sm">
+            Service <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">
+              Above Self
             </span>
           </h1>
-          <p className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed text-gray-200">
-            Empowering young professionals to create positive change through service, professional
-            development, and global fellowship in the heart of New York City.
+          
+          <p className="text-gray-100 text-lg md:text-xl font-medium max-w-2xl leading-relaxed opacity-90">
+            The Rotaract Club of NYC brings together people ages 18-30 to exchange ideas with leaders in the community, develop leadership skills, and have fun through service.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+          
+          <div className="flex flex-col sm:flex-row gap-4 mt-8">
             <Link
               href="/membership-requirements"
-              className="px-10 py-5 bg-rotaract-pink text-white font-bold text-lg rounded-full hover:bg-rotaract-darkpink transition-all shadow-lg hover:shadow-2xl transform hover:scale-105"
+              className="h-12 px-8 bg-accent hover:bg-[#c59d52] text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2"
             >
-              Join Our Community
+              Become a Member
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </Link>
             <Link
-              href="/events"
-              className="px-10 py-5 bg-white/10 backdrop-blur-sm text-white font-bold text-lg rounded-full border-2 border-white/50 hover:bg-white hover:text-rotaract-pink transition-all"
+              href="/about"
+              className="h-12 px-8 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
             >
-              Explore Events
+              <span className="material-symbols-outlined text-lg">play_circle</span>
+              Learn Our Story
             </Link>
           </div>
+        </motion.div>
+      </header>
+
+      {/* Mission Statement Block */}
+      <section className="py-20 px-6 bg-slate-50 dark:bg-[#1a2026]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto text-center flex flex-col gap-6"
+        >
+          <span className="material-symbols-outlined text-accent text-4xl">format_quote</span>
+          <h2 className="text-2xl md:text-3xl font-medium leading-relaxed text-text-main dark:text-gray-100 italic font-display">
+            &ldquo;Our mission is to provide an opportunity for young men and women to enhance the knowledge and skills that will assist them in personal development, to address the physical and social needs of their communities, and to promote better relations between all people worldwide through a framework of friendship and service.&rdquo;
+          </h2>
+          <div className="w-24 h-1 bg-primary mx-auto rounded-full mt-4"></div>
         </motion.div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white border-b">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2, duration: 0.5 }}
-                className="text-center"
-              >
-                <div className="text-5xl md:text-6xl font-bold text-rotaract-pink mb-3">
-                  {stat.value}
-                </div>
-                <div className="text-lg text-gray-600 font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pillars Section */}
-      <section className="py-24 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Our Three Pillars</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Built on three core values that guide everything we do
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pillars.map((pillar, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2, duration: 0.6 }}
-                className="bg-white p-10 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2"
-              >
-                <div className="text-rotaract-pink mb-6">{pillar.icon}</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{pillar.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{pillar.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Activities Gallery Section */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Recent Activities</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              See what we&apos;ve been up to in our community
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            {activityImages.map((img, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="relative group overflow-hidden rounded-2xl shadow-lg aspect-square"
-              >
-                <Image
-                  src={img.src}
-                  alt={img.alt}
-                  fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-rotaract-pink/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                  <p className="text-white font-semibold text-lg">View Gallery</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Link
-              href="/gallery"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-rotaract-pink text-white font-bold text-lg rounded-full hover:bg-rotaract-darkpink transition-all shadow-lg hover:shadow-xl"
+      <section className="py-12 border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {[
+            { value: '5k+', label: 'Service Hours' },
+            { value: '120', label: 'Active Members' },
+            { value: '$50k', label: 'Funds Raised' },
+            { value: '15', label: 'Global Partners' },
+          ].map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+              className="text-center"
             >
-              View Full Gallery
-              <FaArrowRight />
-            </Link>
-          </div>
+              <div className="text-4xl md:text-5xl font-black text-accent mb-2">{stat.value}</div>
+              <div className="text-sm font-bold uppercase tracking-wider text-text-muted dark:text-gray-400">
+                {stat.label}
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-rotaract-pink to-rotaract-darkpink">
-        <div className="container mx-auto px-4 text-center">
+      {/* The 3 Pillars (Alternating Layout) */}
+      <div className="flex flex-col">
+        {/* Pillar 1: Community Service */}
+        <section className="py-24 px-6 md:px-12 max-w-[1280px] mx-auto w-full">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="max-w-4xl mx-auto"
+            className="grid md:grid-cols-2 gap-12 items-center"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-              Ready to Make a Difference?
-            </h2>
-            <p className="text-xl md:text-2xl mb-10 text-white/90 leading-relaxed">
-              Join us for our general meetings every 2nd and 4th Thursday and become part of a community 
-              dedicated to creating positive change.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Link
-                href="/membership-requirements"
-                className="inline-flex items-center gap-3 px-10 py-5 bg-white text-rotaract-pink font-bold text-lg rounded-full hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105"
-              >
-                Become a Member
-                <FaArrowRight />
-              </Link>
-              <Link
-                href="/meetings"
-                className="px-10 py-5 bg-white/10 backdrop-blur-sm text-white font-bold text-lg rounded-full border-2 border-white/50 hover:bg-white hover:text-rotaract-pink transition-all"
-              >
-                <FaCalendar className="inline mr-2" />
-                View Meeting Details
-              </Link>
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-accent/10 rounded-2xl transform -rotate-2 transition-transform group-hover:rotate-0"></div>
+              <Image
+                src="/ce9ea973f79cb6988ad3e2945e3a87ae.jpg"
+                alt="Volunteers engaging in community service"
+                width={600}
+                height={450}
+                className="relative w-full aspect-[4/3] object-cover rounded-xl shadow-2xl dark:opacity-90"
+              />
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Location Section */}
-      <section className="py-24 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-12"
-          >
-            <div className="flex items-center justify-center mb-8">
-              <FaMapMarkerAlt className="text-5xl text-rotaract-pink" />
-            </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center">Visit Us</h2>
-            <div className="text-center text-lg text-gray-700 space-y-3">
-              <p className="font-bold text-2xl text-rotaract-pink">216 East 45th Street</p>
-              <p className="text-xl font-medium">New York, NY 10017</p>
-              <p className="text-xl font-medium">United States</p>
-              <div className="pt-6 mt-6 border-t border-gray-200">
-                <p className="text-gray-600">
-                  Email:{' '}
-                  <a
-                    href="mailto:rotaractnewyorkcity@gmail.com"
-                    className="text-rotaract-pink hover:text-rotaract-darkpink font-semibold hover:underline transition-colors"
-                  >
-                    rotaractnewyorkcity@gmail.com
-                  </a>
-                </p>
+            <div className="flex flex-col gap-6 md:pl-10">
+              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary dark:text-blue-400">
+                <span className="material-symbols-outlined">volunteer_activism</span>
               </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-text-main dark:text-white">
+                Community Service
+              </h2>
+              <p className="text-lg text-text-muted dark:text-gray-300 leading-relaxed">
+                We are dedicated to making a tangible impact in New York City. Through hands-on service projects like park cleanups, food drives, and partnerships with local non-profits, we work to improve the lives of our neighbors and strengthen our community bond.
+              </p>
+              <ul className="flex flex-col gap-3 mt-2">
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-accent">check_circle</span>
+                  <span>Monthly hands-on volunteer events</span>
+                </li>
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-accent">check_circle</span>
+                  <span>Fundraising for local shelters</span>
+                </li>
+              </ul>
             </div>
           </motion.div>
-        </div>
+        </section>
+
+        {/* Pillar 2: Professional Development */}
+        <section className="py-24 px-6 md:px-12 max-w-[1280px] mx-auto w-full bg-white dark:bg-background-dark">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="grid md:grid-cols-2 gap-12 items-center"
+          >
+            {/* Text First on Desktop */}
+            <div className="flex flex-col gap-6 md:pr-10 order-2 md:order-1">
+              <div className="size-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                <span className="material-symbols-outlined">school</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-text-main dark:text-white">
+                Professional Development
+              </h2>
+              <p className="text-lg text-text-muted dark:text-gray-300 leading-relaxed">
+                Rotaract isn&apos;t just about giving back; it&apos;s about growing forward. We provide a platform for members to develop essential leadership skills, network with established industry professionals, and gain mentorship from Rotary members.
+              </p>
+              <ul className="flex flex-col gap-3 mt-2">
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-primary dark:text-blue-400">check_circle</span>
+                  <span>Exclusive guest speaker series</span>
+                </li>
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-primary dark:text-blue-400">check_circle</span>
+                  <span>Leadership workshops &amp; mentorship</span>
+                </li>
+              </ul>
+            </div>
+            {/* Image Second on Desktop */}
+            <div className="relative group order-1 md:order-2">
+              <div className="absolute -inset-4 bg-primary/10 rounded-2xl transform rotate-2 transition-transform group-hover:rotate-0"></div>
+              <Image
+                src="/b220fe440206d474a74b2a2467d410ac.jpg"
+                alt="Professional networking event"
+                width={600}
+                height={450}
+                className="relative w-full aspect-[4/3] object-cover rounded-xl shadow-2xl dark:opacity-90"
+              />
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Pillar 3: International Fellowship */}
+        <section className="py-24 px-6 md:px-12 max-w-[1280px] mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="grid md:grid-cols-2 gap-12 items-center"
+          >
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-accent/10 rounded-2xl transform -rotate-2 transition-transform group-hover:rotate-0"></div>
+              <Image
+                src="/f16b74a04b626f30222c37c4d15d7c80.jpg"
+                alt="Group of diverse friends and global fellowship"
+                width={600}
+                height={450}
+                className="relative w-full aspect-[4/3] object-cover rounded-xl shadow-2xl dark:opacity-90"
+              />
+            </div>
+            <div className="flex flex-col gap-6 md:pl-10">
+              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary dark:text-blue-400">
+                <span className="material-symbols-outlined">public</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-text-main dark:text-white">
+                International Fellowship
+              </h2>
+              <p className="text-lg text-text-muted dark:text-gray-300 leading-relaxed">
+                As part of a global network of over 1.2 million neighbors, friends, and community leaders, our members have the unique opportunity to connect with clubs worldwide. We foster global understanding and lifelong friendships across borders.
+              </p>
+              <ul className="flex flex-col gap-3 mt-2">
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-accent">check_circle</span>
+                  <span>International conventions &amp; travel</span>
+                </li>
+                <li className="flex items-center gap-3 text-text-main dark:text-gray-200">
+                  <span className="material-symbols-outlined text-accent">check_circle</span>
+                  <span>Cultural exchange programs</span>
+                </li>
+              </ul>
+            </div>
+          </motion.div>
+        </section>
+      </div>
+
+      {/* CTA Footer */}
+      <section className="bg-primary py-24 px-6 text-center relative overflow-hidden">
+        {/* Abstract Decoration */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3"></div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="relative z-10 max-w-3xl mx-auto flex flex-col gap-8 items-center"
+        >
+          <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+            Ready to make a difference?
+          </h2>
+          <p className="text-blue-100 text-lg md:text-xl font-medium max-w-xl">
+            Join us at our next meeting to meet the members and see what Rotaract NYC is all about.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <Link
+              href="/meetings"
+              className="h-14 px-8 bg-accent hover:bg-white hover:text-primary text-white font-bold text-lg rounded-lg transition-all shadow-xl flex items-center justify-center gap-2"
+            >
+              Attend a Meeting
+            </Link>
+            <Link
+              href="/contact"
+              className="h-14 px-8 bg-transparent border-2 border-white/30 hover:bg-white/10 text-white font-bold text-lg rounded-lg transition-all flex items-center justify-center gap-2"
+            >
+              Contact Us
+            </Link>
+          </div>
+        </motion.div>
       </section>
     </div>
   )
