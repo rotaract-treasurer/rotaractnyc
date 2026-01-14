@@ -157,7 +157,7 @@ export default function Home() {
           >
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Recent Activities</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              See what we've been up to in our community
+              See what we&apos;ve been up to in our community
             </p>
           </motion.div>
 
