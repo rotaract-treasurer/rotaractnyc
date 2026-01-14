@@ -16,6 +16,237 @@ type GalleryRow = {
   order: number
 }
 
+type ViewMode = 'masonry' | 'albums' | 'list'
+
+// Masonry Grid View Component
+function MasonryView({
+  items,
+  selectedItems,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+}: {
+  items: GalleryRow[]
+  selectedItems: Set<string>
+  onToggleSelect: (id: string) => void
+  onEdit: (item: GalleryRow) => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className="pb-24" style={{
+      columnCount: 1,
+      columnGap: '1.5rem',
+    }}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (min-width: 640px) {
+          .masonry-grid-container { column-count: 2; }
+        }
+        @media (min-width: 1024px) {
+          .masonry-grid-container { column-count: 3; }
+        }
+        @media (min-width: 1280px) {
+          .masonry-grid-container { column-count: 4; }
+        }
+        .masonry-item {
+          break-inside: avoid;
+          margin-bottom: 1.5rem;
+        }
+      `}} />
+      <div className="masonry-grid-container">{items.map((item) => (
+        <div
+          key={item.id}
+          className={`masonry-item group relative overflow-hidden rounded-xl bg-slate-100 shadow-sm transition-all duration-300 hover:shadow-lift-hover dark:bg-slate-800 ${
+            selectedItems.has(item.id) ? 'ring-2 ring-primary' : ''
+          }`}
+        >
+          <img
+            src={item.imageUrl}
+            alt={item.alt}
+            className="block h-auto w-full object-cover"
+          />
+          {/* Overlay */}
+          <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <div className="flex items-start justify-between">
+              <label className="relative flex cursor-pointer items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.has(item.id)}
+                  onChange={() => onToggleSelect(item.id)}
+                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-white/50 bg-black/20 checked:border-primary checked:bg-primary transition-all"
+                />
+                <span className="material-symbols-outlined pointer-events-none absolute text-[16px] text-white opacity-0 peer-checked:opacity-100">
+                  check
+                </span>
+              </label>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-end gap-2 translate-y-4 transition-transform duration-300 delay-75 group-hover:translate-y-0">
+                <button
+                  onClick={() => onEdit(item)}
+                  className="flex size-9 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-colors hover:bg-white hover:text-slate-900"
+                  title="Edit Caption"
+                >
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className="flex size-9 items-center justify-center rounded-full bg-red-500/80 text-white backdrop-blur-sm transition-colors hover:bg-red-600"
+                  title="Delete"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </div>
+              <div className="translate-y-2 transition-transform duration-300 group-hover:translate-y-0">
+                <p className="truncate text-sm font-semibold text-white">{item.title}</p>
+                <p className="text-xs text-white/70">{item.alt}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}</div>
+    </div>
+  )
+}
+
+// Albums Card View Component
+function AlbumsView({
+  items,
+  onEdit,
+  onDelete,
+}: {
+  items: GalleryRow[]
+  onEdit: (item: GalleryRow) => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-6 pb-24 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div className="relative h-48 overflow-hidden">
+            <img
+              src={item.imageUrl}
+              alt={item.alt}
+              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10"></div>
+          </div>
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-bold leading-tight text-slate-900 transition-colors group-hover:text-primary dark:text-white">
+                {item.title}
+              </h3>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => onEdit(item)}
+                  className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className="rounded-full p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                >
+                  <span className="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              </div>
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="material-symbols-outlined text-[16px]">image</span>
+              <span>{item.alt}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// List/Table View Component
+function ListView({
+  items,
+  selectedItems,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+}: {
+  items: GalleryRow[]
+  selectedItems: Set<string>
+  onToggleSelect: (id: string) => void
+  onEdit: (item: GalleryRow) => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Table Header */}
+      <div className="grid grid-cols-[48px_80px_2fr_1fr_100px] items-center gap-4 border-b border-slate-200 bg-slate-50/50 px-6 py-3 dark:border-slate-800 dark:bg-slate-800/50">
+        <div className="flex justify-center">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Select</span>
+        </div>
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Preview</div>
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Title</div>
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Order</div>
+        <div className="text-right text-xs font-bold uppercase tracking-wider text-slate-500">Actions</div>
+      </div>
+      {/* Table Body */}
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="group grid grid-cols-[48px_80px_2fr_1fr_100px] items-center gap-4 px-6 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+          >
+            <div className="flex justify-center">
+              <input
+                type="checkbox"
+                checked={selectedItems.has(item.id)}
+                onChange={() => onToggleSelect(item.id)}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 bg-transparent text-primary focus:ring-primary"
+              />
+            </div>
+            <div>
+              <img
+                src={item.imageUrl}
+                alt={item.alt}
+                className="h-12 w-16 rounded-md border border-slate-200 object-cover shadow-sm dark:border-slate-700"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-slate-900 transition-colors group-hover:text-primary dark:text-slate-200">
+                {item.title}
+              </p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">{item.alt}</p>
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                #{item.order}
+              </span>
+            </div>
+            <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                onClick={() => onEdit(item)}
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-primary/10 hover:text-primary"
+                title="Edit"
+              >
+                <span className="material-symbols-outlined text-lg">edit</span>
+              </button>
+              <button
+                onClick={() => onDelete(item.id)}
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                title="Delete"
+              >
+                <span className="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
 export default function AdminGalleryPage() {
   const router = useRouter()
   const session = useAdminSession()
@@ -28,6 +259,9 @@ export default function AdminGalleryPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false) // Form hidden by default
   const [file, setFile] = useState<File | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('masonry')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [form, setForm] = useState<Omit<GalleryRow, 'id'>>({
     title: '',
     alt: '',
@@ -85,6 +319,64 @@ export default function AdminGalleryPage() {
   }, [refresh, session.status])
 
   const sorted = useMemo(() => [...items].sort((a, b) => a.order - b.order), [items])
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery) return sorted
+    const query = searchQuery.toLowerCase()
+    return sorted.filter(
+      (item) =>
+        item.title.toLowerCase().includes(query) ||
+        item.alt.toLowerCase().includes(query)
+    )
+  }, [sorted, searchQuery])
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set())
+    } else {
+      setSelectedItems(new Set(filteredItems.map((item) => item.id)))
+    }
+  }
+
+  const bulkDelete = async () => {
+    if (selectedItems.size === 0) return
+    if (!confirm(`Delete ${selectedItems.size} selected items?`)) return
+
+    setError(null)
+    const errors: string[] = []
+
+    for (const id of Array.from(selectedItems)) {
+      try {
+        const res = await fetch(`/api/admin/gallery?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        })
+        if (!res.ok) {
+          errors.push(`Failed to delete item ${id}`)
+        }
+      } catch {
+        errors.push(`Error deleting item ${id}`)
+      }
+    }
+
+    if (errors.length > 0) {
+      setError(errors.join(', '))
+    }
+
+    setSelectedItems(new Set())
+    await refresh()
+  }
 
   const startNew = () => {
     resetForm()
@@ -214,7 +506,8 @@ export default function AdminGalleryPage() {
     }
   }
 
-  const seed = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const seedData = async () => {
     setError(null)
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' })
@@ -239,46 +532,64 @@ export default function AdminGalleryPage() {
   if (session.status !== 'authenticated') return null
 
   return (
-    <div className="p-4 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        {/* Breadcrumbs & Heading */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <nav className="mb-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <Link href="/admin/dashboard" className="hover:text-primary">Dashboard</Link>
+    <div className="flex min-h-screen flex-col bg-background-light dark:bg-background-dark">
+      <div className="flex-1 p-4 lg:p-8">
+        <div className="mx-auto max-w-[1440px] space-y-6">
+          {/* Breadcrumbs & Header */}
+          <div className="flex flex-col gap-4">
+            <nav className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <Link href="/admin/dashboard" className="hover:text-primary transition-colors">
+                Dashboard
+              </Link>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-              <span className="font-medium text-slate-900 dark:text-white">Gallery</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">Gallery Management</span>
             </nav>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Gallery</h2>
-            <p className="text-slate-500 dark:text-slate-400">Manage gallery images and media.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {!showForm && (
-              <button
-                onClick={startNew}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">add</span>
-                Add Image
-              </button>
-            )}
-            <button
-              onClick={seed}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-            >
-              <span className="material-symbols-outlined text-[18px]">backup</span>
-              Seed Defaults
-            </button>
-          </div>
-        </div>
 
-        <div className="space-y-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white md:text-4xl">
+                  Gallery Management
+                </h1>
+                <p className="mt-2 text-slate-500 dark:text-slate-400">
+                  Organize, tag, and manage the club&apos;s photo collections.
+                </p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {filteredItems.length} Photos • {(filteredItems.length * 2.4).toFixed(1)} MB
+              </div>
+            </div>
+          </div>
+
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400">
               {error}
             </div>
           )}
 
+          {/* Upload Hero Section */}
+          {!showForm && (
+            <div className="group relative w-full cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 transition-all duration-300 ease-out hover:border-primary hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800 md:p-12">
+              <div
+                onClick={startNew}
+                className="flex flex-col items-center justify-center gap-4 text-center"
+              >
+                <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">Upload Photos</p>
+                  <p className="mx-auto max-w-sm text-sm text-slate-500 dark:text-slate-400">
+                    Click to add high-resolution images to your gallery
+                  </p>
+                </div>
+                <button className="mt-2 rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-primary shadow-sm transition-all group-hover:shadow-md dark:border-slate-600 dark:bg-slate-700">
+                  Browse Files
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Form Section */}
           {showForm && (
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <h3 className="mb-6 text-xl font-bold text-slate-900 dark:text-white">
@@ -390,71 +701,138 @@ export default function AdminGalleryPage() {
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                Gallery Images ({sorted.length})
-              </h3>
+          {/* Toolbar */}
+          <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-background-light/95 py-4 backdrop-blur dark:border-slate-800 dark:bg-background-dark/95">
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative w-64">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="material-symbols-outlined text-[20px] text-slate-400">search</span>
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search photos..."
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+                <button
+                  onClick={() => setViewMode('masonry')}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    viewMode === 'masonry'
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                  Masonry
+                </button>
+                <button
+                  onClick={() => setViewMode('albums')}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    viewMode === 'albums'
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">photo_album</span>
+                  Albums
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">list</span>
+                  List
+                </button>
+              </div>
             </div>
 
-            {loadingData ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-              </div>
-            ) : sorted.length === 0 ? (
-              <div className="py-12 text-center text-slate-500 dark:text-slate-400">
-                <span className="material-symbols-outlined mb-2 text-[48px] opacity-50">photo_library</span>
-                <p>No gallery images yet.</p>
-                <p className="text-sm">Click &quot;Add Image&quot; to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sorted.map((g) => (
-                  <div
-                    key={g.id}
-                    className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800"
-                  >
-                    <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                          Order {g.order}
-                        </span>
-                      </div>
-                      <div className="mb-1 font-semibold text-slate-900 dark:text-white">{g.title}</div>
-                      <div className="mb-1 text-sm text-slate-600 dark:text-slate-400">{g.alt}</div>
-                      {g.imageUrl && (
-                        <div className="mt-2">
-                          <img
-                            src={g.imageUrl}
-                            alt={g.alt}
-                            className="h-24 w-auto rounded-lg border border-slate-200 object-cover dark:border-slate-700"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => startEdit(g)}
-                        className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => remove(g.id)}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary/20"
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {selectedItems.size === filteredItems.length ? 'check_box' : 'check_box_outline_blank'}
+                </span>
+                <span>{selectedItems.size === filteredItems.length ? 'Deselect All' : 'Select All'}</span>
+              </button>
+              <button
+                onClick={seedData}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                <span className="material-symbols-outlined text-[18px]">backup</span>
+                Seed
+              </button>
+            </div>
           </div>
+
+          {/* Content Views */}
+          {loadingData ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900">
+              <span className="material-symbols-outlined mb-2 text-[48px] text-slate-300 dark:text-slate-700">
+                photo_library
+              </span>
+              <p className="text-slate-500 dark:text-slate-400">
+                {searchQuery ? 'No photos match your search.' : 'No gallery images yet.'}
+              </p>
+              {!searchQuery && (
+                <p className="text-sm text-slate-400 dark:text-slate-500">
+                  Click the upload area above to get started.
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              {viewMode === 'masonry' && <MasonryView items={filteredItems} selectedItems={selectedItems} onToggleSelect={toggleSelectItem} onEdit={startEdit} onDelete={remove} />}
+              {viewMode === 'albums' && <AlbumsView items={filteredItems} onEdit={startEdit} onDelete={remove} />}
+              {viewMode === 'list' && <ListView items={filteredItems} selectedItems={selectedItems} onToggleSelect={toggleSelectItem} onEdit={startEdit} onDelete={remove} />}
+            </>
+          )}
         </div>
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedItems.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center gap-3 rounded-full border border-white/10 bg-slate-900 py-3 pl-5 pr-3 text-white shadow-2xl dark:border-slate-200/20 dark:bg-white dark:text-slate-900">
+            <span className="mr-2 whitespace-nowrap text-sm font-bold">
+              {selectedItems.size} Selected
+            </span>
+            <div className="h-5 w-px bg-white/20 dark:bg-black/10"></div>
+            <button className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors hover:bg-white/10 dark:hover:bg-black/5">
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span className="hidden sm:inline">Download</span>
+            </button>
+            <button
+              onClick={bulkDelete}
+              className="ml-1 flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-sm font-bold text-white transition-colors hover:bg-red-600"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span>Delete</span>
+            </button>
+            <button
+              onClick={() => setSelectedItems(new Set())}
+              className="ml-2 rounded-full p-1 text-white/60 transition-colors hover:bg-white/20 hover:text-white dark:text-black/40 dark:hover:bg-black/10 dark:hover:text-black"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

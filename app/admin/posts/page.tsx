@@ -7,6 +7,9 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { slugify } from '@/lib/slugify'
 import dynamic from 'next/dynamic'
 import 'react-quill/dist/quill.snow.css'
+import { TableView } from './_components/TableView'
+import { CardView } from './_components/CardView'
+import { KanbanView } from './_components/KanbanView'
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
 
@@ -55,6 +58,7 @@ export default function AdminPostsPage() {
   const [posts, setPosts] = useState<PostRow[]>([])
   const [editingSlug, setEditingSlug] = useState<string | null>(null)
   const [mode, setMode] = useState<'list' | 'new' | 'edit'>('list')
+  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'kanban'>('table')
 
   const [form, setForm] = useState({
     title: '',
@@ -271,19 +275,25 @@ export default function AdminPostsPage() {
             <nav className="mb-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               <Link href="/admin/dashboard" className="hover:text-primary">Dashboard</Link>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-              <span className="font-medium text-slate-900 dark:text-white">News & Articles</span>
+              <span className="font-medium text-slate-900 dark:text-white">Posts</span>
             </nav>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">News & Articles</h2>
-            <p className="text-slate-500 dark:text-slate-400">Create, edit, and publish news and article updates.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Editorial Management</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Manage, edit, and publish blog posts and news updates.</p>
           </div>
           {mode === 'list' && (
-            <button
-              onClick={startNew}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition-colors"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              New Article
-            </button>
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
+                <span>Import</span>
+              </button>
+              <button
+                onClick={startNew}
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/20 hover:bg-blue-700 transition-all active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                Create New Post
+              </button>
+            </div>
           )}
         </div>
 
@@ -295,42 +305,129 @@ export default function AdminPostsPage() {
           )}
 
           {mode === 'list' ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">All Articles</h3>
-              {loadingData ? (
-                <div className="text-slate-600 dark:text-slate-400">Loading…</div>
-              ) : sorted.length === 0 ? (
-                <div className="text-slate-600 dark:text-slate-400">No posts yet.</div>
-              ) : (
-                <div className="space-y-3">
-                  {sorted.map((p) => (
-                    <button
-                      key={p.slug}
-                      type="button"
-                      onClick={() => startEdit(p)}
-                      className="w-full text-left border border-slate-200 rounded-lg p-4 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                            {p.published ? 'published' : 'draft'} · {p.category}
-                          </div>
-                          <div className="text-lg font-semibold text-slate-900 dark:text-white">{p.title}</div>
-                          <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            {p.date ? <span>{p.date}</span> : <span className="italic">No publish date</span>} · {p.author}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">/{p.slug}</div>
-                          {p.excerpt && <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm">{p.excerpt}</p>}
-                        </div>
-                        <div className="shrink-0 px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-blue-700">
-                          Edit
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+            <>
+              {/* View Controls */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-3">
+                  {/* Search */}
+                  <div className="relative group min-w-[240px]">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                      search
+                    </span>
+                    <input
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border-none rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:bg-white dark:focus:bg-slate-800 transition-all"
+                      placeholder="Search posts..."
+                      type="text"
+                    />
+                  </div>
+                  
+                  {/* Category Filter */}
+                  <select className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium border-none focus:ring-2 focus:ring-primary/20">
+                    <option>All Categories</option>
+                    {allCategories.map(cat => (
+                      <option key={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
+                
+                {/* View Toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`p-2 rounded transition-all ${
+                        viewMode === 'table'
+                          ? 'bg-white dark:bg-slate-600 shadow-sm text-primary'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                      title="Table View"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      className={`p-2 rounded transition-all ${
+                        viewMode === 'cards'
+                          ? 'bg-white dark:bg-slate-600 shadow-sm text-primary'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                      title="Card View"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">grid_view</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('kanban')}
+                      className={`p-2 rounded transition-all ${
+                        viewMode === 'kanban'
+                          ? 'bg-white dark:bg-slate-600 shadow-sm text-primary'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                      title="Kanban View"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">view_kanban</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Area */}
+              {loadingData ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <div className="text-slate-600 dark:text-slate-400">Loading posts...</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {viewMode === 'table' && (
+                    <TableView
+                      posts={sorted}
+                      onEdit={(slug) => {
+                        const post = posts.find(p => p.slug === slug)
+                        if (post) startEdit(post)
+                      }}
+                      onDelete={(slug) => {
+                        if (confirm('Are you sure you want to delete this post?')) {
+                          // Implement delete functionality
+                          console.log('Delete post:', slug)
+                        }
+                      }}
+                    />
+                  )}
+                  
+                  {viewMode === 'cards' && (
+                    <CardView
+                      posts={sorted}
+                      onEdit={(slug) => {
+                        const post = posts.find(p => p.slug === slug)
+                        if (post) startEdit(post)
+                      }}
+                      onDelete={(slug) => {
+                        if (confirm('Are you sure you want to delete this post?')) {
+                          // Implement delete functionality
+                          console.log('Delete post:', slug)
+                        }
+                      }}
+                      onCreate={startNew}
+                    />
+                  )}
+                  
+                  {viewMode === 'kanban' && (
+                    <div className="h-[calc(100vh-20rem)] overflow-hidden">
+                      <KanbanView
+                        posts={sorted}
+                        onEdit={(slug) => {
+                          const post = posts.find(p => p.slug === slug)
+                          if (post) startEdit(post)
+                        }}
+                        onCreate={startNew}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-            </div>
+            </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-4 mb-6">
