@@ -33,5 +33,5 @@ export default async function NewsArticlePage({ params }: Props) {
     }
   }
 
-  return <ArticleView article={article} slug={slug} />
+  return <ArticleView article={article || null} slug={slug} />
 }
