@@ -15,7 +15,7 @@ type FaqCategory = {
   faqs: FaqRow[]
 }
 
-function AccordionItem({ question, answer, index }: { question: string; answer: string; index: number }) {
+function AccordionItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -53,7 +53,7 @@ export default function FAQPage() {
     return (data?.faqs ?? []).map((f) => ({ 
       question: f.question, 
       answer: f.answer,
-      category: (f as any).category || 'General'
+      category: (f as { category?: string }).category || 'General'
     }))
   }, [defaults.data])
 
