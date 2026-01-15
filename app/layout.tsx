@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/Navbar'
+import RouteChrome from '@/components/RouteChrome'
 import Footer from '@/components/Footer'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -32,8 +32,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <Navbar />
-        <main className="min-h-screen pt-[var(--nav-height)]">{children}</main>
+        <RouteChrome>{children}</RouteChrome>
         <Footer />
         <Analytics />
       </body>

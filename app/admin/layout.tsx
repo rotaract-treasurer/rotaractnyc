@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAdminSession, adminSignOut } from '@/lib/admin/useAdminSession'
@@ -39,14 +40,14 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 lg:flex z-20">
         <div className="flex h-16 items-center gap-3 px-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA47T-9wtH_QLu-t8jylVBtYz7rutjBjEW5pNqMLoTHWEkonmpCamXlIJ0EyVM5aSyGOJY3HdgvReEU4JFrDR1MadpWPqh5UJRMfd3ssoE4GjNHiZlwCU6iJM9D9BHqb1_VOjDxoExENuM1jPem6H9yKPyo54TKQXmQVxhWaa0gmpsHMNHToVEKZk-mYlnnZIWEl9YZOAp7RLqwJ1JDSQrGywQVfQgBSLwMkLcHY7_oytTCZv_w3hf8mlPfS153X3J8QSrRjIU30-o" 
-              alt="Rotaract Club Logo"
-              className="w-full h-full object-cover rounded-full"
-            />
-          </div>
-          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Rotaract NYC</h1>
+          <Image
+            src="/Rotaract%20Logo%20(1).png"
+            alt="Rotaract Logo"
+            width={160}
+            height={40}
+            className="h-9 w-auto"
+            priority
+          />
         </div>
 
         <div className="flex flex-1 flex-col justify-between overflow-y-auto px-4 py-6">
@@ -118,7 +119,16 @@ export default function AdminLayout({
             <button className="text-slate-500 hover:text-slate-700 lg:hidden">
               <span className="material-symbols-outlined">menu</span>
             </button>
-            <span className="font-bold text-lg lg:hidden">Rotaract NYC</span>
+            <div className="lg:hidden">
+              <Image
+                src="/Rotaract%20Logo%20(1).png"
+                alt="Rotaract Logo"
+                width={140}
+                height={36}
+                className="h-8 w-auto"
+                priority
+              />
+            </div>
           </div>
 
           {/* Search */}
