@@ -23,45 +23,64 @@ export default function PortalDashboard() {
 
   const loadDashboardData = async () => {
     const app = getFirebaseClientApp();
-    if (!app) return;
+    if (!app) {
+      console.log('Firebase app not initialized');
+      setLoadingData(false);
+      return;
+    }
 
     const db = getFirestore(app);
     
     try {
-      // Load upcoming events
-      const eventsRef = collection(db, 'events');
-      const eventsQuery = query(
-        eventsRef,
-        where('visibility', '==', 'member'),
-        where('startAt', '>=', Timestamp.now()),
-        orderBy('startAt', 'asc'),
-        limit(5)
-      );
-      const eventsSnapshot = await getDocs(eventsQuery);
-      const events = eventsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Event[];
-      setUpcomingEvents(events);
+      console.log('Loading dashboard data...');
+      
+      // Load upcoming events (try without complex query first)
+      try {
+        const eventsRef = collection(db, 'events');
+        const eventsSnapshot = await getDocs(eventsRef);
+        console.log(`Found ${eventsSnapshot.docs.length} events`);
+        
+        const now = Timestamp.now();
+        const events = eventsSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter((e: any) => e.visibility === 'member' && e.startAt >= now)
+          .sort((a: any, b: any) => a.startAt.seconds - b.startAt.seconds)
+          .slice(0, 5) as Event[];
+        
+        setUpcomingEvents(events);
+        console.log('Loaded events:', events.length);
+      } catch (err) {
+        console.error('Error loading events:', err);
+      }
 
       // Load recent announcements
-      const announcementsRef = collection(db, 'announcements');
-      const announcementsQuery = query(
-        announcementsRef,
-        where('visibility', '==', 'member'),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const announcementsSnapshot = await getDocs(announcementsQuery);
-      const announcements = announcementsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Announcement[];
-      setRecentAnnouncements(announcements);
+      try {
+        const announcementsRef = collection(db, 'announcements');
+        const announcementsSnapshot = await getDocs(announcementsRef);
+        console.log(`Found ${announcementsSnapshot.docs.length} announcements`);
+        
+        const announcements = announcementsSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter((a: any) => a.visibility === 'member')
+          .sort((a: any, b: any) => b.createdAt.seconds - a.createdAt.seconds)
+          .slice(0, 5) as Announcement[];
+        
+        setRecentAnnouncements(announcements);
+        console.log('Loaded announcements:', announcements.length);
+      } catch (err) {
+        console.error('Error loading announcements:', err);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoadingData(false);
+      console.log('Dashboard loading complete');
     }
   };
 
