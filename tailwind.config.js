@@ -10,16 +10,18 @@ module.exports = {
     extend: {
       colors: {
         // Primary colors for membership page design
-        primary: '#22a598',
-        'primary-dark': '#1b8278',
-        'background-light': '#fbfaf9',
-        'background-dark': '#141f1f',
+        primary: '#141414',
+        'primary-dark': '#169aa6',
+        accent: '#EBC85B',
+        'rotaract-blue': '#005dAA',
+        'background-light': '#f5f5f7',
+        'background-dark': '#191919',
         'surface-light': '#ffffff',
-        'surface-dark': '#1e2e2e',
-        'text-main': '#0f1a19',
-        'text-muted': '#5e706d',
-        // Rotary brand colors (legacy)
-        accent: '#D6AD60',  // Rotary Gold
+        'surface-dark': '#1e1e1e',
+        'text-main': '#101817',
+        'text-muted': '#5c8a82',
+        peach: '#F9C0AF',
+        'peach-dark': '#d98c73',
         // Keep legacy colors for backward compatibility
         rotaract: {
           pink: '#ac005a',
@@ -29,7 +31,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Manrope', 'system-ui', 'sans-serif'],
-        display: ['Manrope', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Manrope', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '0.5rem',
@@ -42,6 +44,8 @@ module.exports = {
       boxShadow: {
         'soft': '0 4px 20px rgba(0,0,0,0.05)',
         'soft-hover': '0 10px 25px rgba(0,0,0,0.08)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'card': '0 0 4px rgba(0,0,0,0.05), 0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       },
     },
   },

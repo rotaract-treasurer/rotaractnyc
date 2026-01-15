@@ -48,6 +48,11 @@ html {
   animation: fadeInUp 0.6s ease-out;
 }
 
+/* Member Directory Card Hover Effects */
+.member-card {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Custom scrollbar for cleaner look */
 ::-webkit-scrollbar {
   width: 8px;
@@ -263,6 +268,11 @@ img {
 /* Material Symbols Icons */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-filled {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 .filled-icon {

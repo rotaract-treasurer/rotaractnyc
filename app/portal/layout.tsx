@@ -17,11 +17,9 @@ export default function PortalLayout({
       {isLoginPage ? (
         children
       ) : (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col antialiased text-[#141414] dark:text-white">
           <PortalNav />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </main>
+          {children}
         </div>
       )}
     </AuthProvider>

@@ -4,35 +4,22 @@ import { useAuth } from '@/lib/firebase/auth';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { 
-  FiHome, 
-  FiUsers, 
-  FiCalendar, 
-  FiBell, 
-  FiFileText, 
-  FiDollarSign,
-  FiMenu,
-  FiX,
-  FiLogOut
-} from 'react-icons/fi';
 import { canManageFinances } from '@/lib/portal/roles';
 
 export default function PortalNav() {
   const { user, userData, signOut } = useAuth();
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const navItems = [
-    { href: '/portal', label: 'Dashboard', icon: FiHome },
-    { href: '/portal/directory', label: 'Directory', icon: FiUsers },
-    { href: '/portal/events', label: 'Events', icon: FiCalendar },
-    { href: '/portal/announcements', label: 'Announcements', icon: FiBell },
-    { href: '/portal/docs', label: 'Documents', icon: FiFileText },
+    { href: '/portal/announcements', label: 'Feed' },
+    { href: '/portal/events', label: 'Calendar' },
+    { href: '/portal/directory', label: 'Directory' },
   ];
 
   // Add Finance tab if user has treasurer+ role
   if (canManageFinances(userData?.role)) {
-    navItems.push({ href: '/portal/finance', label: 'Finance', icon: FiDollarSign });
+    navItems.push({ href: '/portal/finance', label: 'Finance' });
   }
 
   const handleSignOut = async () => {
@@ -45,121 +32,103 @@ export default function PortalNav() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md border-b border-[#e5e5e5] dark:border-[#333]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link href="/portal" className="flex items-center">
-              <span className="text-xl font-bold text-blue-600">RCNYC Portal</span>
+        <div className="flex items-center justify-between h-16 gap-4">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 text-rotaract-blue">
+              <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path 
+                  d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
+                  fill="currentColor" 
+                  stroke="currentColor" 
+                  strokeLinejoin="round" 
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <Link href="/portal">
+              <h1 className="hidden sm:block text-xl font-bold tracking-tight text-primary dark:text-white">
+                Rotaract<span className="font-normal text-gray-500 ml-1">Portal</span>
+              </h1>
             </Link>
-            
-            {/* Desktop navigation */}
-            <div className="hidden md:ml-10 md:flex md:space-x-8">
+          </div>
+
+          {/* Search Bar (Centered) */}
+          <div className="flex-1 max-w-md hidden md:flex">
+            <label className="relative w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <span className="material-symbols-outlined text-[20px]">search</span>
+              </div>
+              <input 
+                className="block w-full pl-10 pr-3 py-2 border-none rounded-lg leading-5 bg-[#f2f2f2] dark:bg-[#2a2a2a] text-sm text-primary dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rotaract-blue/50 transition-shadow"
+                placeholder="Search announcements, members, or events..."
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </label>
+          </div>
+
+          {/* Navigation & Profile */}
+          <div className="flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-6">
               {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || (item.href === '/portal/announcements' && pathname === '/portal');
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`inline-flex items-center gap-2 px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
+                    className={`text-sm font-medium transition-colors py-5 ${
                       isActive
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        ? 'font-bold text-primary dark:text-white border-b-2 border-primary dark:border-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-rotaract-blue'
                     }`}
                   >
-                    <Icon className="text-lg" />
                     {item.label}
                   </Link>
                 );
               })}
-            </div>
-          </div>
+            </nav>
 
-          {/* User menu */}
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-3">
-              {user?.photoURL && (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || 'User'}
-                  className="h-8 w-8 rounded-full"
-                />
-              )}
-              <div className="text-sm">
-                <div className="font-medium text-gray-900">{userData?.name || user?.displayName}</div>
-                <div className="text-gray-500 text-xs">{userData?.role || 'Member'}</div>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-                title="Sign out"
-              >
-                <FiLogOut className="text-lg" />
+            <div className="flex items-center gap-3 pl-6 border-l border-gray-200 dark:border-gray-800">
+              <button className="relative p-1 text-gray-500 hover:text-primary dark:hover:text-white transition-colors">
+                <span className="material-symbols-outlined">notifications</span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#141414]"></span>
               </button>
+              
+              <div className="relative group">
+                <div 
+                  className="w-9 h-9 rounded-full bg-cover bg-center border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  style={user?.photoURL ? { backgroundImage: `url(${user.photoURL})` } : {}}
+                >
+                  {!user?.photoURL && (
+                    <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+                      <span className="material-symbols-outlined text-[18px]">person</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Dropdown menu */}
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-gray-200 dark:border-[#2a2a2a] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-3 border-b border-gray-100 dark:border-[#2a2a2a]">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{userData?.name || user?.displayName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{userData?.role || 'Member'}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Sign out
+                  </button>
+                </div>
+              </div>
             </div>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-            >
-              {mobileMenuOpen ? <FiX className="text-2xl" /> : <FiMenu className="text-2xl" />}
-            </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200">
-          <div className="pt-2 pb-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2 text-base font-medium ${
-                    isActive
-                      ? 'bg-blue-50 border-l-4 border-blue-500 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon className="text-xl" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="border-t border-gray-200 pt-4 pb-3">
-            <div className="flex items-center px-4 gap-3">
-              {user?.photoURL && (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || 'User'}
-                  className="h-10 w-10 rounded-full"
-                />
-              )}
-              <div>
-                <div className="text-base font-medium text-gray-800">{userData?.name || user?.displayName}</div>
-                <div className="text-sm text-gray-500">{user?.email}</div>
-              </div>
-            </div>
-            <div className="mt-3 px-4">
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-4 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md"
-              >
-                <FiLogOut />
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </nav>
+    </header>
   );
 }
