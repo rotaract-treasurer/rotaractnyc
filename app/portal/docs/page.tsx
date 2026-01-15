@@ -127,9 +127,10 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-text-main tracking-tight">Resource Center</h1>
           <p className="text-text-muted mt-1 text-base">Access club documents, minutes, and service guidelines.</p>
@@ -283,6 +284,7 @@ export default function DocumentsPage() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </main>
   );
 }
