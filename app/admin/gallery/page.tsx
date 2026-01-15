@@ -14,9 +14,63 @@ type GalleryRow = {
   imageUrl: string
   storagePath?: string
   order: number
+  createdAt?: unknown
+  updatedAt?: unknown
 }
 
 type ViewMode = 'masonry' | 'albums' | 'list'
+
+type FilterMode = 'all' | 'uploaded' | 'external'
+type SortMode =
+  | 'order-asc'
+  | 'order-desc'
+  | 'title-asc'
+  | 'title-desc'
+  | 'updated-desc'
+  | 'created-desc'
+
+function timestampToMs(value: unknown): number | null {
+  if (!value) return null
+
+  if (typeof value === 'object' && value && 'toMillis' in value) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ms = (value as any).toMillis?.()
+      return typeof ms === 'number' && Number.isFinite(ms) ? ms : null
+    } catch {
+      return null
+    }
+  }
+
+  if (typeof value === 'object' && value) {
+    const obj = value as Record<string, unknown>
+    const seconds =
+      (typeof obj._seconds === 'number' ? obj._seconds : null) ??
+      (typeof obj.seconds === 'number' ? obj.seconds : null)
+    if (typeof seconds === 'number' && Number.isFinite(seconds)) {
+      return seconds * 1000
+    }
+  }
+
+  if (typeof value === 'string') {
+    const ms = Date.parse(value)
+    return Number.isFinite(ms) ? ms : null
+  }
+
+  return null
+}
+
+function formatRelativeTime(ms: number): string {
+  const diff = Date.now() - ms
+  const seconds = Math.round(diff / 1000)
+  if (seconds < 60) return 'Just now'
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.round(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
 
 // Masonry Grid View Component
 function MasonryView({
@@ -131,6 +185,9 @@ function AlbumsView({
               alt={item.alt}
               className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
+            <div className="absolute top-3 right-3 rounded bg-black/60 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
+              {item.storagePath ? 'Uploaded' : 'External'}
+            </div>
             <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10"></div>
           </div>
           <div className="flex flex-col gap-2 p-4">
@@ -155,8 +212,32 @@ function AlbumsView({
             </div>
             <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               <span className="material-symbols-outlined text-[16px]">image</span>
-              <span>{item.alt}</span>
+              <span className="truncate">{item.alt}</span>
             </div>
+            {(() => {
+              const updatedMs = timestampToMs(item.updatedAt)
+              const createdMs = timestampToMs(item.createdAt)
+              const dateMs = updatedMs ?? createdMs
+              if (!dateMs) return null
+              return (
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                  <span>
+                    {new Date(dateMs).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: '2-digit',
+                    })}
+                  </span>
+                  {updatedMs ? (
+                    <>
+                      <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                      <span>Updated {formatRelativeTime(updatedMs)}</span>
+                    </>
+                  ) : null}
+                </div>
+              )
+            })()}
           </div>
         </div>
       ))}
@@ -261,6 +342,8 @@ export default function AdminGalleryPage() {
   const [file, setFile] = useState<File | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('masonry')
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterMode, setFilterMode] = useState<FilterMode>('all')
+  const [sortMode, setSortMode] = useState<SortMode>('order-asc')
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [form, setForm] = useState<Omit<GalleryRow, 'id'>>({
     title: '',
@@ -299,6 +382,8 @@ export default function AdminGalleryPage() {
               imageUrl: String(obj.imageUrl ?? ''),
               storagePath: String(obj.storagePath ?? ''),
               order: Number.isFinite(order) ? order : 1,
+              createdAt: obj.createdAt,
+              updatedAt: obj.updatedAt,
             }
           })
           .filter((g) => g.id)
@@ -318,17 +403,45 @@ export default function AdminGalleryPage() {
     if (session.status === 'authenticated') refresh()
   }, [refresh, session.status])
 
-  const sorted = useMemo(() => [...items].sort((a, b) => a.order - b.order), [items])
-
   const filteredItems = useMemo(() => {
-    if (!searchQuery) return sorted
-    const query = searchQuery.toLowerCase()
-    return sorted.filter(
-      (item) =>
-        item.title.toLowerCase().includes(query) ||
-        item.alt.toLowerCase().includes(query)
-    )
-  }, [sorted, searchQuery])
+    const query = searchQuery.trim().toLowerCase()
+
+    const filtered = items
+      .filter((item) => {
+        if (!query) return true
+        return item.title.toLowerCase().includes(query) || item.alt.toLowerCase().includes(query)
+      })
+      .filter((item) => {
+        if (filterMode === 'all') return true
+        if (filterMode === 'uploaded') return Boolean(item.storagePath)
+        return !item.storagePath
+      })
+
+    const sorted = [...filtered]
+    const updatedMs = (row: GalleryRow) => timestampToMs(row.updatedAt) ?? 0
+    const createdMs = (row: GalleryRow) => timestampToMs(row.createdAt) ?? 0
+
+    sorted.sort((a, b) => {
+      switch (sortMode) {
+        case 'order-asc':
+          return a.order - b.order
+        case 'order-desc':
+          return b.order - a.order
+        case 'title-asc':
+          return a.title.localeCompare(b.title)
+        case 'title-desc':
+          return b.title.localeCompare(a.title)
+        case 'updated-desc':
+          return updatedMs(b) - updatedMs(a)
+        case 'created-desc':
+          return createdMs(b) - createdMs(a)
+        default:
+          return a.order - b.order
+      }
+    })
+
+    return sorted
+  }, [items, searchQuery, filterMode, sortMode])
 
   const toggleSelectItem = (id: string) => {
     setSelectedItems((prev) => {
@@ -554,8 +667,18 @@ export default function AdminGalleryPage() {
                   Organize, tag, and manage the club&apos;s photo collections.
                 </p>
               </div>
-              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {filteredItems.length} Photos • {(filteredItems.length * 2.4).toFixed(1)} MB
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={startNew}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-primary-dark active:scale-[0.99]"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add_circle</span>
+                  <span>Add Photo</span>
+                </button>
+                <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {filteredItems.length} Photos
+                  {items.length !== filteredItems.length ? ` (of ${items.length})` : ''}
+                </div>
               </div>
             </div>
           </div>
@@ -703,9 +826,9 @@ export default function AdminGalleryPage() {
 
           {/* Toolbar */}
           <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-background-light/95 py-4 backdrop-blur dark:border-slate-800 dark:bg-background-dark/95">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Search */}
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-72">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <span className="material-symbols-outlined text-[20px] text-slate-400">search</span>
                 </div>
@@ -713,16 +836,51 @@ export default function AdminGalleryPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search photos..."
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  placeholder="Search photos by title or alt..."
+                  className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
+              {/* Filter */}
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <span className="material-symbols-outlined text-[18px] text-slate-400">filter_list</span>
+                <label className="sr-only" htmlFor="gallery-filter">Filter</label>
+                <select
+                  id="gallery-filter"
+                  value={filterMode}
+                  onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+                  className="h-full bg-transparent pr-6 text-sm outline-none"
+                >
+                  <option value="all">Filter: All</option>
+                  <option value="uploaded">Filter: Uploaded</option>
+                  <option value="external">Filter: External</option>
+                </select>
+              </div>
+
+              {/* Sort */}
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <span className="material-symbols-outlined text-[18px] text-slate-400">sort</span>
+                <label className="sr-only" htmlFor="gallery-sort">Sort</label>
+                <select
+                  id="gallery-sort"
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as SortMode)}
+                  className="h-full bg-transparent pr-6 text-sm outline-none"
+                >
+                  <option value="order-asc">Sort: Order (Asc)</option>
+                  <option value="order-desc">Sort: Order (Desc)</option>
+                  <option value="title-asc">Sort: Title (A–Z)</option>
+                  <option value="title-desc">Sort: Title (Z–A)</option>
+                  <option value="updated-desc">Sort: Recently Updated</option>
+                  <option value="created-desc">Sort: Recently Created</option>
+                </select>
+              </div>
+
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <button
                   onClick={() => setViewMode('masonry')}
-                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors ${
                     viewMode === 'masonry'
                       ? 'bg-primary text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
@@ -733,7 +891,7 @@ export default function AdminGalleryPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('albums')}
-                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors ${
                     viewMode === 'albums'
                       ? 'bg-primary text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
@@ -744,7 +902,7 @@ export default function AdminGalleryPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors ${
                     viewMode === 'list'
                       ? 'bg-primary text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
@@ -759,7 +917,7 @@ export default function AdminGalleryPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSelectAll}
-                className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary/20"
+                className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20"
               >
                 <span className="material-symbols-outlined text-[20px]">
                   {selectedItems.size === filteredItems.length ? 'check_box' : 'check_box_outline_blank'}
@@ -768,7 +926,7 @@ export default function AdminGalleryPage() {
               </button>
               <button
                 onClick={seedData}
-                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 <span className="material-symbols-outlined text-[18px]">backup</span>
                 Seed
