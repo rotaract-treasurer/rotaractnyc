@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/firebase/auth';
 import PortalNav from './_components/PortalNav';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth';
+import { useEffect } from 'react';
 
 export default function PortalLayout({
   children,
@@ -23,6 +24,14 @@ export default function PortalLayout({
 function PortalShell({ children }: { children: React.ReactNode }) {
   const { user, userData, loading, signOut } = useAuth();
 
+  // Avoid returning null during auth transitions; always render a useful UI.
+  // Redirects are handled in effects to prevent blank screens.
+  useEffect(() => {
+    if (!loading && !user) {
+      window.location.href = '/portal/login';
+    }
+  }, [loading, user]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex items-center justify-center antialiased text-[#141414] dark:text-white">
@@ -32,9 +41,24 @@ function PortalShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    // Middleware normally prevents this, but keep a safe fallback.
-    if (typeof window !== 'undefined') window.location.href = '/portal/login';
-    return null;
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex items-center justify-center antialiased text-[#141414] dark:text-white px-6">
+        <div className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#2a2a2a] bg-white/80 dark:bg-[#1e1e1e]/80 backdrop-blur p-6">
+          <h1 className="text-xl font-bold">Sign in required</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Please sign in to access the member portal.
+          </p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => (window.location.href = '/portal/login')}
+              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
+            >
+              Go to login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const status = userData?.status;
