@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { requireAdmin } from '@/app/api/admin/_utils'
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from '@/lib/firebase/admin'
 
@@ -159,8 +159,8 @@ export async function POST(req: NextRequest) {
         title: 'Monthly General Meeting',
         description:
           'Join us for our monthly general meeting to discuss upcoming projects and initiatives.',
-        startAt: new Date(now + 7 * 24 * 60 * 60 * 1000),
-        endAt: new Date(now + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+        startAt: Timestamp.fromMillis(now + 7 * 24 * 60 * 60 * 1000),
+        endAt: Timestamp.fromMillis(now + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
         location: 'Virtual (Zoom link will be shared)',
         visibility: 'member',
         createdBy: 'system',
@@ -169,8 +169,8 @@ export async function POST(req: NextRequest) {
         id: 'sample-food-pantry-support',
         title: 'Community Service: Food Pantry Support',
         description: 'Help sort and pack food donations for NYC families. Gloves provided.',
-        startAt: new Date(now + 14 * 24 * 60 * 60 * 1000),
-        endAt: new Date(now + 14 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000),
+        startAt: Timestamp.fromMillis(now + 14 * 24 * 60 * 60 * 1000),
+        endAt: Timestamp.fromMillis(now + 14 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000),
         location: 'Manhattan, NY',
         visibility: 'member',
         createdBy: 'u_elena',
@@ -377,7 +377,7 @@ export async function POST(req: NextRequest) {
     const transactions = [
       {
         id: 'tx-office-depot',
-        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        date: Timestamp.fromMillis(Date.now() - 5 * 24 * 60 * 60 * 1000),
         vendor: 'Office Depot',
         category: 'Operations',
         amount: -86.42,
@@ -387,7 +387,7 @@ export async function POST(req: NextRequest) {
       },
       {
         id: 'tx-member-dues',
-        date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+        date: Timestamp.fromMillis(Date.now() - 12 * 24 * 60 * 60 * 1000),
         vendor: 'Member Dues',
         category: 'Fundraising',
         amount: 250,
