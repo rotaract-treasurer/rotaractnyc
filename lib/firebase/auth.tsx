@@ -107,7 +107,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const idToken = await result.user.getIdToken();
       console.log('[Auth] Got ID token, setting session');
       
-      const response = await fetch('/api/portal/session', {
+      const response = await fetch('/api/portal/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('[Auth] Signing out');
       await firebaseSignOut(auth);
       // Clear session cookie on server
-      await fetch('/api/portal/session', {
+      await fetch('/api/portal/auth/session', {
         method: 'DELETE',
       });
       console.log('[Auth] Signed out successfully');
