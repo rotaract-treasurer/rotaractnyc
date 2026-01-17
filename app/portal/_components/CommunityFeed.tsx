@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
+import { collection, addDoc, getDocs, limit, orderBy, query, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { getFirebaseClientApp } from '@/lib/firebase/client';
 
 interface Post {
   id: string;
@@ -29,83 +32,120 @@ interface Post {
 }
 
 export default function CommunityFeed() {
-  const { userData } = useAuth();
+  const { user, userData } = useAuth();
   const [postText, setPostText] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
 
-  // Sample posts for demonstration
   useEffect(() => {
-    const samplePosts: Post[] = [
-      {
-        id: '1',
-        author: {
-          name: 'Elena Rodriguez',
-          role: 'Service Committee Chair',
-          photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAzh7Q0gSXQtod3NZU0NkIDGmOvzIwxgaiRI9x2uP5OVi9IP02xu-QjqvSQENePzui8kD6kLrHUVHkRFNuPTtsYL6ORDp8wV8lm4E2hYNshW6IiDBVNw5k_GLTYuCaZ_U5ZBCZJX6xKwghUOXLJAIBW2DTrZt-3MYUMrLe4eTYB__YzkGoWyixNCtV1RSoj5nLdoHpeVwe8fkSQX2keApOFFbOosZ73pzS44veMr-JVXGqKob-SmgOCagPVm4GMfEZWAqinzDYOGoY'
-        },
-        timestamp: '2h ago',
-        content: {
-          title: 'Highlights from the Park Clean-up 🌳',
-          body: 'What an incredible turnout this weekend! We collected over 50 bags of trash and planted 12 new saplings. Huge thanks to everyone who woke up early on a Saturday.',
-          type: 'images',
-          images: [
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDk8FRRFvZHccj0BJ-8YYxKZwCjdRLZNCrxMszTiXEjIf_03yOaOxpxHUPkOv4fSSyJrqz1NoXKtp3orluI9PSkfg6kLrDbV30M7SqPeSGndFrJlcIuCdQZC4Y0QThzTq0nP_c6WT99hlANaPwiCpM6sTkMv_gSpo4Y6VsIevleg-7aWyYH45WTqr8S7GiJuwLAqgLQBxuXJu-hL8h98wMGvUB9CmhaXnjbr-KLJIS4yIq545kXwGTqluA3fsuBHknExf6wZeF_8xk',
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCaR2L4M3F0ZuX1KBldE75AO88elk4K3JrOUdumI80iqIsdLy-ji86Rk5Aqb1rTno1ujSk7X5ErBEqQSeLw8XLIsBf6bMc5j3-OZWmBA6UNLcHoniTLT2pB3gw4xYouaT2GQ9-KamDe3rp6-nI7qHZUJWLTQUiR4KcsZg32HTO4uJnFNh33KNgADU73pxz2xsmmJxrM8lud9Ok_6zNGwKJeU4VTzYInaU0KnfJlGFyO4Nl8c1iCJYVnPXrMWR35WhB7dLxugGqc-8A',
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuAAfdA5-2iDOhAnmA9G0v0DoLHY30NEo_uaiYTGX26qSpWcD6ZIITe1cEkeLurkaEr-Ag4ZB3rG4L1yyvjMXMeH-S2DrqMUmzh4kXJaQhtwXuyFLbHc7G9dekvmGnr27w3aY8N_q1HvOdYlkXF_u1RylsLlxfCkqkxMjqgjkE0VL9llLe9JQ4MH8IGbHR6dnc_7JXYwJ2dDkWXb6xY72HPxqL-sSFR5yK3po5UBMBKGvY2F1yci8lvSgohciIdkniRR1WsEvd2gWl0'
-          ]
-        },
-        reactions: {
-          likes: 24,
-          comments: 6
-        }
-      },
-      {
-        id: '2',
-        author: {
-          name: 'Rotaract NYC',
-          role: 'Official Announcement',
-        },
-        timestamp: '5h ago',
-        content: {
-          title: 'Welcome our newest members! 🚀',
-          body: 'We are thrilled to welcome 4 new passionate individuals to our club this month. Make sure to say hi at the next mixer!',
-          type: 'announcement'
-        },
-        reactions: {
-          likes: 42,
-          comments: 12
-        }
-      },
-      {
-        id: '3',
-        author: {
-          name: 'Marcus Chen',
-          role: 'Club Secretary',
-          photoUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDQvTNslLnPB1HN0wvPXeeFhMME_NdB8LyFVmBprQGmo_G_aeS1wCeR0w2MI4EeVnUTi2inVYCp4k1QV0Cr096VjPwPvbs68V3iA0HmkJUiRkrFQsTCANsoI5QYeZ-VnIbkCKBPEENCd2_wGmMpaxGrhRqiCYNFjOZ2_Zp3ESuiG4rSQ9eTXQ32cgP2p84ZE9h1WMAymKUOA6iGiqE26nH20JwvRDVR4sdBAQGzUpLwZjjasC68EH0vfhp9FHATPse_vsXjbdcB4-w'
-        },
-        timestamp: '1d ago',
-        content: {
-          body: 'Just uploaded the minutes from last Tuesday\'s strategy session. Please review before next week.',
-          type: 'document',
-          document: {
-            name: 'August_Strategy_Meeting_Minutes.pdf',
-            size: '1.2 MB',
-            url: '#'
-          }
-        },
-        reactions: {
-          likes: 8,
-          comments: 3
-        }
+    let cancelled = false;
+
+    async function load() {
+      const app = getFirebaseClientApp();
+      if (!app) return;
+      const db = getFirestore(app);
+
+      try {
+        const ref = collection(db, 'communityPosts');
+        const q = query(ref, orderBy('createdAt', 'desc'), limit(20));
+        const snapshot = await getDocs(q);
+        if (cancelled) return;
+
+        const mapped = snapshot.docs.map((d) => {
+          const data = d.data() as any;
+          const createdAt: Timestamp | null = data.createdAt?.toDate ? data.createdAt : null;
+
+          return {
+            id: d.id,
+            author: {
+              name: String(data.authorName || 'Member'),
+              role: String(data.authorRole || 'Member'),
+              photoUrl: data.authorPhotoURL ? String(data.authorPhotoURL) : undefined,
+            },
+            timestamp: createdAt ? formatTimeAgo(createdAt) : '',
+            content: {
+              title: data.title ? String(data.title) : undefined,
+              body: String(data.body || ''),
+              type: (data.type as Post['content']['type']) || 'text',
+              images: Array.isArray(data.images) ? (data.images as string[]) : undefined,
+              document: data.document ? (data.document as Post['content']['document']) : undefined,
+            },
+            reactions: {
+              likes: Number(data.likesCount || 0),
+              comments: Number(data.commentsCount || 0),
+            },
+          } as Post;
+        });
+
+        setPosts(mapped);
+      } catch (err) {
+        console.error('Error loading community posts:', err);
+        if (!cancelled) setPosts([]);
       }
-    ];
-    setPosts(samplePosts);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const formatTimeAgo = (timestamp: Timestamp) => {
+    const now = new Date();
+    const date = timestamp.toDate();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const handlePost = () => {
     if (!postText.trim()) return;
-    // TODO: Implement actual post creation
-    setPostText('');
+    void createPost(postText.trim());
+  };
+
+  const createPost = async (body: string) => {
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+
+    try {
+      const authorName = userData?.name || user?.displayName || 'Member';
+      const authorRole = userData?.role ? String(userData.role) : 'Member';
+      const authorPhotoURL = userData?.photoURL || user?.photoURL || null;
+      const authorUid = user?.uid || null;
+
+      // Optimistic UI
+      const optimistic: Post = {
+        id: `local-${Date.now()}`,
+        author: { name: authorName, role: authorRole, photoUrl: authorPhotoURL || undefined },
+        timestamp: 'Just now',
+        content: { body, type: 'text' },
+        reactions: { likes: 0, comments: 0 },
+      };
+      setPosts((prev) => [optimistic, ...prev]);
+      setPostText('');
+
+      await addDoc(collection(db, 'communityPosts'), {
+        authorUid,
+        authorName,
+        authorRole,
+        authorPhotoURL,
+        title: null,
+        body,
+        type: 'text',
+        images: null,
+        document: null,
+        likesCount: 0,
+        commentsCount: 0,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error('Error creating post:', err);
+    }
   };
 
   return (

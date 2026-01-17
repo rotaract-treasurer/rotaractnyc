@@ -1,13 +1,82 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { getFirebaseClientApp } from '@/lib/firebase/client';
+import { User } from '@/types/portal';
+
 export default function MemberSpotlight() {
-  // TODO: Fetch random/featured member from Firestore
-  const spotlightMember = {
-    name: "James O.",
-    role: "New Member",
-    photoURL: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
-    quote: "Excited to join Rotaract to help with youth mentorship programs!"
-  };
+  const [member, setMember] = useState<User | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const app = getFirebaseClientApp();
+      if (!app) return;
+      const db = getFirestore(app);
+
+      try {
+        const usersRef = collection(db, 'users');
+        const usersQuery = query(
+          usersRef,
+          where('status', '==', 'active'),
+          orderBy('name', 'asc'),
+          limit(25)
+        );
+        const snapshot = await getDocs(usersQuery);
+        const rows = snapshot.docs.map((d) => ({ uid: d.id, ...d.data() })) as User[];
+        if (cancelled) return;
+
+        if (rows.length === 0) {
+          setMember(null);
+          return;
+        }
+
+        const picked = rows[Math.floor(Math.random() * rows.length)];
+        setMember(picked);
+      } catch (err) {
+        console.error('Error loading member spotlight:', err);
+        if (!cancelled) setMember(null);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const spotlightMember = useMemo(() => {
+    if (member) {
+      return {
+        name: member.name,
+        role:
+          member.role === 'BOARD'
+            ? 'Board Member'
+            : member.role === 'TREASURER'
+            ? 'Treasurer'
+            : member.role === 'ADMIN'
+            ? 'Administrator'
+            : 'Member',
+        photoURL:
+          member.photoURL ||
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+        quote:
+          (member as unknown as { spotlightQuote?: string }).spotlightQuote ||
+          'Proud to be part of Rotaract NYC!',
+      };
+    }
+
+    return {
+      name: 'Member',
+      role: 'Rotaract NYC',
+      photoURL:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+      quote: 'Welcome to the members portal.',
+    };
+  }, [member]);
 
   return (
     <div className="bg-gradient-to-br from-rotaract-blue to-[#004280] rounded-xl shadow-md p-5 text-white relative overflow-hidden">

@@ -1,8 +1,11 @@
 'use client';
 
 import { Announcement, User } from '@/types/portal';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, deleteDoc, doc, getCountFromServer, getDoc, getFirestore, serverTimestamp, setDoc, collection } from 'firebase/firestore';
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { getFirebaseClientApp } from '@/lib/firebase/client';
+import { useAuth } from '@/lib/firebase/auth';
 
 interface Author {
   name: string;
@@ -16,8 +19,10 @@ interface FeedCardProps {
 }
 
 export default function FeedCard({ announcement, author }: FeedCardProps) {
+  const { user } = useAuth();
   const [acknowledged, setAcknowledged] = useState(false);
-  const [acknowledgedCount, setAcknowledgedCount] = useState(42); // TODO: Get from Firestore
+  const [acknowledgedCount, setAcknowledgedCount] = useState(0);
+  const [loadingAck, setLoadingAck] = useState(true);
 
   const formatTimeAgo = (timestamp: Timestamp) => {
     const now = new Date();
@@ -46,10 +51,68 @@ export default function FeedCard({ announcement, author }: FeedCardProps) {
     return roleMap[role] || 'text-gray-600 bg-gray-100 dark:bg-gray-800';
   };
 
-  const handleAcknowledge = () => {
-    setAcknowledged(!acknowledged);
-    setAcknowledgedCount(prev => acknowledged ? prev - 1 : prev + 1);
-    // TODO: Update in Firestore
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAck() {
+      const app = getFirebaseClientApp();
+      if (!app) return;
+      const db = getFirestore(app);
+
+      try {
+        const ackCol = collection(db, 'announcements', announcement.id, 'acknowledgements');
+        const countSnap = await getCountFromServer(ackCol);
+
+        let isAck = false;
+        if (user?.uid) {
+          const ackDoc = await getDoc(doc(db, 'announcements', announcement.id, 'acknowledgements', user.uid));
+          isAck = ackDoc.exists();
+        }
+
+        if (cancelled) return;
+        setAcknowledgedCount(countSnap.data().count);
+        setAcknowledged(isAck);
+      } catch (err) {
+        console.error('Error loading acknowledgements:', err);
+        if (!cancelled) {
+          setAcknowledged(false);
+          setAcknowledgedCount(0);
+        }
+      } finally {
+        if (!cancelled) setLoadingAck(false);
+      }
+    }
+
+    loadAck();
+    return () => {
+      cancelled = true;
+    };
+  }, [announcement.id, user?.uid]);
+
+  const handleAcknowledge = async () => {
+    if (!user?.uid) return;
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+
+    const ref = doc(db, 'announcements', announcement.id, 'acknowledgements', user.uid);
+
+    try {
+      if (acknowledged) {
+        setAcknowledged(false);
+        setAcknowledgedCount((prev) => Math.max(0, prev - 1));
+        await deleteDoc(ref);
+      } else {
+        setAcknowledged(true);
+        setAcknowledgedCount((prev) => prev + 1);
+        await setDoc(ref, { createdAt: serverTimestamp() }, { merge: true });
+      }
+    } catch (err) {
+      console.error('Error updating acknowledgement:', err);
+      // revert optimistic update
+      setAcknowledged((prev) => !prev);
+      setAcknowledgedCount((prev) => (acknowledged ? prev + 1 : Math.max(0, prev - 1)));
+    }
   };
 
   return (
@@ -102,7 +165,8 @@ export default function FeedCard({ announcement, author }: FeedCardProps) {
           {/* Acknowledge Button */}
           <button 
             onClick={handleAcknowledge}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group/btn"
+            disabled={loadingAck || !user}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group/btn disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span 
               className={`material-symbols-outlined text-[20px] transition-colors ${

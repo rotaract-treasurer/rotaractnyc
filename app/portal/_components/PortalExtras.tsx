@@ -21,7 +21,7 @@ export default function PortalExtras() {
     const db = getFirestore(app);
     
     try {
-      const eventsRef = collection(db, 'events');
+      const eventsRef = collection(db, 'portalEvents');
       const now = Timestamp.now();
       const nextEventQuery = query(
         eventsRef,

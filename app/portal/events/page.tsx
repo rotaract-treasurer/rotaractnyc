@@ -56,7 +56,7 @@ export default function EventsPage() {
     
     try {
       // Load upcoming events (member and public)
-      const eventsRef = collection(db, 'events');
+      const eventsRef = collection(db, 'portalEvents');
       const eventsQuery = query(
         eventsRef,
         where('startAt', '>=', Timestamp.now()),
@@ -76,7 +76,7 @@ export default function EventsPage() {
       
       for (const event of eventsData) {
         // Get user's RSVP
-        const rsvpDoc = await getDoc(doc(db, 'events', event.id, 'rsvps', user.uid));
+        const rsvpDoc = await getDoc(doc(db, 'portalEvents', event.id, 'rsvps', user.uid));
         if (rsvpDoc.exists()) {
           rsvpMap.set(event.id, {
             uid: user.uid,
@@ -87,7 +87,7 @@ export default function EventsPage() {
 
         // Get total "going" count
         const rsvpsQuery = query(
-          collection(db, 'events', event.id, 'rsvps'),
+          collection(db, 'portalEvents', event.id, 'rsvps'),
           where('status', '==', 'going')
         );
         const rsvpsSnapshot = await getDocs(rsvpsQuery);
@@ -112,7 +112,7 @@ export default function EventsPage() {
     const db = getFirestore(app);
     
     try {
-      const rsvpRef = doc(db, 'events', eventId, 'rsvps', user.uid);
+      const rsvpRef = doc(db, 'portalEvents', eventId, 'rsvps', user.uid);
       const rsvpData: Omit<RSVP, 'uid' | 'eventId'> = {
         status,
         updatedAt: Timestamp.now()

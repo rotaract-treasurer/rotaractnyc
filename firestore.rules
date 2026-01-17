@@ -57,6 +57,24 @@ service cloud.firestore {
         allow write: if isAuthenticated() && request.auth.uid == userId;
       }
     }
+
+    // Portal Events (separate from public site events)
+    match /portalEvents/{eventId} {
+      // Members can read member-visible events, board can read all
+      allow read: if (isMember() && resource.data.visibility == 'member')
+                  || (isBoard() && resource.data.visibility in ['member', 'board'])
+                  || resource.data.visibility == 'public';
+      // Board can create/edit events
+      allow create, update, delete: if isBoard();
+
+      // RSVPs subcollection
+      match /rsvps/{userId} {
+        // Members can read all RSVPs for an event
+        allow read: if isMember();
+        // Members can only write their own RSVP
+        allow write: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
     
     // Announcements collection
     match /announcements/{announcementId} {
@@ -65,6 +83,19 @@ service cloud.firestore {
                   || (isBoard() && resource.data.visibility in ['member', 'board']);
       // Board can create/edit announcements
       allow create, update, delete: if isBoard();
+
+      // Acknowledgements subcollection
+      match /acknowledgements/{userId} {
+        allow read: if isMember();
+        allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    // Community posts (portal dashboard feed)
+    match /communityPosts/{postId} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
     
     // Documents collection

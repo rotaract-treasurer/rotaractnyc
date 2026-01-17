@@ -1,5 +1,11 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { collection, getDocs, limit, orderBy, query, where, Timestamp } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { getFirebaseClientApp } from '@/lib/firebase/client';
+import { Event } from '@/types/portal';
+
 interface Deadline {
   title: string;
   daysLeft?: number;
@@ -8,12 +14,53 @@ interface Deadline {
 }
 
 export default function UpcomingDeadlines() {
-  // TODO: Fetch from Firestore or calculate from events
-  const deadlines: Deadline[] = [
-    { title: "Board Applications Due", daysLeft: 2, urgency: 'urgent' },
-    { title: "RSVP for Fall Mixer", dueDate: "Oct 18", urgency: 'warning' },
-    { title: "Q4 Dues Payment", dueDate: "Nov 01", urgency: 'normal' },
-  ];
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const app = getFirebaseClientApp();
+      if (!app) return;
+      const db = getFirestore(app);
+
+      try {
+        const ref = collection(db, 'portalEvents');
+        const q = query(
+          ref,
+          where('visibility', '==', 'member'),
+          where('startAt', '>=', Timestamp.now()),
+          orderBy('startAt', 'asc'),
+          limit(3)
+        );
+        const snapshot = await getDocs(q);
+        if (cancelled) return;
+
+        setEvents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Event[]);
+      } catch (err) {
+        console.error('Error loading upcoming deadlines:', err);
+        if (!cancelled) setEvents([]);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const deadlines: Deadline[] = useMemo(() => {
+    return events.map((e) => {
+      const start = e.startAt?.toDate ? e.startAt.toDate() : new Date();
+      const diffDays = Math.ceil((start.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const urgency: Deadline['urgency'] = diffDays <= 3 ? 'urgent' : diffDays <= 10 ? 'warning' : 'normal';
+      return {
+        title: e.title,
+        daysLeft: diffDays >= 0 ? diffDays : 0,
+        urgency,
+      };
+    });
+  }, [events]);
 
   const getUrgencyColor = (urgency: Deadline['urgency']) => {
     const colors = {
