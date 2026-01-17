@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 
 // User roles
 export type UserRole = 'MEMBER' | 'BOARD' | 'TREASURER' | 'ADMIN';
-export type UserStatus = 'active' | 'inactive';
+export type UserStatus = 'pending' | 'active' | 'inactive';
 
 // Visibility levels
 export type Visibility = 'public' | 'member' | 'board';

@@ -7,7 +7,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getFirebaseClientApp } from './client';
 import { getAuth } from 'firebase/auth';
@@ -85,8 +85,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setUserData({ uid: firebaseUser.uid, ...userDoc.data() } as User);
           } else {
             console.log('[Auth] User document does not exist');
-            // User document doesn't exist yet - will be created by admin
-            setUserData(null);
+            // Create a minimal pending profile so admins can approve the account.
+            try {
+              await setDoc(
+                doc(db, 'users', firebaseUser.uid),
+                {
+                  name: firebaseUser.displayName || firebaseUser.email || 'Member',
+                  email: firebaseUser.email,
+                  photoURL: firebaseUser.photoURL || null,
+                  role: 'MEMBER',
+                  status: 'pending',
+                  phoneOptIn: false,
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              );
+
+              const created = await getDoc(doc(db, 'users', firebaseUser.uid));
+              setUserData(created.exists() ? ({ uid: firebaseUser.uid, ...created.data() } as User) : null);
+            } catch (error: any) {
+              if (error?.code !== 'permission-denied') {
+                console.error('[Auth] Error creating pending user profile:', error);
+              }
+              setUserData(null);
+            }
           }
         } catch (error: any) {
           // Ignore permission errors on first sign-in

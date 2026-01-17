@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     // Update Firestore user document
     await db.collection('users').doc(user.uid).set({
       role,
+      status: 'active',
       updatedAt: new Date(),
     }, { merge: true });
 

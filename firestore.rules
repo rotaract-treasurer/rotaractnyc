@@ -30,13 +30,21 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Members can read all active users
-      allow read: if isMember();
+      // Members can read users; signed-in users can also read their own profile for approval status.
+      allow read: if isMember() || (isAuthenticated() && request.auth.uid == userId);
+
+      // Signed-in users can create their own pending profile (no access to member content until approved).
+      allow create: if isAuthenticated()
+                    && request.auth.uid == userId
+                    && request.resource.data.email == request.auth.token.email
+                    && request.resource.data.role == 'MEMBER'
+                    && request.resource.data.status == 'pending';
+
       // Users can update their own profile (limited fields)
       allow update: if isAuthenticated() && request.auth.uid == userId
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']);
       // Only admins can create users or change role/status
-      allow create, delete: if isAdmin();
+      allow delete: if isAdmin();
       allow update: if isAdmin();
     }
     

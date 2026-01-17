@@ -9,7 +9,7 @@ import { isEmailAllowed } from '@/lib/firebase/allowlist';
 export interface PortalSession {
   uid: string;
   email: string;
-  role: UserRole;
+  role: UserRole | null;
   user: User | null;
 }
 
@@ -36,8 +36,8 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     const userData = userDoc.exists ? { uid: decodedClaims.uid, ...userDoc.data() } as User : null;
     
     const email = decodedClaims.email || '';
-    const roleFromClaims = decodedClaims.role as UserRole | undefined;
-    const role: UserRole = roleFromClaims || (isEmailAllowed(email) ? 'ADMIN' : 'MEMBER');
+    const roleFromClaims = (decodedClaims.role as UserRole | undefined) || null;
+    const role: UserRole | null = isEmailAllowed(email) ? 'ADMIN' : roleFromClaims;
 
     return {
       uid: decodedClaims.uid,
@@ -61,6 +61,10 @@ export async function requirePortalSession(): Promise<PortalSession> {
 
 export async function requireRole(minRole: UserRole): Promise<PortalSession> {
   const session = await requirePortalSession();
+
+  if (!session.role) {
+    throw new Error('Insufficient permissions');
+  }
   
   const roleHierarchy: Record<UserRole, number> = {
     MEMBER: 1,
