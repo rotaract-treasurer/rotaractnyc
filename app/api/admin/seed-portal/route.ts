@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { requireAdmin } from '@/app/api/admin/_utils'
-import { getFirebaseAdminDb } from '@/lib/firebase/admin'
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from '@/lib/firebase/admin'
 
 type SeedResult = {
   ok: true
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const db = getFirebaseAdminDb()
+    const auth = getFirebaseAdminAuth()
     const batch = db.batch()
 
     const createdOrUpdated: SeedResult['createdOrUpdated'] = {
@@ -46,6 +47,30 @@ export async function POST(req: NextRequest) {
       transactions: 0,
       monthlySummaries: 0,
       acknowledgements: 0,
+    }
+
+    // Ensure the current allowlisted admin user can actually access portal content.
+    // Portal Firestore rules depend on request.auth.token.role (custom claims).
+    if (admin.uid) {
+      await auth.setCustomUserClaims(admin.uid, { role: 'ADMIN' })
+
+      const ref = db.collection('users').doc(admin.uid)
+      batch.set(
+        ref,
+        {
+          email: admin.email,
+          name: admin.email || 'Admin',
+          role: 'ADMIN',
+          status: 'active',
+          phoneOptIn: false,
+          spotlightQuote: 'Welcome to the Rotaract NYC members portal!',
+          updatedAt: FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+          seeded: true,
+        },
+        { merge: true }
+      )
+      createdOrUpdated.users += 1
     }
 
     // Deterministic IDs so multiple runs are safe.

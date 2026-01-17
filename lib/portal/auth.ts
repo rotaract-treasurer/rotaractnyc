@@ -4,6 +4,7 @@ import { getFirebaseAdminApp } from '@/lib/firebase/admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { User, UserRole } from '@/types/portal';
 import { PORTAL_SESSION_COOKIE } from '@/lib/portal/session';
+import { isEmailAllowed } from '@/lib/firebase/allowlist';
 
 export interface PortalSession {
   uid: string;
@@ -34,10 +35,14 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     
     const userData = userDoc.exists ? { uid: decodedClaims.uid, ...userDoc.data() } as User : null;
     
+    const email = decodedClaims.email || '';
+    const roleFromClaims = decodedClaims.role as UserRole | undefined;
+    const role: UserRole = roleFromClaims || (isEmailAllowed(email) ? 'ADMIN' : 'MEMBER');
+
     return {
       uid: decodedClaims.uid,
-      email: decodedClaims.email || '',
-      role: (decodedClaims.role as UserRole) || 'MEMBER',
+      email,
+      role,
       user: userData,
     };
   } catch (error) {

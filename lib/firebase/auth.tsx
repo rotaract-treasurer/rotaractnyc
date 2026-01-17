@@ -64,7 +64,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Fetch user data from Firestore
         try {
           console.log('[Auth] Fetching user document for:', firebaseUser.uid);
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          let userDoc;
+          try {
+            userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          } catch (error: any) {
+            if (error?.code === 'permission-denied') {
+              // If custom claims were just updated (e.g., after seeding/role assignment),
+              // force-refresh the ID token once and retry.
+              try {
+                await firebaseUser.getIdToken(true);
+                userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+              } catch {
+                throw error;
+              }
+            }
+            throw error;
+          }
           if (userDoc.exists()) {
             console.log('[Auth] User document found:', userDoc.data());
             setUserData({ uid: firebaseUser.uid, ...userDoc.data() } as User);
@@ -116,7 +131,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!response.ok) {
         console.error('[Auth] Failed to set session:', await response.text());
       } else {
+        const json = await response.json().catch(() => null);
         console.log('[Auth] Session set successfully');
+
+        // If the server bootstrapped custom claims, refresh token and re-set session.
+        if (json?.needsTokenRefresh) {
+          console.log('[Auth] Refreshing ID token to pick up custom claims');
+          const refreshedToken = await result.user.getIdToken(true);
+          const response2 = await fetch('/api/portal/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: refreshedToken }),
+          });
+          if (!response2.ok) {
+            console.error('[Auth] Failed to set refreshed session:', await response2.text());
+          } else {
+            console.log('[Auth] Refreshed session set successfully');
+          }
+        }
       }
     } catch (error) {
       console.error('[Auth] Error signing in with Google:', error);
