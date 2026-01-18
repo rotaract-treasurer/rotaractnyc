@@ -55,26 +55,54 @@ export default function EventsPage() {
     const db = getFirestore(app);
     
     try {
-      // Load upcoming events (member and public)
+      // Load upcoming events - query for both member and public visibility
       const eventsRef = collection(db, 'portalEvents');
-      const eventsQuery = query(
+      
+      // Query for member-visible events
+      const memberQuery = query(
         eventsRef,
+        where('visibility', '==', 'member'),
         where('startAt', '>=', Timestamp.now()),
         orderBy('startAt', 'asc')
       );
-      const snapshot = await getDocs(eventsQuery);
-      const eventsData = snapshot.docs.map(doc => ({
+      
+      // Query for public events
+      const publicQuery = query(
+        eventsRef,
+        where('visibility', '==', 'public'),
+        where('startAt', '>=', Timestamp.now()),
+        orderBy('startAt', 'asc')
+      );
+      
+      const [memberSnapshot, publicSnapshot] = await Promise.all([
+        getDocs(memberQuery),
+        getDocs(publicQuery)
+      ]);
+      
+      const memberEvents = memberSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Event[];
       
-      setEvents(eventsData);
+      const publicEvents = publicSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Event[];
+      
+      // Combine and sort by startAt
+      const allEvents = [...memberEvents, ...publicEvents].sort((a, b) => {
+        const aTime = a.startAt instanceof Timestamp ? a.startAt.toMillis() : 0;
+        const bTime = b.startAt instanceof Timestamp ? b.startAt.toMillis() : 0;
+        return aTime - bTime;
+      });
+      
+      setEvents(allEvents);
 
       // Load RSVPs for current user
       const rsvpMap = new Map<string, RSVP>();
       const countsMap = new Map<string, number>();
       
-      for (const event of eventsData) {
+      for (const event of allEvents) {
         // Get user's RSVP
         const rsvpDoc = await getDoc(doc(db, 'portalEvents', event.id, 'rsvps', user.uid));
         if (rsvpDoc.exists()) {
