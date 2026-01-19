@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import DragDropFile from '@/components/admin/DragDropFile'
+import NewMemberWizard from '@/components/admin/NewMemberWizard'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type MemberRow = {
@@ -31,6 +32,7 @@ export default function AdminMembersPage() {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
   const [headshotFile, setHeadshotFile] = useState<File | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'honorary' | 'alumni'>('all')
@@ -395,6 +397,62 @@ export default function AdminMembersPage() {
     }
   }
 
+  const handleWizardSubmit = async (data: any) => {
+    setSaving(true)
+    setError(null)
+    try {
+      // Upload photo first if provided
+      let photoUrl = ''
+      if (data.photoFile) {
+        const fd = new FormData()
+        fd.append('file', data.photoFile)
+        fd.append('folder', 'members')
+
+        const uploadRes = await fetch('/api/admin/upload', {
+          method: 'POST',
+          body: fd,
+        })
+
+        if (uploadRes.ok) {
+          const json: any = await uploadRes.json()
+          photoUrl = json.url || ''
+        }
+      }
+
+      // Create the member
+      const res = await fetch('/api/admin/members', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          group: data.group,
+          title: data.title,
+          name: `${data.firstName} ${data.lastName}`,
+          role: data.role,
+          email: data.email,
+          photoUrl,
+          order: 999, // Default to end of list
+          active: true,
+          membershipType: data.membershipType,
+          duesStatus: data.duesStatus,
+          joinDate: data.joinDate,
+        }),
+      })
+
+      if (!res.ok) {
+        setError(await getFriendlyAdminApiError(res, 'Unable to create member.'))
+        throw new Error('Failed to create member')
+      }
+
+      setShowWizard(false)
+      await refresh()
+    } catch (err) {
+      setError('Unable to create member.')
+      throw err
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const remove = async (id: string) => {
     if (!confirm('Delete this member?')) return
     setError(null)
@@ -479,7 +537,7 @@ export default function AdminMembersPage() {
               Export CSV
             </button>
             <button
-              onClick={startNew}
+              onClick={() => setShowWizard(true)}
               className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all shadow-sm"
             >
               <span className="material-symbols-outlined text-[20px] mr-2">person_add</span>
@@ -880,6 +938,13 @@ export default function AdminMembersPage() {
           )}
         </div>
       </div>
+
+      {/* New Member Wizard */}
+      <NewMemberWizard 
+        isOpen={showWizard} 
+        onClose={() => setShowWizard(false)}
+        onSubmit={handleWizardSubmit}
+      />
     </div>
   )
 }
