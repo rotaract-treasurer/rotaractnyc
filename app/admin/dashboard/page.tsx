@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
+import StatCard from '../_components/StatCard'
+import RecentActivity from '../_components/RecentActivity'
+import QuickActions from '../_components/QuickActions'
 
 export default function AdminDashboard() {
   const session = useAdminSession()
@@ -26,128 +29,224 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 lg:p-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        {/* Breadcrumbs & Heading */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          Welcome back, Admin
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">
+          Here&apos;s what&apos;s happening with your club today
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <StatCard
+          title="Total Members"
+          value={stats.members}
+          icon="group"
+          iconColor="bg-primary/10 text-primary"
+          trend={{ value: '+12 New', positive: true }}
+          subtitle="this month"
+        />
+        <StatCard
+          title="Active Events"
+          value={stats.events}
+          icon="calendar_month"
+          iconColor="bg-purple-500/10 text-purple-500"
+          trend={{ value: 'Stable', neutral: true }}
+          subtitle="vs last quarter"
+        />
+        <StatCard
+          title="Published Posts"
+          value={stats.posts}
+          icon="article"
+          iconColor="bg-green-500/10 text-green-600"
+          trend={{ value: '+5', positive: true }}
+          subtitle="this week"
+        />
+        <StatCard
+          title="Funds Raised"
+          value={`$${stats.fundsRaised.toLocaleString()}`}
+          icon="attach_money"
+          iconColor="bg-orange-500/10 text-orange-600"
+          trend={{ value: '+5%', positive: true }}
+          subtitle="vs last month"
+        />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Quick Actions + Upcoming Events */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Quick Actions */}
+          <QuickActions />
+
+          {/* Upcoming Events */}
+          <div className="rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upcoming Events</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Events scheduled in the next 30 days
+                </p>
+              </div>
+              <Link
+                href="/admin/events"
+                className="text-sm font-medium text-primary hover:text-blue-700 transition-colors"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <EventRow
+                title="Annual Gala"
+                date="Jan 25, 2026"
+                location="The Plaza"
+                status="published"
+              />
+              <EventRow
+                title="Community Cleanup"
+                date="Feb 5, 2026"
+                location="Central Park"
+                status="draft"
+              />
+              <EventRow
+                title="Fundraising Dinner"
+                date="Feb 15, 2026"
+                location="Hudson Yards"
+                status="published"
+              />
+            </div>
+          </div>
+
+          {/* Recent Members */}
+          <div className="rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Members</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Latest member registrations
+                </p>
+              </div>
+              <Link
+                href="/admin/members"
+                className="text-sm font-medium text-primary hover:text-blue-700 transition-colors"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <MemberRow
+                name="John Smith"
+                email="john@example.com"
+                status="active"
+                joined="2 days ago"
+              />
+              <MemberRow
+                name="Sarah Johnson"
+                email="sarah@example.com"
+                status="pending"
+                joined="5 days ago"
+              />
+              <MemberRow
+                name="Mike Chen"
+                email="mike@example.com"
+                status="active"
+                joined="1 week ago"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Recent Activity */}
+        <div className="lg:col-span-1">
+          <RecentActivity />
+        </div>
+      </div>
+    </main>
+  )
+}
+
+function EventRow({
+  title,
+  date,
+  location,
+  status,
+}: {
+  title: string
+  date: string
+  location: string
+  status: 'published' | 'draft'
+}) {
+  return (
+    <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-purple-600 text-[20px]">event</span>
+          </div>
           <div>
-            <nav className="mb-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <Link href="/admin" className="hover:text-primary">Home</Link>
-              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-              <span className="font-medium text-slate-900 dark:text-white">Dashboard</span>
-            </nav>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back, Admin</h2>
-            <p className="text-slate-500 dark:text-slate-400">Here is an overview of your club&apos;s performance.</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {date} • {location}
+            </p>
           </div>
         </div>
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+            status === 'published'
+              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-700/10'
+              : 'bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-700/10'
+          }`}
+        >
+          {status === 'published' ? '✓ Published' : '○ Draft'}
+        </span>
+      </div>
+    </div>
+  )
+}
 
-        {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Card 1 */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Members</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{stats.members}</p>
-              </div>
-              <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <span className="material-symbols-outlined">group</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                +12 New
-              </span>
-              <span className="text-xs text-slate-400">this month</span>
-            </div>
+function MemberRow({
+  name,
+  email,
+  status,
+  joined,
+}: {
+  name: string
+  email: string
+  status: 'active' | 'pending'
+  joined: string
+}) {
+  return (
+    <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-blue-600 text-[20px]">person</span>
           </div>
-
-          {/* Card 2 */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Active Projects</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{stats.events}</p>
-              </div>
-              <div className="flex size-12 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
-                <span className="material-symbols-outlined">assignment</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                Stable
-              </span>
-              <span className="text-xs text-slate-400">vs last quarter</span>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Funds Raised</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">${stats.fundsRaised.toLocaleString()}</p>
-              </div>
-              <div className="flex size-12 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
-                <span className="material-symbols-outlined">attach_money</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                +5%
-              </span>
-              <span className="text-xs text-slate-400">vs last month</span>
-            </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{email}</p>
           </div>
         </div>
-
-        {/* Main Grid: Events Table & Activity Feed */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Events Column (2/3 width) */}
-          <div className="flex flex-col gap-4 lg:col-span-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Upcoming Events</h3>
-              <Link href="/admin/events" className="text-sm font-medium text-primary hover:underline">View all</Link>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                    <tr>
-                      <th scope="col" className="px-6 py-4 font-semibold">Event Name</th>
-                      <th scope="col" className="px-6 py-4 font-semibold">Date</th>
-                      <th scope="col" className="px-6 py-4 font-semibold">Location</th>
-                      <th scope="col" className="px-6 py-4 font-semibold">Status</th>
-                      <th scope="col" className="px-6 py-4 text-right font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-primary">celebration</span>
-                          </div>
-                          <span className="font-semibold text-slate-900 dark:text-white">Annual Gala</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">Jan 25, 2026</td>
-                      <td className="px-6 py-4 text-slate-500">The Plaza</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900/30 dark:text-blue-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>
-                          Published
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link href="/admin/events" className="text-slate-400 hover:text-primary transition-colors">
-                          <span className="material-symbols-outlined text-[20px]">edit_square</span>
-                        </Link>
-                      </td>
-                    </tr>
-                    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+        <div className="text-right">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+              status === 'active'
+                ? 'bg-green-50 text-green-700'
+                : 'bg-yellow-50 text-yellow-700'
+            }`}
+          >
+            {status === 'active' ? '✓ Active' : '○ Pending'}
+          </span>
+          <p className="text-xs text-gray-400 mt-1">{joined}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
