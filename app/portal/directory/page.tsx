@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/lib/firebase/auth';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
@@ -182,6 +183,7 @@ export default function DirectoryPage() {
 
 // Member Card Component
 function MemberCard({ member }: { member: User }) {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Get member's interests/tags from committee
@@ -189,7 +191,8 @@ function MemberCard({ member }: { member: User }) {
   
   return (
     <div 
-      className="group/card member-card relative bg-white dark:bg-surface-dark rounded-[1.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/10"
+      onClick={() => router.push(`/portal/directory/${member.uid}`)}
+      className="group/card member-card relative bg-white dark:bg-surface-dark rounded-[1.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/10 cursor-pointer"
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
     >
@@ -255,6 +258,7 @@ function MemberCard({ member }: { member: User }) {
         >
           <a
             href={`mailto:${member.email}`}
+            onClick={(e) => e.stopPropagation()}
             className="flex-1 h-9 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">mail</span>
@@ -265,6 +269,7 @@ function MemberCard({ member }: { member: User }) {
               href={member.linkedin}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="size-9 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-[#0077b5] hover:border-[#0077b5] rounded-lg flex items-center justify-center transition-colors bg-white dark:bg-transparent"
             >
               <span className="material-symbols-outlined text-lg">link</span>
