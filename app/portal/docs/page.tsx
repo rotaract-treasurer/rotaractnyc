@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/firebase/auth';
 import { useEffect, useState } from 'react';
 import { addDoc, collection, query, where, getDocs, orderBy, serverTimestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { Document } from '@/types/portal';
 import { 
@@ -28,6 +29,8 @@ export default function DocumentsPage() {
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Minutes');
   const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadType, setUploadType] = useState<'link' | 'file'>('file');
   const [uploading, setUploading] = useState(false);
 
   const canUpload = userData?.role === 'BOARD' || userData?.role === 'TREASURER' || userData?.role === 'ADMIN';
@@ -131,7 +134,17 @@ export default function DocumentsPage() {
       return;
     }
     if (!user?.uid) return;
-    if (!uploadTitle.trim() || !uploadCategory.trim() || !uploadUrl.trim()) return;
+    if (!uploadTitle.trim() || !uploadCategory.trim()) return;
+    
+    // Validate based on upload type
+    if (uploadType === 'link' && !uploadUrl.trim()) {
+      alert('Please provide a URL');
+      return;
+    }
+    if (uploadType === 'file' && !uploadFile) {
+      alert('Please select a file to upload');
+      return;
+    }
 
     const app = getFirebaseClientApp();
     if (!app) return;
@@ -139,19 +152,57 @@ export default function DocumentsPage() {
 
     setUploading(true);
     try {
+      let finalUrl = uploadUrl.trim();
+      
+      // If uploading a file, upload to Firebase Storage first
+      if (uploadType === 'file' && uploadFile) {
+        // Validate file type
+        const allowedTypes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+        
+        if (!allowedTypes.includes(uploadFile.type)) {
+          alert('Please upload a PDF, Word document, or Excel file');
+          setUploading(false);
+          return;
+        }
+        
+        // Check file size (max 10MB)
+        if (uploadFile.size > 10 * 1024 * 1024) {
+          alert('File must be less than 10MB');
+          setUploading(false);
+          return;
+        }
+        
+        const storage = getStorage(app);
+        const timestamp = Date.now();
+        const sanitizedFileName = uploadFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storageRef = ref(storage, `documents/${user.uid}/${timestamp}-${sanitizedFileName}`);
+        
+        await uploadBytes(storageRef, uploadFile);
+        finalUrl = await getDownloadURL(storageRef);
+      }
+      
       await addDoc(collection(db, 'documents'), {
         title: uploadTitle.trim(),
         category: uploadCategory.trim(),
-        url: uploadUrl.trim(),
+        url: finalUrl,
         visibility: 'member',
         createdBy: user.uid,
         createdAt: serverTimestamp(),
         seeded: false,
       });
+      
       setUploadOpen(false);
       setUploadTitle('');
       setUploadCategory('Minutes');
       setUploadUrl('');
+      setUploadFile(null);
+      setUploadType('file');
       window.location.reload();
     } catch (e) {
       console.error('Error uploading document:', e);
@@ -209,7 +260,7 @@ export default function DocumentsPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => (uploading ? null : setUploadOpen(false))} />
           <div className="relative w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-text-main">Add a document link</h2>
+              <h2 className="text-lg font-bold text-text-main">Add Document</h2>
               <button
                 onClick={() => (uploading ? null : setUploadOpen(false))}
                 className="text-slate-400 hover:text-text-main"
@@ -219,13 +270,44 @@ export default function DocumentsPage() {
               </button>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-4 grid gap-4">
+              {/* Upload Type Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-text-main mb-2">Upload Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUploadType('file')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                      uploadType === 'file'
+                        ? 'border-primary bg-primary/5 text-primary font-semibold'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <FiUpload className="inline mr-2" />
+                    Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadType('link')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                      uploadType === 'link'
+                        ? 'border-primary bg-primary/5 text-primary font-semibold'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <FiExternalLink className="inline mr-2" />
+                    Add Link
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-text-main mb-1">Title</label>
                 <input
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   placeholder="e.g., January Meeting Minutes"
                 />
               </div>
@@ -235,36 +317,67 @@ export default function DocumentsPage() {
                 <input
                   value={uploadCategory}
                   onChange={(e) => setUploadCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   placeholder="e.g., Minutes"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-text-main mb-1">URL</label>
-                <input
-                  value={uploadUrl}
-                  onChange={(e) => setUploadUrl(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                  placeholder="https://…"
-                />
-                <p className="mt-1 text-xs text-text-muted">This does not upload a file; it saves a link.</p>
-              </div>
+              {uploadType === 'file' ? (
+                <div>
+                  <label className="block text-sm font-semibold text-text-main mb-1">File</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-text-muted">
+                    Accepted formats: PDF, Word (.doc, .docx), Excel (.xls, .xlsx). Max size: 10MB
+                  </p>
+                  {uploadFile && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-text-main">
+                      <FiFileText className="text-primary" />
+                      <span className="font-medium">{uploadFile.name}</span>
+                      <span className="text-text-muted">({(uploadFile.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-text-main mb-1">URL</label>
+                  <input
+                    value={uploadUrl}
+                    onChange={(e) => setUploadUrl(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    placeholder="https://…"
+                  />
+                  <p className="mt-1 text-xs text-text-muted">Link to an external document or resource</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => (uploading ? null : setUploadOpen(false))}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold"
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                disabled={uploading}
               >
                 Cancel
               </button>
               <button
                 onClick={submitUpload}
-                disabled={uploading || !uploadTitle.trim() || !uploadCategory.trim() || !uploadUrl.trim()}
-                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  uploading ||
+                  !uploadTitle.trim() ||
+                  !uploadCategory.trim() ||
+                  (uploadType === 'link' && !uploadUrl.trim()) ||
+                  (uploadType === 'file' && !uploadFile)
+                }
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
               >
-                {uploading ? 'Saving…' : 'Save'}
+                {uploading ? 'Uploading…' : uploadType === 'file' ? 'Upload' : 'Save'}
               </button>
             </div>
           </div>

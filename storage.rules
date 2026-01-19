@@ -32,6 +32,12 @@ service firebase.storage {
     }
     
     // Documents - members can read, board can write
+    match /documents/{userId}/{fileName} {
+      allow read: if isMember();
+      allow write, delete: if isBoard();
+    }
+    
+    // Legacy documents path (flat structure)
     match /documents/{fileName} {
       allow read: if isMember();
       allow write, delete: if isBoard();
