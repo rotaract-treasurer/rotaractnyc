@@ -308,45 +308,7 @@ export default function AdminEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-10 py-3 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="size-8 flex items-center justify-center text-rotaract-pink">
-            <FaCalendar className="text-2xl" />
-          </div>
-          <h2 className="text-lg font-bold leading-tight tracking-tight hidden md:block">Rotaract Admin</h2>
-        </div>
-        <div className="flex flex-1 justify-end gap-4 md:gap-8 items-center">
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/admin/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-rotaract-pink text-sm font-medium leading-normal transition-colors">
-              Dashboard
-            </Link>
-            <span className="text-rotaract-pink text-sm font-bold leading-normal">Events</span>
-            <Link href="/admin/members" className="text-slate-600 dark:text-slate-300 hover:text-rotaract-pink text-sm font-medium leading-normal transition-colors">
-              Members
-            </Link>
-            <Link href="/admin/settings" className="text-slate-600 dark:text-slate-300 hover:text-rotaract-pink text-sm font-medium leading-normal transition-colors">
-              Settings
-            </Link>
-          </div>
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden md:block" />
-          <div className="flex items-center gap-3">
-            <button
-              onClick={async () => {
-                await adminSignOut()
-                router.push('/')
-              }}
-              className="flex items-center justify-center size-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors"
-              title="Sign Out"
-            >
-              <FaSignOutAlt className="text-lg" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 w-full px-4 md:px-8 py-6 max-w-[1440px] mx-auto">
+    <main className="flex-1 w-full px-4 md:px-8 py-6 max-w-[1440px] mx-auto">
         {/* Page Heading */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -850,6 +812,6 @@ export default function AdminEventsPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   )
 }
