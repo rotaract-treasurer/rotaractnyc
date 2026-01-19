@@ -6,6 +6,7 @@ import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { updateProfile } from 'firebase/auth';
+import SyncCustomClaimsButton from '../_components/SyncCustomClaimsButton';
 
 export default function SettingsPage() {
   const { user, userData, loading } = useAuth();
@@ -276,6 +277,14 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Admin Tools - Only visible to admins */}
+        {userData?.role === 'ADMIN' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Admin Tools</h2>
+            <SyncCustomClaimsButton />
+          </div>
+        )}
       </div>
     </main>
   );
