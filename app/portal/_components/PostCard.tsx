@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
+import SayHelloModal from './SayHelloModal';
 
 interface Comment {
   id: string;
@@ -81,12 +82,37 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [showSayHelloModal, setShowSayHelloModal] = useState(false);
+  const [spotlightMemberEmail, setSpotlightMemberEmail] = useState<string>('');
 
   useEffect(() => {
     if (user?.uid) {
       setIsLiked(likes.includes(user.uid));
     }
   }, [user?.uid, likes]);
+
+  // Fetch spotlight member email
+  useEffect(() => {
+    if (content.type === 'spotlight' && content.spotlight?.userId) {
+      const fetchMemberEmail = async () => {
+        const app = getFirebaseClientApp();
+        if (!app) return;
+        const db = getFirestore(app);
+        
+        try {
+          const userDoc = await import('firebase/firestore').then(m => m.getDoc(m.doc(db, 'users', content.spotlight!.userId)));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setSpotlightMemberEmail(userData.email || '');
+          }
+        } catch (error) {
+          console.error('Error fetching spotlight member email:', error);
+        }
+      };
+      
+      fetchMemberEmail();
+    }
+  }, [content.type, content.spotlight?.userId]);
 
   useEffect(() => {
     if (!showComments) return;
@@ -388,11 +414,7 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
                 </p>
               )}
               <button
-                onClick={() => {
-                  if (content.spotlight?.userId) {
-                    window.location.href = `/portal/directory?member=${content.spotlight.userId}`;
-                  }
-                }}
+                onClick={() => setShowSayHelloModal(true)}
                 className="w-full bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold backdrop-blur-sm transition-colors"
               >
                 Say Hello 👋
@@ -508,12 +530,12 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
                             {comment.text}
                           </p>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 px-2">
-                          <button
-                            onClick={() => handleCommentLike(comment.id, comment.likes)}
-                            className="text-xs font-semibold text-gray-500 hover:text-pink-500 transition-colors"
-                          >
-                            {comment.likes.includes(user?.uid || '') ? '❤️' : 'Like'}
+                        <div className="flex items-center gap-4 mt-1 px-2">spotlightMemberEmail && (
+        <SayHelloModal
+          isOpen={showSayHelloModal}
+          onClose={() => setShowSayHelloModal(false)}
+          recipientName={content.spotlight.name}
+          recipientEmail={spotlightMemberEmail
                             {comment.likes.length > 0 && ` (${comment.likes.length})`}
                           </button>
                           <span className="text-xs text-gray-400">
@@ -529,6 +551,17 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
           </>
         )}
       </div>
+      
+      {/* Say Hello Modal */}
+      {content.type === 'spotlight' && content.spotlight && showSayHelloModal && (
+        <SayHelloModal
+          isOpen={showSayHelloModal}
+          onClose={() => setShowSayHelloModal(false)}
+          recipientName={content.spotlight.name}
+          recipientEmail={author.uid ? `${content.spotlight.userId}@rotaractnyc.org` : ''}
+          recipientUid={content.spotlight.userId}
+        />
+      )}
     </article>
   );
 }

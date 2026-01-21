@@ -5,9 +5,11 @@ import { collection, getDocs, limit, orderBy, query, where } from 'firebase/fire
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { User } from '@/types/portal';
+import SayHelloModal from './SayHelloModal';
 
 export default function MemberSpotlight() {
   const [member, setMember] = useState<User | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,18 +106,22 @@ export default function MemberSpotlight() {
           "{spotlightMember.quote}"
         </p>
         <button
-          onClick={() => {
-            if (spotlightMember.email) {
-              window.location.href = `mailto:${spotlightMember.email}`;
-            } else {
-              window.location.href = '/portal/directory';
-            }
-          }}
+          onClick={() => setShowModal(true)}
           className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors backdrop-blur-sm"
         >
           Say Hello
         </button>
       </div>
+      
+      {spotlightMember.email && (
+        <SayHelloModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          recipientName={spotlightMember.name}
+          recipientEmail={spotlightMember.email}
+          recipientUid={member?.uid}
+        />
+      )}
     </div>
   );
 }
