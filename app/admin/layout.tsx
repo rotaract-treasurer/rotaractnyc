@@ -64,7 +64,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark font-display antialiased text-[#141414] dark:text-white">
       <AdminNav />
-      <main className="flex-1">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>
