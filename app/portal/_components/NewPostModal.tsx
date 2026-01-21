@@ -24,6 +24,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   const [wordCount, setWordCount] = useState(0);
   const [lastEdited, setLastEdited] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,6 +68,79 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       setFeaturedImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const applyFormat = (formatType: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    let newText = '';
+    let newContent = '';
+    let newCursorPos = start;
+
+    switch (formatType) {
+      case 'bold':
+        newText = `**${selectedText || 'bold text'}**`;
+        newContent = content.substring(0, start) + newText + content.substring(end);
+        newCursorPos = selectedText ? end + 4 : start + 2;
+        break;
+      case 'italic':
+        newText = `*${selectedText || 'italic text'}*`;
+        newContent = content.substring(0, start) + newText + content.substring(end);
+        newCursorPos = selectedText ? end + 2 : start + 1;
+        break;
+      case 'list':
+        const lines = (selectedText || 'List item').split('\n');
+        newText = lines.map(line => `- ${line}`).join('\n');
+        newContent = content.substring(0, start) + newText + content.substring(end);
+        newCursorPos = start + newText.length;
+        break;
+      case 'link':
+        const url = prompt('Enter URL:');
+        if (url) {
+          newText = `[${selectedText || 'link text'}](${url})`;
+          newContent = content.substring(0, start) + newText + content.substring(end);
+          newCursorPos = selectedText ? end + url.length + 4 : start + 1;
+        } else {
+          return;
+        }
+        break;
+      case 'image':
+        const imageUrl = prompt('Enter image URL:');
+        if (imageUrl) {
+          newText = `![${selectedText || 'image description'}](${imageUrl})`;
+          newContent = content.substring(0, start) + newText + content.substring(end);
+          newCursorPos = start + newText.length;
+        } else {
+          return;
+        }
+        break;
+      case 'quote':
+        const quoteLines = (selectedText || 'Quote text').split('\n');
+        newText = quoteLines.map(line => `> ${line}`).join('\n');
+        newContent = content.substring(0, start) + newText + content.substring(end);
+        newCursorPos = start + newText.length;
+        break;
+      case 'code':
+        newText = `\`${selectedText || 'code'}\``;
+        newContent = content.substring(0, start) + newText + content.substring(end);
+        newCursorPos = selectedText ? end + 2 : start + 1;
+        break;
+      default:
+        return;
+    }
+
+    setContent(newContent);
+    updateLastEdited();
+
+    // Set cursor position after state update
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   const handleSaveDraft = async () => {
@@ -125,6 +199,23 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         throw new Error('Not authenticated');
       }
 
+      // Split content into paragraphs and filter empty ones
+      const contentArray = content.split('\n\n').filter(p => p.trim());
+      
+      // Generate excerpt by stripping markdown and taking first 150 chars
+      const plainText = content
+        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
+        .replace(/\*([^*]+)\*/g, '$1')     // Remove italic
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
+        .replace(/`([^`]+)`/g, '$1')       // Remove inline code
+        .replace(/^> /gm, '')              // Remove quote markers
+        .replace(/^- /gm, '')              // Remove list markers
+        .trim();
+      const excerpt = plainText.length > 150 
+        ? plainText.substring(0, 150) + '...' 
+        : plainText;
+
       // Create post
       const response = await fetch('/api/portal/posts', {
         method: 'POST',
@@ -135,7 +226,8 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         body: JSON.stringify({
           slug,
           title,
-          content: content.split('\n\n').filter(p => p.trim()),
+          content: contentArray,
+          excerpt,
           category,
           date: publicationDate,
           published: publishImmediately,
@@ -237,44 +329,109 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
 
               {/* Editor Toolbar */}
               <div className="flex items-center flex-wrap gap-1 p-1 border-b border-slate-100 dark:border-zinc-800 sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-10">
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Bold">
+                <button 
+                  onClick={() => applyFormat('bold')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Bold (Ctrl+B)"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">format_bold</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Italic">
+                <button 
+                  onClick={() => applyFormat('italic')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Italic (Ctrl+I)"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">format_italic</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="List">
+                <button 
+                  onClick={() => applyFormat('list')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Bullet List"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">format_list_bulleted</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Link">
+                <button 
+                  onClick={() => applyFormat('link')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Insert Link (Ctrl+K)"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">link</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Image">
+                <button 
+                  onClick={() => applyFormat('image')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Insert Image"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">image</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Quote">
+                <button 
+                  onClick={() => applyFormat('quote')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Quote"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">format_quote</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Code">
+                <button 
+                  onClick={() => applyFormat('code')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Inline Code"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">code</span>
                 </button>
                 <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 mx-1"></div>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Undo">
+                <button 
+                  onClick={() => {
+                    // Undo functionality - browser native
+                    document.execCommand('undo');
+                  }}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Undo (Ctrl+Z)"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">undo</span>
                 </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" title="Redo">
+                <button 
+                  onClick={() => {
+                    // Redo functionality - browser native
+                    document.execCommand('redo');
+                  }}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
+                  title="Redo (Ctrl+Y)"
+                  type="button"
+                >
                   <span className="material-symbols-outlined">redo</span>
                 </button>
               </div>
 
               {/* Content Textarea */}
               <textarea
+                ref={textareaRef}
                 className="w-full min-h-[400px] border-0 focus:ring-0 text-lg leading-relaxed text-slate-700 dark:text-zinc-300 placeholder:text-slate-300 dark:placeholder:text-zinc-700 p-0 resize-none font-display bg-transparent"
                 placeholder="Start writing your post content here..."
                 value={content}
                 onChange={(e) => {
                   setContent(e.target.value);
                   updateLastEdited();
+                }}
+                onKeyDown={(e) => {
+                  // Keyboard shortcuts
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                    e.preventDefault();
+                    applyFormat('bold');
+                  } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+                    e.preventDefault();
+                    applyFormat('italic');
+                  } else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    applyFormat('link');
+                  }
                 }}
               />
             </div>
@@ -394,7 +551,18 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
                   rotaractnyc.org/blog/{title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '...'}
                 </p>
                 <p className="text-[12px] text-slate-500 dark:text-zinc-500 line-clamp-2 leading-relaxed">
-                  {content.slice(0, 150) || 'Description will be automatically generated from your post content...'}
+                  {content 
+                    ? content
+                        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
+                        .replace(/\*([^*]+)\*/g, '$1')     // Remove italic
+                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+                        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
+                        .replace(/`([^`]+)`/g, '$1')       // Remove inline code
+                        .replace(/^> /gm, '')              // Remove quote markers
+                        .replace(/^- /gm, '')              // Remove list markers
+                        .trim()
+                        .slice(0, 150)
+                    : 'Description will be automatically generated from your post content...'}
                 </p>
               </div>
             </section>
