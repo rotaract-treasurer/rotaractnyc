@@ -48,8 +48,8 @@ export async function createInvitation(data: {
     tokenHash,
     status: 'SENT',
     memberId: data.memberId,
-    createdAt: now,
-    expiresAt,
+    createdAt: now.toDate(),
+    expiresAt: expiresAt.toDate(),
     createdBy: data.createdBy,
   };
 

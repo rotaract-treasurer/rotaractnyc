@@ -2,11 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getActiveDuesCycle,
-  getMemberDues,
-} from '@/lib/firebase/duesCycles';
-import type { DuesCycle, MemberDues } from '@/types/dues';
+
+interface DuesCycle {
+  id: string;
+  amount: number;
+  endDate: string | Date;
+}
+
+interface MemberDues {
+  status: string;
+}
+
+interface DuesStatus {
+  cycle: DuesCycle | null;
+  memberDues: MemberDues | null;
+}
 
 interface DuesBannerProps {
   memberId: string;
@@ -29,18 +39,15 @@ export default function DuesBanner({ memberId }: DuesBannerProps) {
       setLoading(true);
       setError(null);
 
-      // Get active cycle
-      const cycle = await getActiveDuesCycle();
-      if (!cycle) {
-        setLoading(false);
-        return;
+      // Fetch dues status from API
+      const response = await fetch(`/api/portal/dues-status?memberId=${memberId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load dues status');
       }
 
-      setActiveCycle(cycle);
-
-      // Get member dues for active cycle
-      const dues = await getMemberDues(memberId, cycle.id);
-      setMemberDues(dues);
+      const data: DuesStatus = await response.json();
+      setActiveCycle(data.cycle);
+      setMemberDues(data.memberDues);
     } catch (err: any) {
       console.error('Error loading dues status:', err);
       setError(err.message);
@@ -100,9 +107,11 @@ export default function DuesBanner({ memberId }: DuesBannerProps) {
 
   // Calculate days until due
   const today = new Date();
-  const endDate = activeCycle.endDate instanceof Date 
+  const endDate = typeof activeCycle.endDate === 'string' 
+    ? new Date(activeCycle.endDate)
+    : activeCycle.endDate instanceof Date 
     ? activeCycle.endDate 
-    : activeCycle.endDate.toDate();
+    : new Date(activeCycle.endDate);
   const daysUntilDue = Math.ceil(
     (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );

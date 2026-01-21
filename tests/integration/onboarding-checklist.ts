@@ -269,9 +269,9 @@ export function printChecklist() {
     
     items.forEach((item, index) => {
       console.log(`\n${index + 1}. ${item.task}`);
-      if (item.url) console.log(`   URL: ${item.url}`);
-      if (item.command) console.log(`   Run: ${item.command}`);
-      if (item.expected) console.log(`   ✓ Expected: ${item.expected}`);
+      if ('url' in item) console.log(`   URL: ${item.url}`);
+      if ('command' in item) console.log(`   Run: ${item.command}`);
+      if ('expected' in item) console.log(`   ✓ Expected: ${item.expected}`);
     });
   });
   

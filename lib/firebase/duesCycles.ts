@@ -20,14 +20,14 @@ export async function createDuesCycle(data: CreateCycleData & { createdBy: strin
   const cycle: DuesCycle = {
     id: cycleId,
     label: getRotaryYearLabel(cycleId),
-    startDate: Timestamp.fromDate(startDate),
-    endDate: Timestamp.fromDate(endDate),
+    startDate: startDate,
+    endDate: endDate,
     amount: data.amount || 8500, // Default $85
     currency: 'USD',
     isActive: false, // Admin must manually activate
     graceDays: data.graceDays || 30,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: now.toDate(),
+    updatedAt: now.toDate(),
     createdBy: data.createdBy,
   };
   
@@ -156,7 +156,7 @@ export async function markDuesPaidOnline(
   const now = Timestamp.now();
   await setMemberDues(memberId, cycleId, {
     status: 'PAID',
-    paidAt: now,
+    paidAt: now.toDate(),
     paymentRef,
   });
 }
@@ -168,7 +168,7 @@ export async function markDuesPaidOffline(action: MarkDuesAction): Promise<void>
   const now = Timestamp.now();
   await setMemberDues(action.memberId, action.cycleId, {
     status: 'PAID_OFFLINE',
-    paidOfflineAt: now,
+    paidOfflineAt: now.toDate(),
     note: action.note,
     updatedBy: action.adminUid,
   });
@@ -181,7 +181,7 @@ export async function waiveMemberDues(action: MarkDuesAction): Promise<void> {
   const now = Timestamp.now();
   await setMemberDues(action.memberId, action.cycleId, {
     status: 'WAIVED',
-    waivedAt: now,
+    waivedAt: now.toDate(),
     note: action.note,
     updatedBy: action.adminUid,
   });
@@ -211,7 +211,7 @@ export async function getAllMemberDuesForCycle(cycleId: string): Promise<Map<str
         memberId,
         cycleId,
         status: 'UNPAID',
-        updatedAt: Timestamp.now(),
+        updatedAt: Timestamp.now().toDate(),
       });
     }
   }
@@ -245,8 +245,8 @@ export async function createDuesPayment(data: {
     currency: data.currency,
     status: 'PENDING',
     description: data.description,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: now.toDate(),
+    updatedAt: now.toDate(),
   };
   
   await paymentRef.set(payment);
@@ -317,7 +317,7 @@ export async function processDuesPayment(sessionId: string, paymentIntentId?: st
   await markDuesPaidOnline(payment.memberId, payment.cycleId, payment.id);
   
   return {
-    payment: { ...payment, status: 'PAID', paidAt: Timestamp.now() },
+    payment: { ...payment, status: 'PAID', paidAt: Timestamp.now().toDate() },
     memberId: payment.memberId,
     cycleId: payment.cycleId,
   };

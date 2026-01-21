@@ -30,8 +30,8 @@ export async function createPayment(data: {
     status: 'PENDING',
     type: data.type || 'DUES',
     description: data.description,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: now.toDate(),
+    updatedAt: now.toDate(),
   };
 
   await paymentRef.set(payment);
@@ -81,11 +81,11 @@ export async function updatePaymentStatus(
   const db = getFirebaseAdminDb();
   const updates: any = {
     status,
-    updatedAt: Timestamp.now(),
+    updatedAt: Timestamp.now().toDate(),
   };
 
   if (status === 'PAID') {
-    updates.paidAt = Timestamp.now();
+    updates.paidAt = Timestamp.now().toDate();
   }
 
   if (stripePaymentIntentId) {
@@ -113,7 +113,7 @@ export async function markPaymentPaid(
   return {
     ...payment,
     status: 'PAID',
-    paidAt: Timestamp.now(),
+    paidAt: Timestamp.now().toDate(),
     stripePaymentIntentId: paymentIntentId,
   };
 }

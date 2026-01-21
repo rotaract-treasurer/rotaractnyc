@@ -31,9 +31,9 @@ export async function createMember(data: {
       currency: 'USD',
       paid: false,
     },
-    createdAt: now,
-    updatedAt: now,
-    invitedAt: now,
+    createdAt: now.toDate(),
+    updatedAt: now.toDate(),
+    invitedAt: now.toDate(),
   };
 
   await memberRef.set(member);

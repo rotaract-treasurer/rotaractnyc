@@ -7,12 +7,16 @@ import { getAllMembers, updateMemberStatus } from '@/lib/firebase/members';
 import { Resend } from 'resend';
 import { getCurrentRotaryCycleId } from '@/lib/utils/rotaryYear';
 
+export const dynamic = 'force-dynamic';
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 const AUTOMATION_API_KEY = process.env.AUTOMATION_API_KEY;
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email helper
 async function sendEmail(options: { to: string; subject: string; html: string }) {
+  const { Resend } = await import('resend');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  
   return await resend.emails.send({
     from: 'Rotaract NYC <noreply@rotaractnewyork.org>',
     ...options,
@@ -299,5 +303,3 @@ async function enforceGracePeriod() {
     cycleId: cycle.id,
   };
 }
-
-export const dynamic = 'force-dynamic';

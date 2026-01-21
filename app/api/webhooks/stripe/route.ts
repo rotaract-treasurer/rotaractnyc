@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { constructWebhookEvent } from '@/lib/stripe/client';
 import { markPaymentPaid } from '@/lib/firebase/payments';
 import { markDuesPaid, getMemberById } from '@/lib/firebase/members';
-import { sendConfirmationEmail } from '@/lib/email/sendOnboarding';
 import { processDuesPayment } from '@/lib/firebase/duesCycles';
+
+export const dynamic = 'force-dynamic';
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -123,6 +124,7 @@ async function handleCheckoutSessionCompleted(session: any) {
 
       if (member && member.status === 'ACTIVE') {
         // Send confirmation email
+        const { sendConfirmationEmail } = await import('@/lib/email/sendOnboarding');
         const emailResult = await sendConfirmationEmail({
           firstName: member.firstName,
           email: member.email,
@@ -148,4 +150,3 @@ async function handleCheckoutSessionCompleted(session: any) {
 /**
  * Disable body parsing for webhooks (we need raw body for signature verification)
  */
-export const dynamic = 'force-dynamic';
