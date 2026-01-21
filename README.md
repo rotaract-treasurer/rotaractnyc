@@ -138,6 +138,7 @@ npm run lint
 ### Quick Links
 - [Admin Portal Guide](docs/implementation/ADMIN_PORTAL_CURATION.md)
 - [Portal Implementation](docs/portal/PORTAL_IMPLEMENTATION_SUMMARY.md)
+- [Member Onboarding & Dues Payment](docs/MEMBER_ONBOARDING.md) ⭐ NEW
 - [Permission Issues Fix](docs/admin/QUICK_FIX.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [Deployment Checklist](docs/portal/PORTAL_DEPLOYMENT_CHECKLIST.md)
