@@ -18,15 +18,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { memberId, cycleId, email, successUrl, cancelUrl } = body;
+    const { memberId, cycleId, email, memberType, successUrl, cancelUrl } = body;
 
     // Validate input
-    if (!memberId || !cycleId || !email || !successUrl || !cancelUrl) {
+    if (!memberId || !cycleId || !email || !memberType || !successUrl || !cancelUrl) {
       return NextResponse.json(
-        { error: 'Missing required fields: memberId, cycleId, email, successUrl, cancelUrl' },
+        { error: 'Missing required fields: memberId, cycleId, email, memberType, successUrl, cancelUrl' },
         { status: 400 }
       );
     }
+
+    // Validate member type and get amount
+    const DUES_AMOUNTS: { [key: string]: number } = {
+      professional: 8500, // $85.00 in cents
+      student: 6500, // $65.00 in cents
+    };
+
+    if (!DUES_AMOUNTS[memberType]) {
+      return NextResponse.json(
+        { error: 'Invalid member type. Must be "professional" or "student"' },
+        { status: 400 }
+      );
+    }
+
+    const duesAmount = DUES_AMOUNTS[memberType];
+    const memberTypeLabel = memberType === 'professional' ? 'Professional' : 'Student';
 
     // Get member to verify they exist
     const member = await getMemberById(memberId);
@@ -57,7 +73,15 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripeClient();
 
-    // Create Stripe Checkout Session
+    // Calculate Stripe processing fee to pass to customer
+    // Stripe fee structure: 2.9% + $0.30 for US cards
+    const stripeFeePercentage = 0.029; // 2.9%
+    const stripeFeeFixed = 30; // $0.30 in cents
+    
+    // Calculate the fee on the dues amount
+    const processingFee = Math.round(duesAmount * stripeFeePercentage + stripeFeeFixed);
+    
+    // Create Stripe Checkout Session with dues + processing fee
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -65,11 +89,21 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: cycle.currency.toLowerCase(),
             product_data: {
-              name: `${cycle.label} Annual Membership Dues`,
-              description: `Rotaract NYC dues for ${cycle.label}`,
-              images: [], // Add club logo URL if available
+              name: `${cycle.label} Annual Membership Dues (${memberTypeLabel})`,
+              description: `Rotaract NYC ${memberTypeLabel.toLowerCase()} dues for ${cycle.label}`,
             },
-            unit_amount: cycle.amount, // Amount in cents
+            unit_amount: duesAmount, // Dues amount in cents
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency: cycle.currency.toLowerCase(),
+            product_data: {
+              name: 'Payment Processing Fee',
+              description: 'Credit card processing fee (2.9% + $0.30)',
+            },
+            unit_amount: processingFee, // Processing fee in cents
           },
           quantity: 1,
         },
@@ -82,11 +116,23 @@ export async function POST(request: NextRequest) {
         memberId,
         cycleId,
         email,
+        memberType,
+        duesAmount: duesAmount.toString(),
+        processingFee: processingFee.toString(),
         type: 'ANNUAL_DUES',
         clubId: 'rotaract-nyc',
       },
-      allow_promotion_codes: true, // Allow discount codes
+      allow_promotion_codes: false, // Disable promo codes when passing fees
       billing_address_collection: 'auto',
+      payment_intent_data: {
+        metadata: {
+          memberId,
+          cycleId,
+          memberType,
+          duesAmount: duesAmount.toString(),
+          processingFee: processingFee.toString(),
+        },
+      },
     });
 
     // Create payment record in Firestore
@@ -95,9 +141,9 @@ export async function POST(request: NextRequest) {
       cycleId,
       email,
       stripeSessionId: session.id,
-      amount: cycle.amount,
+      amount: duesAmount,
       currency: cycle.currency,
-      description: `${cycle.label} Annual Dues`,
+      description: `${cycle.label} ${memberTypeLabel} Annual Dues`,
     });
 
     return NextResponse.json({

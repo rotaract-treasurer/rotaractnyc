@@ -22,7 +22,15 @@ interface MemberDues {
   waivedAt?: any;
   amount?: number;
   stripeSessionId?: string;
+  memberType?: 'professional' | 'student';
 }
+
+type MemberType = 'professional' | 'student';
+
+const DUES_AMOUNTS = {
+  professional: 8500, // $85.00 in cents
+  student: 6500, // $65.00 in cents
+};
 
 export default function PortalDuesPage() {
   const { user, userData, loading: authLoading } = useAuth();
@@ -32,6 +40,7 @@ export default function PortalDuesPage() {
   const [memberDues, setMemberDues] = useState<MemberDues | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memberType, setMemberType] = useState<MemberType>('professional');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -88,6 +97,7 @@ export default function PortalDuesPage() {
           memberId: user.uid,
           cycleId: activeCycle.id,
           email: user.email,
+          memberType: memberType,
           successUrl: `${baseUrl}/portal/dues?success=true`,
           cancelUrl: `${baseUrl}/portal/dues?canceled=true`,
         }),
@@ -125,6 +135,14 @@ export default function PortalDuesPage() {
   }
 
   const isPaid = memberDues && ['PAID', 'PAID_OFFLINE', 'WAIVED'].includes(memberDues.status);
+
+  // Calculate total with Stripe fees (2.9% + $0.30)
+  const calculateTotalWithFees = (amount: number) => {
+    const stripeFeePercentage = 0.029;
+    const stripeFeeFixed = 0.30;
+    const fee = amount * stripeFeePercentage + stripeFeeFixed;
+    return amount + fee;
+  };
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -232,25 +250,92 @@ export default function PortalDuesPage() {
               )}
             </div>
 
-            {/* Pay Button */}
+            {/* Member Type Selection & Pay Button */}
             {!isPaid && (
-              <button
-                onClick={handlePayNow}
-                disabled={paymentLoading}
-                className="w-full sm:w-auto px-8 py-4 bg-primary text-navy font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-              >
-                {paymentLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined">credit_card</span>
-                    Pay ${(activeCycle.amount / 100).toFixed(2)} Now
-                  </>
-                )}
-              </button>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-navy dark:text-white mb-3">
+                    Select Your Membership Type
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setMemberType('professional')}
+                      className={`p-4 border-2 rounded-xl transition-all ${
+                        memberType === 'professional'
+                          ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-bold text-navy dark:text-white">Professional</h4>
+                        <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                          memberType === 'professional' ? 'border-primary' : 'border-gray-300 dark:border-white/20'
+                        }`}>
+                          {memberType === 'professional' && (
+                            <div className="size-3 rounded-full bg-primary"></div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-2xl font-extrabold text-navy dark:text-white mb-1">
+                        ${(DUES_AMOUNTS.professional / 100).toFixed(2)}
+                      </div>
+                      <p className="text-sm text-navy/60 dark:text-white/60 text-left">
+                        For working professionals
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMemberType('student')}
+                      className={`p-4 border-2 rounded-xl transition-all ${
+                        memberType === 'student'
+                          ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-bold text-navy dark:text-white">Student</h4>
+                        <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                          memberType === 'student' ? 'border-primary' : 'border-gray-300 dark:border-white/20'
+                        }`}>
+                          {memberType === 'student' && (
+                            <div className="size-3 rounded-full bg-primary"></div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-2xl font-extrabold text-navy dark:text-white mb-1">
+                        ${(DUES_AMOUNTS.student / 100).toFixed(2)}
+                      </div>
+                      <p className="text-sm text-navy/60 dark:text-white/60 text-left">
+                        For current students
+                      </p>
+                    </button>
+                  </div>
+                  <p className="mt-3 text-sm text-navy/60 dark:text-white/60">
+                    <strong>Processing fee:</strong> Stripe charges 2.9% + $0.30 per transaction.<br />
+                    <strong>Total with fees:</strong> ${calculateTotalWithFees(DUES_AMOUNTS[memberType] / 100).toFixed(2)}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handlePayNow}
+                  disabled={paymentLoading}
+                  className="w-full sm:w-auto px-8 py-4 bg-primary text-navy font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                >
+                  {paymentLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined">credit_card</span>
+                      Pay ${(DUES_AMOUNTS[memberType] / 100).toFixed(2)} Now
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         )}

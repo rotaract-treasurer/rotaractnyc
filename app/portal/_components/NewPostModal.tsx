@@ -5,6 +5,10 @@ import { useAuth } from '@/lib/firebase/auth';
 import { getAuth } from 'firebase/auth';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 interface NewPostModalProps {
   isOpen: boolean;
@@ -24,7 +28,6 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   const [wordCount, setWordCount] = useState(0);
   const [lastEdited, setLastEdited] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,8 +39,9 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   }, [isOpen]);
 
   useEffect(() => {
-    // Count words
-    const words = content.trim().split(/\s+/).filter(w => w.length > 0).length;
+    // Count words - strip HTML tags for accurate count
+    const plainText = content.replace(/<[^>]*>/g, '');
+    const words = plainText.trim().split(/\s+/).filter(w => w.length > 0).length;
     setWordCount(words);
   }, [content]);
 
@@ -68,79 +72,6 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       setFeaturedImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-  };
-
-  const applyFormat = (formatType: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
-    let newText = '';
-    let newContent = '';
-    let newCursorPos = start;
-
-    switch (formatType) {
-      case 'bold':
-        newText = `**${selectedText || 'bold text'}**`;
-        newContent = content.substring(0, start) + newText + content.substring(end);
-        newCursorPos = selectedText ? end + 4 : start + 2;
-        break;
-      case 'italic':
-        newText = `*${selectedText || 'italic text'}*`;
-        newContent = content.substring(0, start) + newText + content.substring(end);
-        newCursorPos = selectedText ? end + 2 : start + 1;
-        break;
-      case 'list':
-        const lines = (selectedText || 'List item').split('\n');
-        newText = lines.map(line => `- ${line}`).join('\n');
-        newContent = content.substring(0, start) + newText + content.substring(end);
-        newCursorPos = start + newText.length;
-        break;
-      case 'link':
-        const url = prompt('Enter URL:');
-        if (url) {
-          newText = `[${selectedText || 'link text'}](${url})`;
-          newContent = content.substring(0, start) + newText + content.substring(end);
-          newCursorPos = selectedText ? end + url.length + 4 : start + 1;
-        } else {
-          return;
-        }
-        break;
-      case 'image':
-        const imageUrl = prompt('Enter image URL:');
-        if (imageUrl) {
-          newText = `![${selectedText || 'image description'}](${imageUrl})`;
-          newContent = content.substring(0, start) + newText + content.substring(end);
-          newCursorPos = start + newText.length;
-        } else {
-          return;
-        }
-        break;
-      case 'quote':
-        const quoteLines = (selectedText || 'Quote text').split('\n');
-        newText = quoteLines.map(line => `> ${line}`).join('\n');
-        newContent = content.substring(0, start) + newText + content.substring(end);
-        newCursorPos = start + newText.length;
-        break;
-      case 'code':
-        newText = `\`${selectedText || 'code'}\``;
-        newContent = content.substring(0, start) + newText + content.substring(end);
-        newCursorPos = selectedText ? end + 2 : start + 1;
-        break;
-      default:
-        return;
-    }
-
-    setContent(newContent);
-    updateLastEdited();
-
-    // Set cursor position after state update
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
   };
 
   const handleSaveDraft = async () => {
@@ -200,18 +131,13 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       }
 
       // Split content into paragraphs and filter empty ones
-      const contentArray = content.split('\n\n').filter(p => p.trim());
+      const contentArray = content
+        .split(/<\/p>|<br\s*\/?>/i)
+        .map(p => p.replace(/<[^>]*>/g, '').trim())
+        .filter(Boolean);
       
-      // Generate excerpt by stripping markdown and taking first 150 chars
-      const plainText = content
-        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
-        .replace(/\*([^*]+)\*/g, '$1')     // Remove italic
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
-        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
-        .replace(/`([^`]+)`/g, '$1')       // Remove inline code
-        .replace(/^> /gm, '')              // Remove quote markers
-        .replace(/^- /gm, '')              // Remove list markers
-        .trim();
+      // Generate excerpt by stripping HTML tags and taking first 150 chars
+      const plainText = content.replace(/<[^>]*>/g, '').trim();
       const excerpt = plainText.length > 150 
         ? plainText.substring(0, 150) + '...' 
         : plainText;
