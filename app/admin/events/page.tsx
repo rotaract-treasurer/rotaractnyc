@@ -23,6 +23,7 @@ type EventRow = {
   status?: 'published' | 'draft' | 'cancelled'
   attendees?: number
   imageUrl?: string
+  visibility?: 'public' | 'member' | 'board'
 }
 
 type ViewMode = 'table' | 'grid' | 'calendar'
@@ -58,6 +59,7 @@ export default function AdminEventsPage() {
     status: 'published',
     attendees: 0,
     imageUrl: '',
+    visibility: 'member',
   })
 
   const hasCalendarDate = Boolean(form.startDate)
@@ -121,6 +123,7 @@ export default function AdminEventsPage() {
             const category = obj.category === 'past' ? 'past' : 'upcoming'
             const order = Number(obj.order)
             const status = obj.status === 'draft' ? 'draft' : obj.status === 'cancelled' ? 'cancelled' : 'published'
+            const visibility = obj.visibility === 'public' ? 'public' : obj.visibility === 'board' ? 'board' : 'member'
             return {
               id: String(obj.id ?? ''),
               title: String(obj.title ?? ''),
@@ -137,6 +140,7 @@ export default function AdminEventsPage() {
               status,
               attendees: Number(obj.attendees ?? 0),
               imageUrl: String(obj.imageUrl ?? ''),
+              visibility,
             }
           })
           .filter((e) => e.id)
@@ -212,6 +216,7 @@ export default function AdminEventsPage() {
       status: row.status || 'published',
       attendees: row.attendees || 0,
       imageUrl: row.imageUrl || '',
+      visibility: row.visibility || 'member',
     })
   }
 
@@ -233,6 +238,7 @@ export default function AdminEventsPage() {
       status: 'published',
       attendees: 0,
       imageUrl: '',
+      visibility: 'member',
     })
   }
 
@@ -697,6 +703,21 @@ export default function AdminEventsPage() {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Visibility *
+                </label>
+                <select
+                  value={form.visibility}
+                  onChange={(e) => setForm((f) => ({ ...f, visibility: e.target.value as 'public' | 'member' | 'board' }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                >
+                  <option value="public">Public - Visible to everyone</option>
+                  <option value="member">Member - Visible to logged-in members</option>
+                  <option value="board">Board - Visible to board members only</option>
+                </select>
               </div>
 
               {!hasCalendarDate ? (
