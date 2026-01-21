@@ -151,16 +151,6 @@ export default function NewEventWizard() {
       <WizardHeader />
       
       <main className="flex-1 flex flex-col items-center py-12 px-4">
-        {/* Headline */}
-        <div className="max-w-4xl w-full text-center mb-8">
-          <h1 className="text-slate-900 dark:text-white text-4xl font-bold tracking-tight mb-2">
-            Configure Your Event
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Step {currentStep} of 3: {currentStep === 1 ? 'Setting the Foundation for Success' : currentStep === 2 ? 'Tell Your Story' : 'Manage Registrations'}
-          </p>
-        </div>
-
         {/* Wizard Container */}
         <div className="max-w-4xl w-full bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col">
           <WizardProgress currentStep={currentStep} />
