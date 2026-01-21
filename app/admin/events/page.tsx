@@ -327,10 +327,7 @@ export default function AdminEventsPage() {
             </p>
           </div>
           <button
-            onClick={() => {
-              resetForm()
-              setShowEventModal(true)
-            }}
+            onClick={() => router.push('/admin/events/new')}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-rotaract-pink hover:bg-rotaract-darkpink text-white px-5 py-2.5 text-sm font-bold shadow-sm hover:shadow-md transition-all"
           >
             <FaPlus className="text-lg" />

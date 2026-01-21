@@ -26,6 +26,15 @@ export type EventDoc = {
   status?: 'published' | 'draft' | 'cancelled'
   attendees?: number
   imageUrl?: string
+  // New wizard fields
+  venueType?: 'physical' | 'virtual' | 'hybrid'
+  virtualLink?: string
+  requiresRegistration?: boolean
+  capacity?: number
+  registrationDeadline?: string
+  allowGuests?: boolean
+  memberPrice?: number
+  guestPrice?: number
 }
 
 export async function GET(req: NextRequest) {
@@ -173,6 +182,15 @@ export async function POST(req: NextRequest) {
     order: Number.isFinite(body.order as number) ? Number(body.order) : 1,
     status: (body.status as 'published' | 'draft' | 'cancelled') || 'published',
     imageUrl: body.imageUrl || '',
+    // New wizard fields
+    venueType: (body.venueType as 'physical' | 'virtual' | 'hybrid') || 'physical',
+    virtualLink: body.virtualLink || '',
+    requiresRegistration: body.requiresRegistration ?? true,
+    capacity: body.capacity,
+    registrationDeadline: body.registrationDeadline,
+    allowGuests: body.allowGuests ?? true,
+    memberPrice: body.memberPrice,
+    guestPrice: body.guestPrice,
   }
 
   const ref = id ? db.collection('portalEvents').doc(id) : db.collection('portalEvents').doc()
@@ -230,6 +248,16 @@ export async function PUT(req: NextRequest) {
   if (body.order !== undefined) updates.order = Number(body.order)
   if (body.status !== undefined) updates.status = body.status as 'published' | 'draft' | 'cancelled'
   if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl
+  
+  // Update new wizard fields
+  if (body.venueType !== undefined) updates.venueType = body.venueType as 'physical' | 'virtual' | 'hybrid'
+  if (body.virtualLink !== undefined) updates.virtualLink = body.virtualLink
+  if (body.requiresRegistration !== undefined) updates.requiresRegistration = body.requiresRegistration
+  if (body.capacity !== undefined) updates.capacity = body.capacity
+  if (body.registrationDeadline !== undefined) updates.registrationDeadline = body.registrationDeadline
+  if (body.allowGuests !== undefined) updates.allowGuests = body.allowGuests
+  if (body.memberPrice !== undefined) updates.memberPrice = body.memberPrice
+  if (body.guestPrice !== undefined) updates.guestPrice = body.guestPrice
 
   await db.collection('portalEvents').doc(body.id).set(updates, { merge: true })
   return NextResponse.json({ ok: true })
