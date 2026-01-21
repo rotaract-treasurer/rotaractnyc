@@ -225,7 +225,7 @@ export default function EventsPage() {
   const stats = getEventStats();
 
   return (
-    <main className="max-w-[1200px] mx-auto px-6 lg:px-20 py-10 w-full">
+    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome & Stats Section */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
