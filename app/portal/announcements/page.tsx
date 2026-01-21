@@ -13,6 +13,8 @@ import { CreatePostComposer } from '../_components/CommunityPostComposer';
 import MemberSpotlight from '../_components/MemberSpotlight';
 import UpcomingDeadlines from '../_components/UpcomingDeadlines';
 import QuickLinks from '../_components/QuickLinks';
+import DashboardSummary from '../_components/DashboardSummary';
+import DashboardQuickActions from '../_components/DashboardQuickActions';
 
 interface CommunityPost {
   id: string;
@@ -244,16 +246,26 @@ export default function AnnouncementsPage() {
 
   return (
     <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      {/* Dashboard Summary - Full Width */}
+      <div className="mb-8">
+        <DashboardSummary />
+      </div>
+
+      {/* Quick Actions - Full Width */}
+      <div className="mb-8">
+        <DashboardQuickActions />
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* LEFT COLUMN: The Feed (Main Content) */}
+        {/* LEFT/MAIN COLUMN: The Feed */}
         <div className="flex-1 w-full lg:max-w-[720px] mx-auto flex flex-col gap-6">
-          {/* Page Heading */}
+          {/* Section Heading */}
           <div className="flex flex-col gap-1 pb-2">
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-              Community Feed
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Announcements
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 font-medium">
-              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {userData?.name?.split(' ')[0] || 'Member'}! Here's what's happening today.
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Stay updated with the latest news and posts from your club
             </p>
           </div>
 
