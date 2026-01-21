@@ -254,112 +254,29 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
               </div>
 
               {/* Editor Toolbar */}
-              <div className="flex items-center flex-wrap gap-1 p-1 border-b border-slate-100 dark:border-zinc-800 sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-10">
-                <button 
-                  onClick={() => applyFormat('bold')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Bold (Ctrl+B)"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">format_bold</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('italic')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Italic (Ctrl+I)"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">format_italic</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('list')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Bullet List"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">format_list_bulleted</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('link')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Insert Link (Ctrl+K)"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">link</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('image')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Insert Image"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">image</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('quote')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Quote"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">format_quote</span>
-                </button>
-                <button 
-                  onClick={() => applyFormat('code')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Inline Code"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">code</span>
-                </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 mx-1"></div>
-                <button 
-                  onClick={() => {
-                    // Undo functionality - browser native
-                    document.execCommand('undo');
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <ReactQuill
+                  theme="snow"
+                  value={content}
+                  onChange={(value) => {
+                    setContent(value);
+                    updateLastEdited();
                   }}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Undo (Ctrl+Z)"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">undo</span>
-                </button>
-                <button 
-                  onClick={() => {
-                    // Redo functionality - browser native
-                    document.execCommand('redo');
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      ['blockquote', 'code-block'],
+                      ['link', 'image'],
+                      ['clean'],
+                    ],
                   }}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-400" 
-                  title="Redo (Ctrl+Y)"
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">redo</span>
-                </button>
+                  className="bg-white dark:bg-slate-800"
+                  style={{ minHeight: '400px' }}
+                  placeholder="Start writing your post content here..."
+                />
               </div>
-
-              {/* Content Textarea */}
-              <textarea
-                ref={textareaRef}
-                className="w-full min-h-[400px] border-0 focus:ring-0 text-lg leading-relaxed text-slate-700 dark:text-zinc-300 placeholder:text-slate-300 dark:placeholder:text-zinc-700 p-0 resize-none font-display bg-transparent"
-                placeholder="Start writing your post content here..."
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  updateLastEdited();
-                }}
-                onKeyDown={(e) => {
-                  // Keyboard shortcuts
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-                    e.preventDefault();
-                    applyFormat('bold');
-                  } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
-                    e.preventDefault();
-                    applyFormat('italic');
-                  } else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                    e.preventDefault();
-                    applyFormat('link');
-                  }
-                }}
-              />
             </div>
           </main>
 
@@ -478,16 +395,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
                 </p>
                 <p className="text-[12px] text-slate-500 dark:text-zinc-500 line-clamp-2 leading-relaxed">
                   {content 
-                    ? content
-                        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
-                        .replace(/\*([^*]+)\*/g, '$1')     // Remove italic
-                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
-                        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
-                        .replace(/`([^`]+)`/g, '$1')       // Remove inline code
-                        .replace(/^> /gm, '')              // Remove quote markers
-                        .replace(/^- /gm, '')              // Remove list markers
-                        .trim()
-                        .slice(0, 150)
+                    ? content.replace(/<[^>]*>/g, '').trim().slice(0, 150)
                     : 'Description will be automatically generated from your post content...'}
                 </p>
               </div>
@@ -528,6 +436,40 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #334155;
+        }
+        
+        /* ReactQuill custom styles for the modal */
+        .ql-container {
+          min-height: 400px;
+          font-size: 16px;
+        }
+        
+        .ql-editor {
+          min-height: 400px;
+          line-height: 1.6;
+        }
+        
+        .ql-editor.ql-blank::before {
+          color: #cbd5e1;
+          font-style: normal;
+        }
+        
+        .dark .ql-toolbar {
+          background: #18181b;
+          border-color: #3f3f46 !important;
+        }
+        
+        .dark .ql-container {
+          background: #18181b;
+          border-color: #3f3f46 !important;
+        }
+        
+        .dark .ql-editor {
+          color: #d4d4d8;
+        }
+        
+        .dark .ql-editor.ql-blank::before {
+          color: #52525b;
         }
       `}</style>
     </div>

@@ -24,17 +24,25 @@ export default function ServiceHoursReviewPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processing, setProcessing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && userData) {
       loadSubmissions();
+    } else if (!loading && !userData) {
+      setLoadingData(false);
     }
-  }, [loading, filter]);
+  }, [loading, userData, filter]);
 
   const loadSubmissions = async () => {
     setLoadingData(true);
+    setError(null);
     const app = getFirebaseClientApp();
-    if (!app) return;
+    if (!app) {
+      setError('Firebase is not configured. Please check your environment variables.');
+      setLoadingData(false);
+      return;
+    }
 
     const db = getFirestore(app);
     
@@ -88,6 +96,7 @@ export default function ServiceHoursReviewPage() {
       setSubmissions(submissionsData);
     } catch (error) {
       console.error('Error loading submissions:', error);
+      setError(`Failed to load submissions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoadingData(false);
     }
@@ -159,6 +168,31 @@ export default function ServiceHoursReviewPage() {
           <p className="text-gray-500 dark:text-gray-400">
             You don't have permission to review service hours.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if there's one
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="text-center max-w-md">
+          <span className="material-symbols-outlined text-6xl text-red-500 mb-4">
+            error
+          </span>
+          <h1 className="text-2xl font-bold text-[#141414] dark:text-white mb-2">
+            Error Loading Service Hours
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {error}
+          </p>
+          <button
+            onClick={() => loadSubmissions()}
+            className="px-6 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );

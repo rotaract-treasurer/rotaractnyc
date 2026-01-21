@@ -46,6 +46,11 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Skip external URLs (e.g., placeholder images, CDNs)
+  if (url.origin !== location.origin) {
+    return
+  }
+
   // Skip API and admin routes - always fetch fresh
   if (url.pathname.includes('/api/') || url.pathname.includes('/admin/') || url.pathname.includes('/portal/')) {
     event.respondWith(fetch(request))
