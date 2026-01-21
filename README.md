@@ -84,9 +84,17 @@ FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'
 # Email
 RESEND_API_KEY=your_resend_key
 
+# Stripe (for online dues payment) - REQUIRED for dues payment feature
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
 # Optional: Analytics
 NEXT_PUBLIC_GA_ID=your_ga_id
 ```
+
+**📘 For detailed Stripe setup:** See [STRIPE_SETUP_GUIDE.md](STRIPE_SETUP_GUIDE.md)
+
+**📘 For all environment variables:** See [docs/VERCEL_ENV.md](docs/VERCEL_ENV.md)
 
 ### Installation & Running
 
@@ -136,9 +144,11 @@ npm run lint
 ## 📖 Documentation
 
 ### Quick Links
+- **[Stripe Setup Guide](STRIPE_SETUP_GUIDE.md)** ⭐ **Set up online dues payment**
 - [Admin Portal Guide](docs/implementation/ADMIN_PORTAL_CURATION.md)
 - [Portal Implementation](docs/portal/PORTAL_IMPLEMENTATION_SUMMARY.md)
-- [Member Onboarding & Dues Payment](docs/MEMBER_ONBOARDING.md) ⭐ NEW
+- [Member Onboarding & Dues Payment](docs/MEMBER_ONBOARDING.md)
+- [Annual Dues System](docs/ANNUAL_DUES_IMPLEMENTATION.md)
 - [Permission Issues Fix](docs/admin/QUICK_FIX.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [Deployment Checklist](docs/portal/PORTAL_DEPLOYMENT_CHECKLIST.md)

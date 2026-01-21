@@ -96,6 +96,10 @@ export default function PortalDuesPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check for specific error messages
+        if (data.error && data.error.includes('Stripe is not configured')) {
+          throw new Error('Online payment is temporarily unavailable. Please contact the board at board@rotaractnewyork.org to arrange payment.');
+        }
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
@@ -165,6 +169,28 @@ export default function PortalDuesPage() {
         )}
 
         {/* Current Status Card */}
+        {!activeCycle && !loading && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-8 mb-6">
+            <div className="flex items-start gap-4">
+              <span className="material-symbols-outlined text-blue-600 text-3xl">info</span>
+              <div>
+                <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+                  No Active Dues Cycle
+                </h2>
+                <p className="text-blue-800 dark:text-blue-200 mb-4">
+                  There is currently no active dues cycle. The board will notify members when dues payments open.
+                </p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Questions? Contact{' '}
+                  <a href="mailto:board@rotaractnewyork.org" className="font-medium underline hover:no-underline">
+                    board@rotaractnewyork.org
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeCycle && (
           <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-8 mb-6">
             <div className="flex items-start justify-between mb-6">

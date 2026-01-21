@@ -33,12 +33,21 @@ RESEND_API_KEY=...
 RESEND_FROM=...
 # Optional: comma-separated recipients for contact notifications
 RESEND_CONTACT_TO=rotaractnewyorkcity@gmail.com
+
+# Stripe (for online dues payment)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Automation (for dues reminders and enforcement)
+AUTOMATION_API_KEY=your-secret-key-here
 ```
 
 ## Notes
 
 - The public site can read data via server routes using Firebase Admin.
 - Admin writes are protected by `ADMIN_ALLOWLIST` + Firebase ID token verification.
+- **Stripe keys are required for online dues payment.** See [STRIPE_SETUP_GUIDE.md](../STRIPE_SETUP_GUIDE.md) for detailed setup instructions.
+- Use test keys (`sk_test_`) for development and live keys (`sk_live_`) for production.
 
 ## Firebase rules (recommended)
 
