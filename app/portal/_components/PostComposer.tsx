@@ -34,6 +34,10 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
     if (!user?.uid) return;
     const trimmedBody = body.trim();
     if (!trimmedBody) return;
+    if (trimmedBody.length > 2000) {
+      alert('Post is too long. Please keep it under 2000 characters.');
+      return;
+    }
     if (mode === 'announcement' && !canPostAnnouncement) return;
     if (mode === 'announcement' && !title.trim()) return;
 
@@ -75,13 +79,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
       }
 
       close();
-      
-      // Call the callback if provided, otherwise reload
-      if (onPostCreated) {
-        onPostCreated();
-      } else {
-        window.location.reload();
-      }
+      onPostCreated?.();
     } catch (err) {
       console.error('Error creating post:', err);
       alert('Failed to post. Please try again.');
@@ -110,7 +108,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
           onClick={() => setOpen(true)}
           className="w-full text-left bg-[#f5f5f7] dark:bg-[#2a2a2a] text-gray-500 dark:text-gray-400 py-2.5 px-4 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-[#333] transition-colors"
         >
-          Share an announcement or update...
+          Share an update with the club...
         </button>
       </div>
     </div>
@@ -123,7 +121,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         />
         <div className="relative w-full max-w-xl rounded-2xl bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2a2a2a] shadow-xl p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-primary dark:text-white">Create post</h2>
+            <h2 className="text-lg font-bold text-primary dark:text-white">Create Post</h2>
             <button
               onClick={() => (submitting ? null : close())}
               className="text-gray-400 hover:text-primary dark:hover:text-white"
@@ -133,72 +131,104 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
             </button>
           </div>
 
-          {canPostAnnouncement ? (
-            <div className="mt-4 flex gap-2">
+          {canPostAnnouncement && (
+            <div className="mt-4 flex gap-2 bg-gray-50 dark:bg-[#141414] p-1 rounded-lg">
               <button
                 onClick={() => setMode('community')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                   mode === 'community'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white dark:bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2a2a2a]'
+                    ? 'bg-white dark:bg-[#2a2a2a] text-primary dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-white'
                 }`}
               >
+                <span className="material-symbols-outlined text-base mr-1 align-middle">forum</span>
                 Update
               </button>
               <button
                 onClick={() => setMode('announcement')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                   mode === 'announcement'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white dark:bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2a2a2a]'
+                    ? 'bg-white dark:bg-[#2a2a2a] text-primary dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-white'
                 }`}
               >
+                <span className="material-symbols-outlined text-base mr-1 align-middle">campaign</span>
                 Announcement
               </button>
             </div>
-          ) : (
-            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-              Updates are visible to members. Announcements require board access.
+          )}
+
+          {!canPostAnnouncement && (
+            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+              <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
+              Your updates are visible to all members. Announcements require board access.
             </p>
           )}
 
-          {mode === 'announcement' ? (
+          {mode === 'announcement' && (
             <div className="mt-4">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Title</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <span className="material-symbols-outlined text-base align-middle mr-1">title</span>
+                Title
+              </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414]"
-                placeholder="Announcement title"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                placeholder="e.g., Important Meeting Change"
               />
             </div>
-          ) : null}
+          )}
 
           <div className="mt-4">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              {mode === 'announcement' ? 'Announcement' : 'Update'}
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <span className="material-symbols-outlined text-base align-middle mr-1">
+                {mode === 'announcement' ? 'description' : 'chat'}
+              </span>
+              {mode === 'announcement' ? 'Message' : 'Update'}
             </label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full min-h-[120px] px-3 py-2 rounded-lg border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414]"
-              placeholder={mode === 'announcement' ? 'Write an announcement for members…' : 'Share an update with members…'}
+              className="w-full min-h-[140px] px-4 py-3 rounded-lg border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder={mode === 'announcement' ? 'Share important news with all members...' : 'What\'s on your mind? Share updates, ideas, or questions...'}
             />
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-gray-400">
+                {body.length} / 2000 characters
+              </p>
+              {mode === 'announcement' && (
+                <span className="text-xs font-semibold text-primary">
+                  Visible to all members
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="mt-5 flex justify-end gap-2">
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-[#2a2a2a]">
             <button
               onClick={() => (submitting ? null : close())}
-              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-[#2a2a2a] text-sm font-semibold"
+              className="px-5 py-2.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+              disabled={submitting}
             >
               Cancel
             </button>
             <button
               onClick={submit}
-              disabled={submitting || !body.trim() || (mode === 'announcement' && (!canPostAnnouncement || !title.trim()))}
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting || !body.trim() || body.length > 2000 || (mode === 'announcement' && (!canPostAnnouncement || !title.trim()))}
+              className="px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
             >
-              {submitting ? 'Posting…' : 'Post'}
+              {submitting ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                  Posting...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-sm">send</span>
+                  Post {mode === 'announcement' ? 'Announcement' : 'Update'}
+                </>
+              )}
             </button>
           </div>
         </div>

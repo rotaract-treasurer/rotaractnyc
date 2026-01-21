@@ -9,7 +9,6 @@ import { Announcement, User } from '@/types/portal';
 import FeedCard from './_components/FeedCard';
 import { PostCard } from './_components/PostCard';
 import PostComposer from './_components/PostComposer';
-import { CreatePostComposer } from './_components/CommunityPostComposer';
 import MemberSpotlight from './_components/MemberSpotlight';
 import UpcomingDeadlines from './_components/UpcomingDeadlines';
 import QuickLinks from './_components/QuickLinks';
@@ -262,22 +261,15 @@ export default function PortalDashboard() {
           {/* Section Heading */}
           <div className="flex flex-col gap-1 pb-2">
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Announcements
+              Club Feed
             </h2>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Stay updated with the latest news and posts from your club
+              Stay updated with announcements, updates, and posts from your club
             </p>
           </div>
 
-          {/* Post Composers */}
-          <div className="flex flex-col gap-4">
-            <PostComposer />
-            <CreatePostComposer 
-              user={user} 
-              userData={userData} 
-              onPostCreated={() => {}} 
-            />
-          </div>
+          {/* Post Composer */}
+          <PostComposer onPostCreated={loadFeed} />
 
           {/* Unified Feed */}
           {feedItems.length > 0 ? (
