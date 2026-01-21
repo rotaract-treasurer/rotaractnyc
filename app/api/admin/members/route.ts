@@ -51,26 +51,29 @@ function coerceUser(input: unknown): Record<string, unknown> {
     }
   }
   
-  return {
+  const result: Record<string, unknown> = {
     name: String(obj.name ?? ''),
     email: String(obj.email ?? ''),
-    photoURL: photoURL || undefined,
     role: coerceRole(role),
     status: coerceStatus(status),
-    committee: committee || undefined,
-    phone: phone || undefined,
-    whatsapp: whatsapp || undefined,
-    linkedin: linkedin || undefined,
-    bio: bio || undefined,
-    displayOrder: Number.isFinite(displayOrder) ? displayOrder : undefined,
     phoneOptIn: obj.phoneOptIn === true,
-    // Additional fields for extended member info
-    title: obj.title ? String(obj.title) : undefined,
-    membershipType: obj.membershipType ? String(obj.membershipType) : undefined,
-    duesStatus: obj.duesStatus ? String(obj.duesStatus) : undefined,
-    joinDate: obj.joinDate ? String(obj.joinDate) : undefined,
-    occupation: obj.occupation ? String(obj.occupation) : undefined,
   }
+  
+  // Only add optional fields if they have values (avoid undefined)
+  if (photoURL) result.photoURL = photoURL
+  if (committee) result.committee = committee
+  if (phone) result.phone = phone
+  if (whatsapp) result.whatsapp = whatsapp
+  if (linkedin) result.linkedin = linkedin
+  if (bio) result.bio = bio
+  if (Number.isFinite(displayOrder)) result.displayOrder = displayOrder
+  if (obj.title) result.title = String(obj.title)
+  if (obj.membershipType) result.membershipType = String(obj.membershipType)
+  if (obj.duesStatus) result.duesStatus = String(obj.duesStatus)
+  if (obj.joinDate) result.joinDate = String(obj.joinDate)
+  if (obj.occupation) result.occupation = String(obj.occupation)
+  
+  return result
 }
 
 export async function GET(req: NextRequest) {
