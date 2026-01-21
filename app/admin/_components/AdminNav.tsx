@@ -18,6 +18,7 @@ export default function AdminNav() {
     { href: '/admin/events', label: 'Events' },
     { href: '/admin/posts', label: 'Content' },
     { href: '/admin/gallery', label: 'Gallery' },
+    { href: '/admin/service-hours', label: 'Service Hours' },
   ];
 
   const handleSignOut = async () => {

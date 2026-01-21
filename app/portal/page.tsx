@@ -11,6 +11,7 @@ import PostComposer from './_components/PostComposer';
 import MemberSpotlight from './_components/MemberSpotlight';
 import UpcomingDeadlines from './_components/UpcomingDeadlines';
 import QuickLinks from './_components/QuickLinks';
+import RecentServiceHours from './_components/RecentServiceHours';
 
 export default function PortalDashboard() {
   const { loading } = useAuth();
@@ -129,9 +130,10 @@ export default function PortalDashboard() {
 
         {/* RIGHT COLUMN: Sidebar (Widgets) */}
         <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 space-y-6">
+          <QuickLinks />
+          <RecentServiceHours />
           <MemberSpotlight />
           <UpcomingDeadlines />
-          <QuickLinks />
           
           {/* Footer Links */}
           <div className="text-xs text-gray-400 dark:text-gray-600 px-2 leading-relaxed">

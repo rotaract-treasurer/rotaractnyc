@@ -153,6 +153,21 @@ service cloud.firestore {
       allow create, update, delete: if isTreasurer();
     }
     
+    // Service hours collection
+    match /serviceHours/{submissionId} {
+      // Members can read their own submissions, board/admin can read all
+      allow read: if (isAuthenticated() && resource.data.uid == request.auth.uid) 
+                  || isBoard();
+      // Members can create their own submissions
+      allow create: if isMember() 
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      // Only board/admin can update (for review/approval)
+      allow update: if isBoard();
+      // Only admin can delete
+      allow delete: if isAdmin();
+    }
+    
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

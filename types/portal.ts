@@ -102,6 +102,25 @@ export interface MonthlySummary {
   updatedAt: Timestamp;
 }
 
+// Service Hours types
+export type ServiceHourStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ServiceHourSubmission {
+  id: string;
+  uid: string;
+  eventId: string;
+  eventName: string;
+  hours: number;
+  date: Timestamp;
+  notes?: string;
+  status: ServiceHourStatus;
+  reviewedBy?: string;
+  reviewedAt?: Timestamp;
+  reviewNotes?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // Helper types for creating documents
 export type CreateUser = Omit<User, 'uid' | 'createdAt' | 'updatedAt'>;
 export type UpdateUser = Partial<Omit<User, 'uid' | 'email' | 'createdAt'>>;
@@ -120,3 +139,6 @@ export type UpdateTransaction = Partial<Omit<Transaction, 'id' | 'createdBy' | '
 
 export type CreateMonthlySummary = Omit<MonthlySummary, 'updatedAt'>;
 export type UpdateMonthlySummary = Partial<MonthlySummary>;
+
+export type CreateServiceHourSubmission = Omit<ServiceHourSubmission, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
+export type UpdateServiceHourSubmission = Partial<Omit<ServiceHourSubmission, 'id' | 'uid' | 'createdAt'>>;

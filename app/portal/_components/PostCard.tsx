@@ -530,12 +530,12 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
                             {comment.text}
                           </p>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 px-2">spotlightMemberEmail && (
-        <SayHelloModal
-          isOpen={showSayHelloModal}
-          onClose={() => setShowSayHelloModal(false)}
-          recipientName={content.spotlight.name}
-          recipientEmail={spotlightMemberEmail
+                        <div className="flex items-center gap-4 mt-1 px-2">
+                          <button
+                            onClick={() => handleCommentLike(comment.id, comment.likes)}
+                            className="text-xs text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary font-medium transition-colors"
+                          >
+                            Like
                             {comment.likes.length > 0 && ` (${comment.likes.length})`}
                           </button>
                           <span className="text-xs text-gray-400">

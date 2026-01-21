@@ -14,6 +14,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@vercel/analytics": "^1.6.1",
     "autoprefixer": "^10.4.16",
     "critters": "^0.0.23",
