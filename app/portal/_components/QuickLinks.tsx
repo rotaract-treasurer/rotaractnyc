@@ -14,7 +14,7 @@ export default function QuickLinks() {
       icon: "volunteer_activism"
     },
     { label: "Member Directory", href: "/portal/directory", icon: "group" },
-    { label: "Pay Dues", href: "/portal/finance", icon: "payments" },
+    { label: "Pay Dues", href: "/portal/dues", icon: "payments" },
     { label: "Bylaws", href: "/portal/docs", icon: "description" },
   ];
 
