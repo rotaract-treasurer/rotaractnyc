@@ -469,9 +469,25 @@ export default function AdminSettingsPage() {
                 {/* Portal Data Tab */}
                 {activeTab === 'portal' && (
                   <div className="p-8 space-y-8">
+                    {/* Unified Database Notice */}
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[20px] mt-0.5">check_circle</span>
+                        <div className="space-y-2 text-sm text-emerald-700 dark:text-emerald-400">
+                          <p className="font-medium">Admin and Portal now share the same database!</p>
+                          <ul className="list-disc list-inside space-y-1 text-emerald-600 dark:text-emerald-500">
+                            <li>All member data is stored in a single <code className="px-1 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 rounded text-xs">users</code> collection</li>
+                            <li>Events, posts, and all other data are also unified</li>
+                            <li>Changes made in admin automatically appear in portal</li>
+                            <li>No sync required - it's real-time!</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-12">
                       <div className="md:w-1/3">
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Member Portal Data</h2>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Seed Test Data</h2>
                         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                           Generate sample data for testing the member portal
                         </p>

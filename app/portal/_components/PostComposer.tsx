@@ -6,7 +6,11 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 
-export default function PostComposer() {
+interface PostComposerProps {
+  onPostCreated?: () => void;
+}
+
+export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const { user, userData } = useAuth();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'community' | 'announcement'>('community');
@@ -71,7 +75,13 @@ export default function PostComposer() {
       }
 
       close();
-      window.location.reload();
+      
+      // Call the callback if provided, otherwise reload
+      if (onPostCreated) {
+        onPostCreated();
+      } else {
+        window.location.reload();
+      }
     } catch (err) {
       console.error('Error creating post:', err);
       alert('Failed to post. Please try again.');

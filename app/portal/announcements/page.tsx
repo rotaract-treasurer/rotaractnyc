@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/firebase/auth';
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { Announcement, User } from '@/types/portal';
@@ -17,6 +17,7 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [authors, setAuthors] = useState<Record<string, User>>({});
   const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -26,53 +27,69 @@ export default function AnnouncementsPage() {
 
   const loadAnnouncements = async () => {
     const app = getFirebaseClientApp();
-    if (!app) return;
+    if (!app) {
+      setError('Firebase not initialized');
+      setLoadingData(false);
+      return;
+    }
 
     const db = getFirestore(app);
     
     try {
+      setError(null);
       const announcementsRef = collection(db, 'announcements');
       const announcementsQuery = query(
         announcementsRef,
         where('visibility', '==', 'member'),
         orderBy('createdAt', 'desc')
       );
-      const snapshot = await getDocs(announcementsQuery);
-      const announcementsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Announcement[];
       
-      // Sort to put pinned announcements first
-      const sorted = announcementsData.sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-        return 0;
-      });
-      
-      setAnnouncements(sorted);
-      
-      // Load author data
-      const uniqueAuthors = Array.from(new Set(sorted.map(a => a.createdBy)));
-      const authorsData: Record<string, User> = {};
-      
-      await Promise.all(
-        uniqueAuthors.map(async (uid) => {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', uid));
-            if (userDoc.exists()) {
-              authorsData[uid] = { uid, ...userDoc.data() } as User;
+      // Use real-time listener for immediate updates
+      const unsubscribe = onSnapshot(announcementsQuery, async (snapshot) => {
+        const announcementsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Announcement[];
+        
+        // Sort to put pinned announcements first
+        const sorted = announcementsData.sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return 0;
+        });
+        
+        setAnnouncements(sorted);
+        
+        // Load author data
+        const uniqueAuthors = Array.from(new Set(sorted.map(a => a.createdBy)));
+        const authorsData: Record<string, User> = {};
+        
+        await Promise.all(
+          uniqueAuthors.map(async (uid) => {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', uid));
+              if (userDoc.exists()) {
+                authorsData[uid] = { uid, ...userDoc.data() } as User;
+              }
+            } catch (error) {
+              console.error(`Error loading author ${uid}:`, error);
             }
-          } catch (error) {
-            console.error(`Error loading author ${uid}:`, error);
-          }
-        })
-      );
-      
-      setAuthors(authorsData);
-    } catch (error) {
-      console.error('Error loading announcements:', error);
-    } finally {
+          })
+        );
+        
+        setAuthors(authorsData);
+        setLoadingData(false);
+      }, (error) => {
+        console.error('Error loading announcements:', error);
+        setError(error.message);
+        setLoadingData(false);
+      });
+
+      // Cleanup listener on unmount
+      return () => unsubscribe();
+    } catch (error: any) {
+      console.error('Error setting up announcements listener:', error);
+      setError(error.message);
       setLoadingData(false);
     }
   };
@@ -85,12 +102,29 @@ export default function AnnouncementsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <span className="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
+          <p className="text-red-500 text-lg">Error loading announcements</p>
+          <p className="text-gray-500 text-sm mt-2">{error}</p>
+          {error.includes('index') && (
+            <p className="text-gray-500 text-sm mt-2">
+              A Firestore index may need to be created. Check the browser console for the index creation link.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* LEFT COLUMN: The Feed (Main Content) */}
         <div className="flex-1 w-full lg:max-w-[720px] mx-auto flex flex-col gap-6">
-          {/* New Post Composer */}
+          {/* New Post Composer - no callback needed since we use real-time listener */}
           <PostComposer />
 
           {/* Announcements Feed */}

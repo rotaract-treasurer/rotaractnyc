@@ -2,36 +2,42 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { requireAdmin } from '@/app/api/admin/_utils'
 import { getFirebaseAdminDb } from '@/lib/firebase/admin'
+import type { UserRole, UserStatus } from '@/types/portal'
 
-export type MemberDoc = {
-  group: 'board' | 'member'
-  title: string
-  name: string
-  role: string
-  photoUrl?: string
-  order: number
-  active: boolean
-  createdAt?: unknown
-  updatedAt?: unknown
+function coerceRole(v: unknown): UserRole {
+  const valid: UserRole[] = ['MEMBER', 'BOARD', 'TREASURER', 'ADMIN']
+  return valid.includes(v as UserRole) ? (v as UserRole) : 'MEMBER'
 }
 
-function coerceGroup(v: unknown): MemberDoc['group'] {
-  return v === 'member' ? 'member' : 'board'
+function coerceStatus(v: unknown): UserStatus {
+  const valid: UserStatus[] = ['active', 'inactive', 'pending']
+  return valid.includes(v as UserStatus) ? (v as UserStatus) : 'pending'
 }
 
-function coerceMember(input: unknown): Omit<MemberDoc, 'createdAt' | 'updatedAt'> {
+function coerceUser(input: unknown): Record<string, unknown> {
   const obj = typeof input === 'object' && input ? (input as Record<string, unknown>) : {}
-  const order = Number(obj.order)
-  const photoUrl = String(obj.photoUrl ?? '').trim()
-
+  
+  const photoURL = String(obj.photoURL ?? '').trim()
+  const displayOrder = Number(obj.displayOrder)
+  const committee = String(obj.committee ?? '').trim()
+  const phone = String(obj.phone ?? '').trim()
+  const whatsapp = String(obj.whatsapp ?? '').trim()
+  const linkedin = String(obj.linkedin ?? '').trim()
+  const bio = String(obj.bio ?? '').trim()
+  
   return {
-    group: coerceGroup(obj.group),
-    title: String(obj.title ?? ''),
     name: String(obj.name ?? ''),
-    role: String(obj.role ?? ''),
-    photoUrl: photoUrl || undefined,
-    order: Number.isFinite(order) ? order : 1,
-    active: obj.active !== false,
+    email: String(obj.email ?? ''),
+    photoURL: photoURL || undefined,
+    role: coerceRole(obj.role),
+    status: coerceStatus(obj.status),
+    committee: committee || undefined,
+    phone: phone || undefined,
+    whatsapp: whatsapp || undefined,
+    linkedin: linkedin || undefined,
+    bio: bio || undefined,
+    displayOrder: Number.isFinite(displayOrder) ? displayOrder : undefined,
+    phoneOptIn: obj.phoneOptIn === true,
   }
 }
 
@@ -40,24 +46,37 @@ export async function GET(req: NextRequest) {
   if (!admin.ok) return NextResponse.json({ error: admin.message }, { status: admin.status })
 
   const { searchParams } = new URL(req.url)
-  const group = coerceGroup(searchParams.get('group'))
+  const roleFilter = searchParams.get('role') || 'all'
+  const statusFilter = searchParams.get('status') || 'all'
 
   try {
     const db = getFirebaseAdminDb()
-    // Avoid composite index requirements (e.g. where(group==...)+orderBy(order)).
-    const snap = await db.collection('members').where('group', '==', group).limit(500).get()
-    const members = snap.docs.map((d) => ({ id: d.id, ...(d.data() as MemberDoc) }))
-    members.sort((a, b) => {
-      const ao = Number.isFinite(a.order as number) ? Number(a.order) : 0
-      const bo = Number.isFinite(b.order as number) ? Number(b.order) : 0
-      return ao - bo
+    let query: FirebaseFirestore.Query = db.collection('users')
+    
+    // Apply filters if specified
+    if (roleFilter !== 'all') {
+      query = query.where('role', '==', roleFilter)
+    }
+    if (statusFilter !== 'all') {
+      query = query.where('status', '==', statusFilter)
+    }
+    
+    const snap = await query.limit(500).get()
+    const users = snap.docs.map((d: FirebaseFirestore.QueryDocumentSnapshot) => ({ uid: d.id, ...d.data() }))
+    
+    // Sort by displayOrder if available, otherwise by name
+    users.sort((a: any, b: any) => {
+      const ao = Number.isFinite(a.displayOrder) ? a.displayOrder : 999
+      const bo = Number.isFinite(b.displayOrder) ? b.displayOrder : 999
+      if (ao !== bo) return ao - bo
+      return (a.name || '').localeCompare(b.name || '')
     })
 
-    return NextResponse.json({ members })
+    return NextResponse.json({ users })
   } catch (err) {
     const e = err as { message?: string; code?: string }
     return NextResponse.json(
-      { error: 'Failed to load members', details: e?.message || String(err), code: e?.code },
+      { error: 'Failed to load users', details: e?.message || String(err), code: e?.code },
       { status: 500 }
     )
   }
@@ -68,21 +87,25 @@ export async function POST(req: NextRequest) {
   if (!admin.ok) return NextResponse.json({ error: admin.message }, { status: admin.status })
 
   const body: unknown = await req.json().catch(() => null)
-  const member = coerceMember(body)
+  const userData = coerceUser(body)
 
-  if (!member.title.trim() || !member.name.trim()) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  if (!userData.name || !userData.email) {
+    return NextResponse.json({ error: 'Missing required fields: name and email' }, { status: 400 })
   }
 
   const db = getFirebaseAdminDb()
-  const ref = await db.collection('members').add({
-    ...member,
+  // Generate a new ID for the user
+  const ref = db.collection('users').doc()
+  
+  await ref.set({
+    ...userData,
+    uid: ref.id,
+    emailVerified: false,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: admin.email,
   })
 
-  return NextResponse.json({ ok: true, id: ref.id })
+  return NextResponse.json({ ok: true, uid: ref.id })
 }
 
 export async function PUT(req: NextRequest) {
@@ -91,20 +114,19 @@ export async function PUT(req: NextRequest) {
 
   const body: unknown = await req.json().catch(() => null)
   const obj = typeof body === 'object' && body ? (body as Record<string, unknown>) : {}
-  const id = String(obj.id ?? '')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  const uid = String(obj.uid ?? '')
+  if (!uid) return NextResponse.json({ error: 'Missing uid' }, { status: 400 })
 
-  const member = coerceMember(body)
-  if (!member.title.trim() || !member.name.trim()) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  const userData = coerceUser(body)
+  if (!userData.name || !userData.email) {
+    return NextResponse.json({ error: 'Missing required fields: name and email' }, { status: 400 })
   }
 
   const db = getFirebaseAdminDb()
-  await db.collection('members').doc(id).set(
+  await db.collection('users').doc(uid).set(
     {
-      ...member,
+      ...userData,
       updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: admin.email,
     },
     { merge: true }
   )
@@ -117,11 +139,11 @@ export async function DELETE(req: NextRequest) {
   if (!admin.ok) return NextResponse.json({ error: admin.message }, { status: admin.status })
 
   const { searchParams } = new URL(req.url)
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  const uid = searchParams.get('uid')
+  if (!uid) return NextResponse.json({ error: 'Missing uid' }, { status: 400 })
 
   const db = getFirebaseAdminDb()
-  await db.collection('members').doc(id).delete()
+  await db.collection('users').doc(uid).delete()
 
   return NextResponse.json({ ok: true })
 }

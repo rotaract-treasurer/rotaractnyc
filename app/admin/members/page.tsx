@@ -6,20 +6,22 @@ import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
 import DragDropFile from '@/components/admin/DragDropFile'
 import NewMemberWizard from '@/components/admin/NewMemberWizard'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { UserRole, UserStatus } from '@/types/portal'
 
 type MemberRow = {
-  id: string
-  group: 'board' | 'member'
-  title: string
+  uid: string
   name: string
-  role: string
-  email?: string
-  photoUrl?: string
-  order: number
-  active: boolean
-  membershipType?: 'active' | 'honorary' | 'alumni'
-  duesStatus?: 'paid' | 'unpaid' | 'waived'
-  joinDate?: string
+  email: string
+  photoURL?: string
+  role: UserRole
+  status: UserStatus
+  committee?: string
+  phone?: string
+  whatsapp?: string
+  linkedin?: string
+  bio?: string
+  displayOrder?: number
+  phoneOptIn: boolean
 }
 
 export default function AdminMembersPage() {
@@ -35,30 +37,31 @@ export default function AdminMembersPage() {
   const [showWizard, setShowWizard] = useState(false)
   const [headshotFile, setHeadshotFile] = useState<File | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'honorary' | 'alumni'>('all')
-  const [duesFilter, setDuesFilter] = useState<'all' | 'paid' | 'unpaid' | 'waived'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | UserStatus>('all')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [sortField, setSortField] = useState<'name' | 'joinDate' | 'order'>('order')
+  const [sortField, setSortField] = useState<'name' | 'displayOrder'>('displayOrder')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [form, setForm] = useState<Omit<MemberRow, 'id'>>({
-    group: 'board',
-    title: '',
+  const [form, setForm] = useState<Omit<MemberRow, 'uid'>>({
     name: '',
-    role: '',
     email: '',
-    photoUrl: '',
-    order: 1,
-    active: true,
-    membershipType: 'active',
-    duesStatus: 'paid',
-    joinDate: new Date().toISOString().split('T')[0],
+    photoURL: '',
+    role: 'MEMBER',
+    status: 'active',
+    committee: '',
+    phone: '',
+    whatsapp: '',
+    linkedin: '',
+    bio: '',
+    displayOrder: undefined,
+    phoneOptIn: false,
   })
 
   const refresh = useCallback(async () => {
     setLoadingData(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/members?group=board', { cache: 'no-store' })
+      const res = await fetch('/api/admin/members', { cache: 'no-store' })
       if (!res.ok) {
         setError(await getFriendlyAdminApiError(res, 'Unable to load members.'))
         return
@@ -67,38 +70,38 @@ export default function AdminMembersPage() {
       const rows =
         typeof json === 'object' &&
         json &&
-        Array.isArray((json as { members?: unknown }).members)
-          ? ((json as { members: unknown[] }).members as unknown[])
+        Array.isArray((json as { users?: unknown }).users)
+          ? ((json as { users: unknown[] }).users as unknown[])
           : []
 
       setMembers(
         rows
           .map((m): MemberRow => {
             const obj = typeof m === 'object' && m ? (m as Record<string, unknown>) : {}
-            const order = Number(obj.order)
-            const group: MemberRow['group'] = obj.group === 'member' ? 'member' : 'board'
-            const membershipType = ['active', 'honorary', 'alumni'].includes(String(obj.membershipType))
-              ? (obj.membershipType as 'active' | 'honorary' | 'alumni')
-              : 'active'
-            const duesStatus = ['paid', 'unpaid', 'waived'].includes(String(obj.duesStatus))
-              ? (obj.duesStatus as 'paid' | 'unpaid' | 'waived')
-              : 'paid'
+            const displayOrder = Number(obj.displayOrder)
+            const role: UserRole = ['MEMBER', 'BOARD', 'TREASURER', 'ADMIN'].includes(String(obj.role))
+              ? (obj.role as UserRole)
+              : 'MEMBER'
+            const status: UserStatus = ['active', 'inactive', 'pending'].includes(String(obj.status))
+              ? (obj.status as UserStatus)
+              : 'pending'
             return {
-              id: String(obj.id ?? ''),
-              group,
-              title: String(obj.title ?? ''),
+              uid: String(obj.uid ?? ''),
               name: String(obj.name ?? ''),
-              role: String(obj.role ?? ''),
-              email: String(obj.email ?? '') || undefined,
-              photoUrl: String(obj.photoUrl ?? '') || undefined,
-              order: Number.isFinite(order) ? order : 1,
-              active: obj.active !== false,
-              membershipType,
-              duesStatus,
-              joinDate: String(obj.joinDate ?? '') || undefined,
+              email: String(obj.email ?? ''),
+              photoURL: String(obj.photoURL ?? '') || undefined,
+              role,
+              status,
+              committee: String(obj.committee ?? '') || undefined,
+              phone: String(obj.phone ?? '') || undefined,
+              whatsapp: String(obj.whatsapp ?? '') || undefined,
+              linkedin: String(obj.linkedin ?? '') || undefined,
+              bio: String(obj.bio ?? '') || undefined,
+              displayOrder: Number.isFinite(displayOrder) ? displayOrder : undefined,
+              phoneOptIn: obj.phoneOptIn === true,
             }
           })
-          .filter((m) => m.id)
+          .filter((m) => m.uid)
       )
     } catch {
       setError('Unable to load members.')
@@ -128,22 +131,23 @@ export default function AdminMembersPage() {
         (m) =>
           m.name.toLowerCase().includes(term) ||
           m.email?.toLowerCase().includes(term) ||
-          m.id.toLowerCase().includes(term)
+          m.committee?.toLowerCase().includes(term) ||
+          m.uid.toLowerCase().includes(term)
       )
+    }
+
+    // Role filter
+    if (roleFilter !== 'all') {
+      result = result.filter((m) => m.role === roleFilter)
     }
 
     // Status filter
     if (statusFilter !== 'all') {
-      result = result.filter((m) => m.membershipType === statusFilter)
-    }
-
-    // Dues filter
-    if (duesFilter !== 'all') {
-      result = result.filter((m) => m.duesStatus === duesFilter)
+      result = result.filter((m) => m.status === statusFilter)
     }
 
     return result
-  }, [members, searchTerm, statusFilter, duesFilter])
+  }, [members, searchTerm, roleFilter, statusFilter])
 
   const sorted = useMemo(() => {
     const result = [...filtered]
@@ -151,17 +155,17 @@ export default function AdminMembersPage() {
       let comparison = 0
       if (sortField === 'name') {
         comparison = a.name.localeCompare(b.name)
-      } else if (sortField === 'joinDate') {
-        comparison = (a.joinDate || '').localeCompare(b.joinDate || '')
       } else {
-        comparison = a.order - b.order
+        const ao = a.displayOrder || 999
+        const bo = b.displayOrder || 999
+        comparison = ao - bo
       }
       return sortDirection === 'asc' ? comparison : -comparison
     })
     return result
   }, [filtered, sortField, sortDirection])
 
-  const toggleSort = (field: 'name' | 'joinDate' | 'order') => {
+  const toggleSort = (field: 'name' | 'displayOrder') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -174,7 +178,7 @@ export default function AdminMembersPage() {
     if (selectedIds.size === sorted.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(sorted.map((m) => m.id)))
+      setSelectedIds(new Set(sorted.map((m) => m.uid)))
     }
   }
 
@@ -189,15 +193,15 @@ export default function AdminMembersPage() {
   }
 
   const exportCSV = () => {
-    const headers = ['ID', 'Name', 'Email', 'Title', 'Membership Type', 'Dues Status', 'Join Date']
+    const headers = ['UID', 'Name', 'Email', 'Role', 'Status', 'Committee', 'Phone']
     const rows = sorted.map((m) => [
-      m.id,
+      m.uid,
       m.name,
       m.email || '',
-      m.title,
-      m.membershipType || '',
-      m.duesStatus || '',
-      m.joinDate || '',
+      m.role,
+      m.status,
+      m.committee || '',
+      m.phone || '',
     ])
 
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n')
@@ -206,7 +210,7 @@ export default function AdminMembersPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `members-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `users-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -220,75 +224,79 @@ export default function AdminMembersPage() {
     }
   }
 
-  const getMembershipBadge = (type?: string) => {
-    switch (type) {
-      case 'active':
+  const getRoleBadge = (role: UserRole) => {
+    switch (role) {
+      case 'ADMIN':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-            Active
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+            Admin
           </span>
         )
-      case 'honorary':
+      case 'TREASURER':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
             <span className="h-1.5 w-1.5 rounded-full bg-purple-500"></span>
-            Honorary
+            Treasurer
           </span>
         )
-      case 'alumni':
+      case 'BOARD':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
-            Alumni
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+            Board
           </span>
         )
-      default:
-        return null
+      case 'MEMBER':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+            Member
+          </span>
+        )
     }
   }
 
-  const getDuesBadge = (status?: string) => {
+  const getStatusBadge = (status: UserStatus) => {
     switch (status) {
-      case 'paid':
+      case 'active':
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-            Paid
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-100 dark:border-green-800">
+            Active
           </span>
         )
-      case 'unpaid':
-        return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800">
-            Unpaid
-          </span>
-        )
-      case 'waived':
+      case 'inactive':
         return (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            Waived
+            Inactive
           </span>
         )
-      default:
-        return null
+      case 'pending':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            Pending
+          </span>
+        )
     }
   }
 
   const startEdit = (row: MemberRow) => {
-    setEditingId(row.id)
+    setEditingId(row.uid)
     setShowForm(true)
     setHeadshotFile(null)
     setForm({
-      group: row.group,
-      title: row.title,
       name: row.name,
+      email: row.email,
+      photoURL: row.photoURL || '',
       role: row.role,
-      email: row.email || '',
-      photoUrl: row.photoUrl || '',
-      order: row.order,
-      active: row.active,
-      membershipType: row.membershipType || 'active',
-      duesStatus: row.duesStatus || 'paid',
-      joinDate: row.joinDate || new Date().toISOString().split('T')[0],
+      status: row.status,
+      committee: row.committee || '',
+      phone: row.phone || '',
+      whatsapp: row.whatsapp || '',
+      linkedin: row.linkedin || '',
+      bio: row.bio || '',
+      displayOrder: row.displayOrder,
+      phoneOptIn: row.phoneOptIn,
     })
   }
 
@@ -297,17 +305,18 @@ export default function AdminMembersPage() {
     setShowForm(true)
     setHeadshotFile(null)
     setForm({
-      group: 'board',
-      title: '',
       name: '',
-      role: '',
       email: '',
-      photoUrl: '',
-      order: 1,
-      active: true,
-      membershipType: 'active',
-      duesStatus: 'paid',
-      joinDate: new Date().toISOString().split('T')[0],
+      photoURL: '',
+      role: 'MEMBER',
+      status: 'active',
+      committee: '',
+      phone: '',
+      whatsapp: '',
+      linkedin: '',
+      bio: '',
+      displayOrder: undefined,
+      phoneOptIn: false,
     })
   }
 
@@ -316,17 +325,18 @@ export default function AdminMembersPage() {
     setShowForm(false)
     setHeadshotFile(null)
     setForm({
-      group: 'board',
-      title: '',
       name: '',
-      role: '',
       email: '',
-      photoUrl: '',
-      order: 1,
-      active: true,
-      membershipType: 'active',
-      duesStatus: 'paid',
-      joinDate: new Date().toISOString().split('T')[0],
+      photoURL: '',
+      role: 'MEMBER',
+      status: 'active',
+      committee: '',
+      phone: '',
+      whatsapp: '',
+      linkedin: '',
+      bio: '',
+      displayOrder: undefined,
+      phoneOptIn: false,
     })
   }
 
@@ -360,7 +370,7 @@ export default function AdminMembersPage() {
         return
       }
 
-      setForm((f) => ({ ...f, photoUrl: url }))
+      setForm((f) => ({ ...f, photoURL: url }))
       setHeadshotFile(null)
     } catch {
       setError('Unable to upload headshot.')
@@ -377,21 +387,20 @@ export default function AdminMembersPage() {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          ...(editingId ? { id: editingId } : {}),
+          ...(editingId ? { uid: editingId } : {}),
           ...form,
-          order: Number(form.order) || 1,
         }),
       })
 
       if (!res.ok) {
-        setError(await getFriendlyAdminApiError(res, 'Unable to save member.'))
+        setError(await getFriendlyAdminApiError(res, 'Unable to save user.'))
         return
       }
 
       resetForm()
       await refresh()
     } catch {
-      setError('Unable to save member.')
+      setError('Unable to save user.')
     } finally {
       setSaving(false)
     }
@@ -453,20 +462,20 @@ export default function AdminMembersPage() {
     }
   }
 
-  const remove = async (id: string) => {
-    if (!confirm('Delete this member?')) return
+  const remove = async (uid: string) => {
+    if (!confirm('Delete this user?')) return
     setError(null)
     try {
-      const res = await fetch(`/api/admin/members?id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/admin/members?uid=${encodeURIComponent(uid)}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
-        setError(await getFriendlyAdminApiError(res, 'Unable to delete member.'))
+        setError(await getFriendlyAdminApiError(res, 'Unable to delete user.'))
         return
       }
       await refresh()
     } catch {
-      setError('Unable to delete member.')
+      setError('Unable to delete user.')
     }
   }
 
@@ -586,84 +595,56 @@ export default function AdminMembersPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Title *
-                  </label>
-                  <input
-                    value={form.title}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                    placeholder="Club President"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Join Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.joinDate}
-                    onChange={(e) => setForm((f) => ({ ...f, joinDate: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Role / Description
+                  Role *
                 </label>
-                <textarea
+                <select
                   value={form.role}
-                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                  rows={3}
+                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                  placeholder="Committee responsibilities, bio, etc."
-                />
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="BOARD">Board</option>
+                  <option value="TREASURER">Treasurer</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Membership Type
+                    Status
                   </label>
                   <select
-                    value={form.membershipType}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, membershipType: e.target.value as 'active' | 'honorary' | 'alumni' }))
-                    }
+                    value={form.status}
+                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as UserStatus }))}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                   >
                     <option value="active">Active</option>
-                    <option value="honorary">Honorary</option>
-                    <option value="alumni">Alumni</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Dues Status
+                    Committee
                   </label>
-                  <select
-                    value={form.duesStatus}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, duesStatus: e.target.value as 'paid' | 'unpaid' | 'waived' }))
-                    }
+                  <input
+                    value={form.committee}
+                    onChange={(e) => setForm((f) => ({ ...f, committee: e.target.value }))}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                  >
-                    <option value="paid">Paid</option>
-                    <option value="unpaid">Unpaid</option>
-                    <option value="waived">Waived</option>
-                  </select>
+                    placeholder="e.g., Community Service"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Order</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Display Order</label>
                   <input
                     type="number"
-                    value={form.order}
-                    onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
+                    value={form.displayOrder || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, displayOrder: e.target.value ? Number(e.target.value) : undefined }))}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                    placeholder="Optional"
                   />
                 </div>
               </div>
@@ -676,7 +657,7 @@ export default function AdminMembersPage() {
                     accept="image/*"
                     file={headshotFile}
                     onFile={setHeadshotFile}
-                    uploadedUrl={form.photoUrl || undefined}
+                    uploadedUrl={form.photoURL || undefined}
                     hint="PNG/JPG recommended."
                   />
 
@@ -692,33 +673,21 @@ export default function AdminMembersPage() {
                   )}
 
                   <input
-                    value={form.photoUrl || ''}
-                    onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
+                    value={form.photoURL || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, photoURL: e.target.value }))}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     placeholder="Or paste image URL..."
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={form.active}
-                    onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                    className="rounded border-slate-300 text-primary focus:ring-primary"
-                  />
-                  Active Member
-                </label>
-              </div>
-
               <div className="flex items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                 <button
                   onClick={save}
-                  disabled={saving || !form.title.trim() || !form.name.trim()}
+                  disabled={saving || !form.name.trim() || !form.email.trim()}
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 font-medium"
                 >
-                  {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Member'}
+                  {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create User'}
                 </button>
                 <button
                   onClick={resetForm}
@@ -761,21 +730,22 @@ export default function AdminMembersPage() {
                 >
                   <option value="all">Status: All</option>
                   <option value="active">Active</option>
-                  <option value="honorary">Honorary</option>
-                  <option value="alumni">Alumni</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="pending">Pending</option>
                 </select>
               </div>
 
               <div className="relative">
                 <select
-                  value={duesFilter}
-                  onChange={(e) => setDuesFilter(e.target.value as typeof duesFilter)}
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors pr-8"
                 >
-                  <option value="all">Dues: All</option>
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="waived">Waived</option>
+                  <option value="all">Role: All</option>
+                  <option value="MEMBER">Member</option>
+                  <option value="BOARD">Board</option>
+                  <option value="TREASURER">Treasurer</option>
+                  <option value="ADMIN">Admin</option>
                 </select>
               </div>
 
@@ -799,9 +769,9 @@ export default function AdminMembersPage() {
             </div>
           ) : sorted.length === 0 ? (
             <div className="p-12 text-center text-slate-600 dark:text-slate-400">
-              {searchTerm || statusFilter !== 'all' || duesFilter !== 'all'
-                ? 'No members match your filters.'
-                : 'No members yet. Click "Add Member" to get started.'}
+              {searchTerm || statusFilter !== 'all' || roleFilter !== 'all'
+                ? 'No users match your filters.'
+                : 'No users yet. Click "Add User" to get started.'}
             </div>
           ) : (
             <>
@@ -830,22 +800,13 @@ export default function AdminMembersPage() {
                         </div>
                       </th>
                       <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        Membership Type
+                        Role
                       </th>
                       <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        Dues Status
+                        Status
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer group hover:text-primary"
-                        onClick={() => toggleSort('joinDate')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Join Date
-                          <span className="material-symbols-outlined text-[16px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                            unfold_more
-                          </span>
-                        </div>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Committee
                       </th>
                       <th scope="col" className="relative px-6 py-4">
                         <span className="sr-only">Actions</span>
@@ -855,24 +816,24 @@ export default function AdminMembersPage() {
                   <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                     {sorted.map((member) => (
                       <tr
-                        key={member.id}
+                        key={member.uid}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="checkbox"
-                            checked={selectedIds.has(member.id)}
-                            onChange={() => toggleSelect(member.id)}
+                            checked={selectedIds.has(member.uid)}
+                            onChange={() => toggleSelect(member.uid)}
                             className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-10 w-10 flex-shrink-0">
-                              {member.photoUrl ? (
+                              {member.photoURL ? (
                                 <div
                                   className="h-10 w-10 rounded-full bg-slate-200 bg-cover bg-center"
-                                  style={{ backgroundImage: `url("${member.photoUrl}")` }}
+                                  style={{ backgroundImage: `url("${member.photoURL}")` }}
                                 />
                               ) : (
                                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
@@ -888,15 +849,15 @@ export default function AdminMembersPage() {
                             <div className="ml-4">
                               <div className="text-sm font-bold text-slate-900 dark:text-white">{member.name}</div>
                               <div className="text-sm text-slate-500 dark:text-slate-400">
-                                {member.email || member.title}
+                                {member.email}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{getMembershipBadge(member.membershipType)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{getDuesBadge(member.duesStatus)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{getRoleBadge(member.role)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(member.status)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                          {formatDate(member.joinDate)}
+                          {member.committee || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
@@ -908,7 +869,7 @@ export default function AdminMembersPage() {
                               <span className="material-symbols-outlined text-[20px]">edit</span>
                             </button>
                             <button
-                              onClick={() => remove(member.id)}
+                              onClick={() => remove(member.uid)}
                               className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
                               title="Delete"
                             >
