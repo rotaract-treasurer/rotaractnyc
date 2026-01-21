@@ -251,14 +251,13 @@ export default function AnnouncementsPage() {
         <DashboardSummary />
       </div>
 
-      {/* Quick Actions - Full Width */}
-      <div className="mb-8">
-        <DashboardQuickActions />
-      </div>
-
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* LEFT/MAIN COLUMN: The Feed */}
         <div className="flex-1 w-full lg:max-w-[720px] mx-auto flex flex-col gap-6">
+          {/* Quick Actions - Moved into left column */}
+          <div className="lg:pr-4">
+            <DashboardQuickActions />
+          </div>
           {/* Section Heading */}
           <div className="flex flex-col gap-1 pb-2">
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">

@@ -69,11 +69,15 @@ export interface Announcement {
 export interface Document {
   id: string;
   title: string;
+  description?: string;
   category: string;
   url: string;
   visibility: 'member' | 'board';
   createdBy: string;
   createdAt: Timestamp;
+  isPinned?: boolean;
+  downloadCount?: number;
+  lastDownloaded?: Timestamp;
 }
 
 // Transaction type

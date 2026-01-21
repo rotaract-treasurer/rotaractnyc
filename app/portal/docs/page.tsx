@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/firebase/auth';
 import { useEffect, useState } from 'react';
-import { addDoc, collection, query, where, getDocs, orderBy, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, query, where, getDocs, orderBy, serverTimestamp, deleteDoc, doc, updateDoc, increment } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
@@ -14,8 +14,32 @@ import {
   FiSearch, 
   FiUpload,
   FiEye,
-  FiCreditCard
+  FiEdit,
+  FiTrash2,
+  FiX,
+  FiChevronLeft,
+  FiChevronRight,
+  FiFile
 } from 'react-icons/fi';
+
+// Helper function to generate consistent colors for categories
+const stringToColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return {
+    bg: `hsl(${hue}, 85%, 96%)`,
+    darkBg: `hsl(${hue}, 60%, 15%)`,
+    text: `hsl(${hue}, 70%, 45%)`,
+    darkText: `hsl(${hue}, 70%, 70%)`,
+    border: `hsl(${hue}, 60%, 85%)`,
+    darkBorder: `hsl(${hue}, 50%, 25%)`,
+  };
+};
+
+type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'category';
 
 export default function DocumentsPage() {
   const { loading, user, userData } = useAuth();
@@ -27,11 +51,18 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Minutes');
   const [uploadUrl, setUploadUrl] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState<'link' | 'file'>('file');
   const [uploading, setUploading] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [editDoc, setEditDoc] = useState<Document | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const canUpload = userData?.role === 'BOARD' || userData?.role === 'TREASURER' || userData?.role === 'ADMIN';
 
@@ -42,8 +73,8 @@ export default function DocumentsPage() {
   }, [loading]);
 
   useEffect(() => {
-    filterDocuments();
-  }, [documents, selectedCategory, searchQuery]);
+    filterAndSortDocuments();
+  }, [documents, selectedCategory, searchQuery, sortBy]);
 
   const loadDocuments = async () => {
     const app = getFirebaseClientApp();
@@ -79,7 +110,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const filterDocuments = () => {
+  const filterAndSortDocuments = () => {
     let filtered = documents;
     
     if (selectedCategory !== 'all') {
@@ -87,12 +118,34 @@ export default function DocumentsPage() {
     }
     
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(d => 
-        d.title.toLowerCase().includes(searchQuery.toLowerCase())
+        d.title.toLowerCase().includes(query) ||
+        d.category.toLowerCase().includes(query) ||
+        (d.description && d.description.toLowerCase().includes(query))
       );
     }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        case 'date-asc':
+          return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+        case 'title-asc':
+          return a.title.localeCompare(b.title);
+        case 'title-desc':
+          return b.title.localeCompare(a.title);
+        case 'category':
+          return a.category.localeCompare(b.category);
+        default:
+          return 0;
+      }
+    });
     
-    setFilteredDocuments(filtered);
+    setFilteredDocuments(sorted);
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const formatDate = (timestamp: any) => {
@@ -106,13 +159,35 @@ export default function DocumentsPage() {
   };
 
   const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'Minutes': 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border-blue-100 dark:border-blue-800',
-      'Service': 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 border-green-100 dark:border-green-800',
-      'Finance': 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 border-orange-100 dark:border-orange-800',
-      'Events': 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 border-purple-100 dark:border-purple-800',
+    const colors = stringToColor(category);
+    return {
+      light: `bg-[${colors.bg}] text-[${colors.text}] border-[${colors.border}]`,
+      dark: `dark:bg-[${colors.darkBg}] dark:text-[${colors.darkText}] dark:border-[${colors.darkBorder}]`,
+      style: {
+        backgroundColor: colors.bg,
+        color: colors.text,
+        borderColor: colors.border,
+      }
     };
-    return colors[category] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
+  };
+
+  const getFileIcon = (url: string, title: string) => {
+    const urlLower = url.toLowerCase();
+    const titleLower = title.toLowerCase();
+    
+    if (urlLower.includes('.pdf') || titleLower.includes('pdf')) {
+      return { icon: '📄', color: 'text-red-500', name: 'PDF' };
+    }
+    if (urlLower.includes('.doc') || titleLower.includes('doc')) {
+      return { icon: '📘', color: 'text-blue-500', name: 'Word' };
+    }
+    if (urlLower.includes('.xls') || titleLower.includes('excel')) {
+      return { icon: '📗', color: 'text-green-500', name: 'Excel' };
+    }
+    if (urlLower.startsWith('http')) {
+      return { icon: '🔗', color: 'text-purple-500', name: 'Link' };
+    }
+    return { icon: '📎', color: 'text-gray-500', name: 'File' };
   };
 
   const getCategoryIcon = (category: string) => {
@@ -125,8 +200,95 @@ export default function DocumentsPage() {
     return icons[category] || 'folder';
   };
 
-  // Pinned documents (first 3)
-  const pinnedDocs = documents.slice(0, 3);
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
+
+  // Pinned documents
+  const pinnedDocs = documents.filter(d => d.isPinned).slice(0, 3);
+
+  const trackDownload = async (docId: string) => {
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+    
+    try {
+      const docRef = doc(db, 'documents', docId);
+      await updateDoc(docRef, {
+        downloadCount: increment(1),
+        lastDownloaded: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error tracking download:', error);
+    }
+  };
+
+  const handleDelete = async (docId: string) => {
+    if (!canUpload) return;
+    
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+    
+    try {
+      await deleteDoc(doc(db, 'documents', docId));
+      setDocuments(documents.filter(d => d.id !== docId));
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editDoc || !canUpload) return;
+    
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+    
+    try {
+      const docRef = doc(db, 'documents', editDoc.id);
+      await updateDoc(docRef, {
+        title: editDoc.title,
+        category: editDoc.category,
+        description: editDoc.description || '',
+        isPinned: editDoc.isPinned || false,
+      });
+      
+      setDocuments(documents.map(d => d.id === editDoc.id ? editDoc : d));
+      setEditDoc(null);
+    } catch (error) {
+      console.error('Error updating document:', error);
+      alert('Failed to update document');
+    }
+  };
+
+  const togglePin = async (docId: string) => {
+    if (!canUpload) return;
+    
+    const app = getFirebaseClientApp();
+    if (!app) return;
+    const db = getFirestore(app);
+    
+    const document = documents.find(d => d.id === docId);
+    if (!document) return;
+    
+    try {
+      const docRef = doc(db, 'documents', docId);
+      await updateDoc(docRef, {
+        isPinned: !document.isPinned
+      });
+      
+      setDocuments(documents.map(d => 
+        d.id === docId ? { ...d, isPinned: !d.isPinned } : d
+      ));
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+    }
+  };
 
   const submitUpload = async () => {
     if (!canUpload) {
@@ -190,15 +352,19 @@ export default function DocumentsPage() {
       await addDoc(collection(db, 'documents'), {
         title: uploadTitle.trim(),
         category: uploadCategory.trim(),
+        description: uploadDescription.trim() || '',
         url: finalUrl,
         visibility: 'member',
         createdBy: user.uid,
         createdAt: serverTimestamp(),
+        isPinned: false,
+        downloadCount: 0,
         seeded: false,
       });
       
       setUploadOpen(false);
       setUploadTitle('');
+      setUploadDescription('');
       setUploadCategory('Minutes');
       setUploadUrl('');
       setUploadFile(null);
@@ -213,8 +379,30 @@ export default function DocumentsPage() {
 
   if (loading || loadingData) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-4">
+          {/* Skeleton Header */}
+          <div className="h-10 bg-slate-200 rounded-lg animate-pulse w-64"></div>
+          <div className="h-4 bg-slate-200 rounded animate-pulse w-96"></div>
+          
+          {/* Skeleton Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-xl p-5 border border-slate-200">
+                <div className="h-10 w-10 bg-slate-200 rounded-lg animate-pulse mb-4"></div>
+                <div className="h-5 bg-slate-200 rounded animate-pulse mb-2"></div>
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Skeleton List */}
+          <div className="space-y-2 mt-8">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-16 bg-slate-200 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -222,6 +410,13 @@ export default function DocumentsPage() {
   return (
     <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
       <div className="space-y-8">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-text-muted" aria-label="Breadcrumb">
+          <a href="/portal" className="hover:text-primary transition-colors">Portal</a>
+          <span>/</span>
+          <span className="text-text-main font-medium">Resource Center</span>
+        </nav>
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -237,6 +432,7 @@ export default function DocumentsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64 shadow-sm transition-all"
+              aria-label="Search documents"
             />
           </div>
           <button
@@ -248,6 +444,7 @@ export default function DocumentsPage() {
               setUploadOpen(true);
             }}
             className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm shadow-primary/30 transition-all active:scale-95"
+            aria-label="Upload new document"
           >
             <FiUpload className="text-[20px]" />
             <span>Upload</span>
@@ -309,6 +506,17 @@ export default function DocumentsPage() {
                   onChange={(e) => setUploadTitle(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   placeholder="e.g., January Meeting Minutes"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-main mb-1">Description (optional)</label>
+                <textarea
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                  placeholder="Brief description of the document..."
+                  rows={2}
                 />
               </div>
 
@@ -394,29 +602,55 @@ export default function DocumentsPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {pinnedDocs.map((doc) => (
-              <a
+            {pinnedDocs.map((doc) => {
+              const fileInfo = getFileIcon(doc.url, doc.title);
+              return (
+              <div
                 key={doc.id}
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer relative overflow-hidden"
+                className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
                 <div className="flex items-start justify-between mb-4 relative z-10">
                   <div className="size-10 rounded-lg bg-[#eaf1f0] flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined">{getCategoryIcon(doc.category)}</span>
                   </div>
-                  <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_outward</span>
+                  <div className="flex gap-1">
+                    {canUpload && (
+                      <button
+                        onClick={() => togglePin(doc.id)}
+                        className="p-1 hover:bg-slate-100 rounded transition-colors"
+                        title="Unpin"
+                        aria-label="Unpin document"
+                      >
+                        <span className="material-symbols-outlined text-primary text-sm">push_pin</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        trackDownload(doc.id);
+                        setPreviewDoc(doc);
+                      }}
+                      className="p-1 hover:bg-slate-100 rounded transition-colors"
+                      title="Preview"
+                      aria-label="Preview document"
+                    >
+                      <FiEye className="text-slate-400 group-hover:text-primary transition-colors" />
+                    </button>
+                  </div>
                 </div>
                 <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{fileInfo.icon}</span>
+                    <span className="text-xs text-text-muted">{fileInfo.name}</span>
+                  </div>
                   <h3 className="font-bold text-text-main mb-1 group-hover:text-primary transition-colors">{doc.title}</h3>
                   <p className="text-sm text-text-muted line-clamp-2">
                     {doc.category} • {formatDate(doc.createdAt).month} {formatDate(doc.createdAt).year}
+                    {doc.downloadCount ? ` • ${doc.downloadCount} downloads` : ''}
                   </p>
                 </div>
-              </a>
-            ))}
+              </div>
+            )})}
           </div>
         </section>
       )}
@@ -426,48 +660,69 @@ export default function DocumentsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-4">
           <h2 className="text-lg font-bold text-text-main">Club Updates &amp; Documents</h2>
           
-          {/* Filters */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 w-fit">
-            <button 
-              onClick={() => setSelectedCategory('all')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                selectedCategory === 'all' 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'text-text-muted hover:bg-slate-50'
-              }`}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              aria-label="Sort documents"
             >
-              All
-            </button>
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  selectedCategory === category 
+              <option value="date-desc">Newest First</option>
+              <option value="date-asc">Oldest First</option>
+              <option value="title-asc">Title (A-Z)</option>
+              <option value="title-desc">Title (Z-A)</option>
+              <option value="category">Category</option>
+            </select>
+
+            {/* Category Filters */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
+              <button 
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  selectedCategory === 'all' 
                     ? 'bg-primary/10 text-primary' 
                     : 'text-text-muted hover:bg-slate-50'
                 }`}
+                aria-label="Show all categories"
               >
-                {category}
+                All
               </button>
-            ))}
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    selectedCategory === category 
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-text-muted hover:bg-slate-50'
+                  }`}
+                  aria-label={`Filter by ${category}`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Documents Table */}
         {filteredDocuments.length > 0 ? (
+          <>
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             {/* Header Row */}
             <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50/50 text-xs font-semibold text-text-muted uppercase tracking-wider">
               <div className="col-span-2">Date</div>
-              <div className="col-span-7">Topic</div>
-              <div className="col-span-3 text-right">Action</div>
+              <div className="col-span-6">Topic</div>
+              <div className="col-span-4 text-right">Actions</div>
             </div>
 
             {/* Document Rows */}
-            {filteredDocuments.map((document, index) => {
+            {paginatedDocuments.map((document, index) => {
               const date = formatDate(document.createdAt);
-              const isLast = index === filteredDocuments.length - 1;
+              const isLast = index === paginatedDocuments.length - 1;
+              const fileInfo = getFileIcon(document.url, document.title);
+              const categoryColors = getCategoryColor(document.category);
               
               return (
                 <div 
@@ -478,29 +733,159 @@ export default function DocumentsPage() {
                     <span className="text-sm font-medium text-text-main">{date.month} {date.day}</span>
                     <span className="text-xs text-text-muted">{date.year}</span>
                   </div>
-                  <div className="md:col-span-7 flex flex-col gap-1">
+                  <div className="md:col-span-6 flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getCategoryColor(document.category)}`}>
+                      <span 
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border"
+                        style={categoryColors.style}
+                      >
                         {document.category}
                       </span>
+                      <span className="text-lg">{fileInfo.icon}</span>
+                      {document.isPinned && (
+                        <span className="material-symbols-outlined text-primary text-sm" title="Pinned">push_pin</span>
+                      )}
                     </div>
                     <p className="text-sm font-bold text-text-main group-hover:text-primary transition-colors">{document.title}</p>
+                    {document.description && (
+                      <p className="text-xs text-text-muted line-clamp-1">{document.description}</p>
+                    )}
+                    {(document.downloadCount || 0) > 0 && (
+                      <p className="text-xs text-text-muted">{document.downloadCount} downloads</p>
+                    )}
                   </div>
-                  <div className="md:col-span-3 flex justify-start md:justify-end">
+                  <div className="md:col-span-4 flex justify-start md:justify-end gap-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        trackDownload(document.id);
+                        setPreviewDoc(document);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-primary hover:text-primary text-text-main text-xs font-medium transition-all bg-white"
+                      aria-label="Preview document"
+                    >
+                      <FiEye className="text-[16px]" />
+                      <span>Preview</span>
+                    </button>
                     <a
                       href={document.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => trackDownload(document.id)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-primary hover:text-primary text-text-main text-xs font-medium transition-all bg-white"
+                      aria-label="Download document"
                     >
                       <FiDownload className="text-[16px]" />
                       <span>Download</span>
                     </a>
+                    {canUpload && (
+                      <>
+                        {!document.isPinned && (
+                          <button
+                            onClick={() => togglePin(document.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-primary hover:text-primary text-text-main text-xs font-medium transition-all bg-white"
+                            title="Pin to top"
+                            aria-label="Pin document"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">push_pin</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setEditDoc(document)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:text-blue-500 text-text-main text-xs font-medium transition-all bg-white"
+                          aria-label="Edit document"
+                        >
+                          <FiEdit className="text-[16px]" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(document.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-red-500 hover:text-red-500 text-text-main text-xs font-medium transition-all bg-white"
+                          aria-label="Delete document"
+                        >
+                          <FiTrash2 className="text-[16px]" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-muted">
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredDocuments.length)} of {filteredDocuments.length}
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  aria-label="Items per page"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-primary text-white'
+                            : 'border border-slate-200 hover:bg-slate-50'
+                        }`}
+                        aria-label={`Page ${pageNum}`}
+                        aria-current={currentPage === pageNum ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
             <FiFileText className="text-6xl text-gray-300 mx-auto mb-4" />
@@ -515,6 +900,200 @@ export default function DocumentsPage() {
           </div>
         )}
       </section>
+
+      {/* Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setPreviewDoc(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50">
+              <div className="flex-1">
+                <h2 id="preview-title" className="text-xl font-bold text-text-main">{previewDoc.title}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <span 
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border"
+                    style={getCategoryColor(previewDoc.category).style}
+                  >
+                    {previewDoc.category}
+                  </span>
+                  <span className="text-sm text-text-muted">
+                    {formatDate(previewDoc.createdAt).month} {formatDate(previewDoc.createdAt).day}, {formatDate(previewDoc.createdAt).year}
+                  </span>
+                </div>
+                {previewDoc.description && (
+                  <p className="text-sm text-text-muted mt-2">{previewDoc.description}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors ml-4"
+                aria-label="Close preview"
+              >
+                <FiX className="text-xl" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-5">
+              {previewDoc.url.toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={previewDoc.url}
+                  className="w-full h-[600px] border border-slate-200 rounded-lg"
+                  title={`Preview of ${previewDoc.title}`}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">{getFileIcon(previewDoc.url, previewDoc.title).icon}</div>
+                  <p className="text-text-muted mb-4">Preview not available for this file type</p>
+                  <a
+                    href={previewDoc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                  >
+                    <FiExternalLink />
+                    Open in New Tab
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-5 border-t border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-4 text-sm text-text-muted">
+                <span className="flex items-center gap-1">
+                  <FiDownload />
+                  {previewDoc.downloadCount || 0} downloads
+                </span>
+              </div>
+              <a
+                href={previewDoc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                <FiDownload />
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setEditDoc(null)} />
+          <div className="relative w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 id="edit-title" className="text-lg font-bold text-text-main">Edit Document</h2>
+              <button
+                onClick={() => setEditDoc(null)}
+                className="text-slate-400 hover:text-text-main"
+                aria-label="Close"
+              >
+                <FiX className="text-xl" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-text-main mb-1">Title</label>
+                <input
+                  value={editDoc.title}
+                  onChange={(e) => setEditDoc({ ...editDoc, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-main mb-1">Description</label>
+                <textarea
+                  value={editDoc.description || ''}
+                  onChange={(e) => setEditDoc({ ...editDoc, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-main mb-1">Category</label>
+                <input
+                  value={editDoc.category}
+                  onChange={(e) => setEditDoc({ ...editDoc, category: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editDoc.isPinned || false}
+                    onChange={(e) => setEditDoc({ ...editDoc, isPinned: e.target.checked })}
+                    className="rounded border-slate-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-text-main">Pin to top</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setEditDoc(null)}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEdit}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirm(null)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <FiTrash2 className="text-red-600 text-xl" />
+              </div>
+              <div>
+                <h2 id="delete-title" className="text-lg font-bold text-text-main">Delete Document</h2>
+                <p className="text-sm text-text-muted">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-text-main mb-6">
+              Are you sure you want to delete this document? This will permanently remove it from the portal.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </main>
   );
