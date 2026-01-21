@@ -245,28 +245,28 @@ export default function AnnouncementsPage() {
   });
 
   return (
-    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-      {/* Dashboard Summary - Full Width */}
-      <div className="mb-8">
-        <DashboardSummary />
-      </div>
+    <main className="flex-1 py-8">
+      <div className="container mx-auto px-4">
+        {/* Dashboard Summary */}
+        <div className="mb-8">
+          <DashboardSummary />
+        </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* LEFT/MAIN COLUMN: The Feed */}
-        <div className="flex-1 w-full lg:max-w-[720px] mx-auto flex flex-col gap-6">
-          {/* Quick Actions - Moved into left column */}
-          <div className="lg:pr-4">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          {/* LEFT/MAIN COLUMN: The Feed */}
+          <div className="flex-1 w-full lg:max-w-[720px] flex flex-col gap-6">
+            {/* Quick Actions */}
             <DashboardQuickActions />
-          </div>
-          {/* Section Heading */}
-          <div className="flex flex-col gap-1 pb-2">
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Announcements
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Stay updated with the latest news and posts from your club
-            </p>
-          </div>
+            
+            {/* Section Heading */}
+            <div className="flex flex-col gap-1 pb-2">
+              <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                Announcements
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Stay updated with the latest news and posts from your club
+              </p>
+            </div>
 
           {/* Post Composers */}
           <div className="flex flex-col gap-4">
@@ -343,6 +343,7 @@ export default function AnnouncementsPage() {
           </div>
         </aside>
       </div>
+    </div>
     </main>
   );
 }
