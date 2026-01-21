@@ -7,9 +7,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { Transaction, MonthlySummary } from '@/types/portal';
 import { canManageFinances } from '@/lib/portal/roles';
-import { FiDollarSign, FiTrendingUp, FiTrendingDown, FiFilter, FiDownload, FiSearch, FiChevronDown, FiChevronUp, FiCalendar, FiBarChart2 } from 'react-icons/fi';
+import { FiDollarSign, FiTrendingUp, FiTrendingDown, FiFilter, FiDownload, FiSearch, FiChevronDown, FiChevronUp, FiCalendar, FiBarChart2, FiFileText } from 'react-icons/fi';
 import FinanceCharts from '@/components/portal/FinanceCharts';
+import FinanceInsights from '@/components/portal/FinanceInsights';
+import BudgetManager from '@/components/portal/BudgetManager';
+import AdvancedCharts from '@/components/portal/AdvancedCharts';
 import { exportTransactionsToCSV, exportSummariesToCSV } from '@/lib/utils/exportCSV';
+import { generateFinancialReport } from '@/lib/utils/financialReports';
 
 export default function FinancePage() {
   const { userData, loading } = useAuth();
@@ -25,6 +29,8 @@ export default function FinancePage() {
   const [itemsPerPage] = useState(10);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showCharts, setShowCharts] = useState(true);
+  const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
+  const [showBudgets, setShowBudgets] = useState(false);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
   useEffect(() => {
@@ -180,6 +186,14 @@ export default function FinancePage() {
     exportSummariesToCSV(monthlySummaries, `monthly_summaries_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  const handleGeneratePDFReport = () => {
+    generateFinancialReport({
+      monthlySummaries,
+      transactions: filteredTransactions,
+      dateRange: dateRange.start || dateRange.end ? dateRange : undefined,
+    });
+  };
+
   if (loading || loadingData) {
     return (
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -237,18 +251,39 @@ export default function FinancePage() {
                 {showCharts ? 'Hide' : 'Show'} Charts
               </button>
               <button
+                onClick={() => setShowAdvancedCharts(!showAdvancedCharts)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                <FiBarChart2 />
+                {showAdvancedCharts ? 'Hide' : 'Show'} Analytics
+              </button>
+              <button
+                onClick={() => setShowBudgets(!showBudgets)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+              >
+                <FiDollarSign />
+                {showBudgets ? 'Hide' : 'Show'} Budgets
+              </button>
+              <button
+                onClick={handleGeneratePDFReport}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                <FiFileText />
+                PDF Report
+              </button>
+              <button
                 onClick={handleExportSummaries}
                 className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
               >
                 <FiDownload />
-                Export Summaries
+                Export CSV
               </button>
               <button
                 onClick={handleExportTransactions}
                 className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
               >
                 <FiDownload />
-                Export Transactions
+                Transactions
               </button>
             </div>
           </div>
@@ -286,6 +321,25 @@ export default function FinancePage() {
         {/* Charts */}
         {showCharts && (
           <FinanceCharts monthlySummaries={monthlySummaries} transactions={transactions} />
+        )}
+
+        {/* Financial Insights */}
+        <FinanceInsights monthlySummaries={monthlySummaries} />
+
+        {/* Budget Management */}
+        {showBudgets && (
+          <BudgetManager 
+            categories={categories} 
+            transactions={transactions}
+          />
+        )}
+
+        {/* Advanced Analytics */}
+        {showAdvancedCharts && (
+          <AdvancedCharts 
+            monthlySummaries={monthlySummaries} 
+            transactions={transactions}
+          />
         )}
 
       {/* Monthly Summaries */}
