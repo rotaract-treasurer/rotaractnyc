@@ -72,11 +72,11 @@ export function rateLimit(config: RateLimitConfig) {
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now()
-    for (const [key, store] of rateLimitStore.entries()) {
+    rateLimitStore.forEach((store, key) => {
       if (now > store.resetTime) {
         rateLimitStore.delete(key)
       }
-    }
+    })
   }, 60000) // Clean every minute
 }
 

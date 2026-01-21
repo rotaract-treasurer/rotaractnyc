@@ -16,6 +16,7 @@
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
     "autoprefixer": "^10.4.16",
+    "critters": "^0.0.23",
     "firebase": "^12.7.0",
     "firebase-admin": "^13.6.0",
     "framer-motion": "^10.16.16",
