@@ -18,6 +18,7 @@ import {
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { Event, RSVP, RSVPStatus, Visibility } from '@/types/portal';
+import Link from 'next/link';
 
 type FilterType = 'all' | 'member' | 'public';
 
@@ -31,6 +32,7 @@ export default function EventsPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [updatingRsvp, setUpdatingRsvp] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!loading && user) {
@@ -40,14 +42,26 @@ export default function EventsPage() {
 
   useEffect(() => {
     applyFilter();
-  }, [events, activeFilter]);
+  }, [events, activeFilter, searchTerm]);
 
   const applyFilter = () => {
-    if (activeFilter === 'all') {
-      setFilteredEvents(events);
-    } else {
-      setFilteredEvents(events.filter(e => e.visibility === activeFilter));
+    let filtered = events;
+    
+    // Apply visibility filter
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(e => e.visibility === activeFilter);
     }
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(e => 
+        e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredEvents(filtered);
   };
 
   const loadEvents = async () => {
@@ -184,38 +198,26 @@ export default function EventsPage() {
     }
   };
 
-  const formatDate = (timestamp: Timestamp) => {
+  const formatDateTime = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
     return {
       month: date.toLocaleDateString('en-US', { month: 'short' }),
-      day: date.getDate().toString(),
-      full: date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+      day: date.getDate(),
+      time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      dateTime: `${date.toLocaleDateString('en-US', { month: 'short' })} ${date.getDate()} • ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
     };
   };
 
-  const formatTime = (timestamp: Timestamp) => {
-    const date = timestamp.toDate();
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
-
   const getEventStats = () => {
-    const upcomingCount = filteredEvents.length;
     const rsvpCount = Array.from(rsvps.values()).filter(r => r.status === 'going').length;
-    return { upcomingCount, rsvpCount };
+    const totalHours = 12.5; // This would come from service hours tracking
+    return { rsvpCount, totalHours };
   };
 
   if (loading || loadingData) {
     return (
       <div className="flex items-center justify-center py-12 col-span-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17b0cf]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -223,232 +225,197 @@ export default function EventsPage() {
   const stats = getEventStats();
 
   return (
-    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col gap-8">
-        {/* Greeting & Stats Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Welcome back, {userData?.name?.split(' ')[0] || 'Member'}!
+    <main className="max-w-[1200px] mx-auto px-6 lg:px-20 py-10 w-full">
+      {/* Welcome & Stats Section */}
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-display font-extrabold text-[#161217] dark:text-white mb-2 tracking-tight">
+            Welcome back, {userData?.name?.split(' ')[0] || 'Member'}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            Here&apos;s what&apos;s happening with the club this week.
+          <p className="text-gray-500 dark:text-gray-400 font-medium">
+            Ready for another month of impact?
           </p>
         </div>
-        {/* Mini Stats */}
-        <div className="flex gap-4">
-          <div className="bg-white rounded-lg px-4 py-2 shadow-sm border border-slate-100 flex flex-col items-center min-w-[100px]">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Upcoming
-            </span>
-            <span className="text-xl font-bold text-blue-600">{stats.upcomingCount}</span>
+        <div className="flex flex-wrap gap-4">
+          {/* Quick Stats Cards */}
+          <div className="flex min-w-[180px] flex-col gap-1 rounded-xl p-5 bg-white dark:bg-gray-800 shadow-sm border border-[#e3dde4] dark:border-gray-700">
+            <div className="flex items-center gap-2 text-primary">
+              <span className="material-symbols-outlined text-xl">event_available</span>
+              <p className="text-sm font-bold uppercase tracking-wider">RSVPs</p>
+            </div>
+            <div className="flex items-end gap-2 mt-1">
+              <p className="text-3xl font-display font-black text-[#161217] dark:text-white">{stats.rsvpCount}</p>
+              <p className="text-[#07884c] text-sm font-bold pb-1">confirmed</p>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">For this month</p>
           </div>
-          <div className="bg-white rounded-lg px-4 py-2 shadow-sm border border-slate-100 flex flex-col items-center min-w-[100px]">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              RSVP&apos;d
-            </span>
-            <span className="text-xl font-bold text-green-600">{stats.rsvpCount}</span>
+          <div className="flex min-w-[180px] flex-col gap-1 rounded-xl p-5 bg-white dark:bg-gray-800 shadow-sm border border-[#e3dde4] dark:border-gray-700">
+            <div className="flex items-center gap-2 text-secondary-accent">
+              <span className="material-symbols-outlined text-xl">volunteer_activism</span>
+              <p className="text-sm font-bold uppercase tracking-wider">Impact</p>
+            </div>
+            <div className="flex items-end gap-2 mt-1">
+              <p className="text-3xl font-display font-black text-[#161217] dark:text-white">{stats.totalHours}</p>
+              <p className="text-[#07884c] text-sm font-bold pb-1">hrs</p>
+            </div>
+            <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div className="bg-secondary-accent h-full w-[65%]"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Events Filter */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <h2 className="text-lg font-bold text-slate-900">Upcoming Events</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveFilter('all')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md shadow-sm transition-colors ${
-                activeFilter === 'all'
-                  ? 'text-white bg-blue-600'
-                  : 'text-slate-600 hover:bg-white'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setActiveFilter('member')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeFilter === 'member'
-                  ? 'text-white bg-blue-600'
-                  : 'text-slate-600 hover:bg-white'
-              }`}
-            >
-              Member Only
-            </button>
-            <button
-              onClick={() => setActiveFilter('public')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeFilter === 'public'
-                  ? 'text-white bg-blue-600'
-                  : 'text-slate-600 hover:bg-white'
-              }`}
-            >
-              Public
-            </button>
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-[#e3dde4] dark:border-gray-700">
+        <div className="flex bg-[#f3f1f4] dark:bg-gray-700 p-1 rounded-lg w-full sm:w-auto">
+          <button 
+            onClick={() => setActiveFilter('all')}
+            className={`flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${
+              activeFilter === 'all' 
+                ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' 
+                : 'text-gray-500 hover:text-primary'
+            }`}
+          >
+            All Events
+          </button>
+          <button 
+            onClick={() => setActiveFilter('member')}
+            className={`flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${
+              activeFilter === 'member' 
+                ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' 
+                : 'text-gray-500 hover:text-primary'
+            }`}
+          >
+            Member-Only
+          </button>
+          <button 
+            onClick={() => setActiveFilter('public')}
+            className={`flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${
+              activeFilter === 'public' 
+                ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' 
+                : 'text-gray-500 hover:text-primary'
+            }`}
+          >
+            Public
+          </button>
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+            <input 
+              className="pl-10 pr-4 py-2 bg-[#f3f1f4] dark:bg-gray-700 border-none rounded-full text-sm w-full sm:w-48 focus:ring-1 focus:ring-primary focus:w-64 transition-all duration-300" 
+              placeholder="Search events..." 
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
-
-        {/* Event Cards Grid */}
-        {filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredEvents.map((event) => {
-              const userRsvp = rsvps.get(event.id);
-              const isUpdating = updatingRsvp === event.id;
-              const dateInfo = formatDate(event.startAt);
-              const attendeeCount = attendeeCounts.get(event.id) || 0;
-
-              return (
-                <article
-                  key={event.id}
-                  onClick={() => router.push(`/portal/events/${event.id}`)}
-                  className="group bg-white rounded-xl overflow-hidden border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col h-full cursor-pointer"
-                >
-                  {/* Event Image/Header */}
-                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700">
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className={`inline-flex items-center rounded-md backdrop-blur px-2.5 py-0.5 text-xs font-bold shadow-sm ${
-                        event.visibility === 'member'
-                          ? 'bg-white/90 text-blue-600'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                      }`}>
-                        {event.visibility === 'member' ? 'Member Only' : 'Public'}
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  </div>
-
-                  <div className="p-5 flex flex-col flex-grow">
-                    {/* Date & Title */}
-                    <div className="flex gap-4 mb-3">
-                      <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 min-w-[60px] h-[60px] border border-slate-200">
-                        <span className="text-xs font-bold text-slate-500 uppercase">
-                          {dateInfo.month}
-                        </span>
-                        <span className="text-xl font-bold text-slate-900 leading-none">
-                          {dateInfo.day}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
-                          {event.title}
-                        </h3>
-                        <div className="flex items-center gap-1 mt-1 text-sm text-slate-500">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>{formatTime(event.startAt)}</span>
-                          <span className="mx-1">•</span>
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-sm text-slate-600 line-clamp-2 mb-4">
-                      {event.description}
-                    </p>
-
-                    {/* Footer with Actions */}
-                    <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <span className="font-medium">{attendeeCount > 0 ? `+${attendeeCount}` : 'No attendees yet'}</span>
-                      </div>
-
-                      {/* RSVP Status / Action */}
-                      {userRsvp?.status === 'going' ? (
-                        <div className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
-                          <svg className="w-[18px] h-[18px] fill-current" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                          </svg>
-                          <span>Going</span>
-                        </div>
-                      ) : userRsvp?.status === 'maybe' ? (
-                        <div className="flex items-center gap-1.5 text-amber-600 font-bold text-sm bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
-                          <svg className="w-[18px] h-[18px] fill-current" viewBox="0 0 24 24">
-                            <path d="M12 2l-5.5 9h11z"/>
-                            <circle cx="12" cy="17" r="1.5"/>
-                          </svg>
-                          <span>Interested</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRsvp(event.id, 'going');
-                          }}
-                          disabled={isUpdating}
-                          className="flex items-center justify-center rounded-lg h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold leading-normal transition-colors shadow-sm disabled:opacity-50"
-                        >
-                          {isUpdating ? 'Loading...' : 'RSVP'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Additional RSVP Actions */}
-                    {userRsvp && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRsvp(event.id, 'going');
-                          }}
-                          disabled={isUpdating}
-                          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            userRsvp.status === 'going'
-                              ? 'bg-green-600 text-white'
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          } disabled:opacity-50`}
-                        >
-                          Going
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRsvp(event.id, 'maybe');
-                          }}
-                          disabled={isUpdating}
-                          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            userRsvp.status === 'maybe'
-                              ? 'bg-amber-500 text-white'
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          } disabled:opacity-50`}
-                        >
-                          Maybe
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRsvp(event.id, 'not');
-                          }}
-                          disabled={isUpdating}
-                          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            userRsvp.status === 'not'
-                              ? 'bg-gray-600 text-white'
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          } disabled:opacity-50`}
-                        >
-                          Can&apos;t Go
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-500">No upcoming events</p>
-          </div>
-        )}
       </div>
+
+      {/* 3-Column Visual Grid */}
+      {filteredEvents.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredEvents.map((event) => {
+            const userRsvp = rsvps.get(event.id);
+            const isUpdating = updatingRsvp === event.id;
+            const dateInfo = formatDateTime(event.startAt);
+            const attendeeCount = attendeeCounts.get(event.id) || 0;
+            const isRegistered = userRsvp?.status === 'going';
+
+            return (
+              <div 
+                key={event.id}
+                className="group event-card relative overflow-hidden rounded-2xl h-[450px] shadow-lg transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+              >
+                {/* Event Image/Background */}
+                <div 
+                  className="event-image absolute inset-0 bg-cover bg-center transition-transform duration-700 bg-gradient-to-br from-primary to-blue-600"
+                  style={{
+                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 100%), linear-gradient(135deg, #8f29a3 0%, #4f46e5 100%)`
+                  }}
+                />
+                
+                {/* Visibility Badge */}
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                  <span className={`px-3 py-1 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-sm ${
+                    event.visibility === 'member'
+                      ? 'bg-secondary-accent/90 text-white'
+                      : 'bg-white/90 text-[#161217]'
+                  }`}>
+                    {event.visibility === 'member' ? 'Member-Only' : 'Public'}
+                  </span>
+                </div>
+
+                {/* Content Card */}
+                <div className="absolute bottom-4 inset-x-4">
+                  <div className="glass-panel backdrop-blur-md bg-white/70 dark:bg-gray-900/70 p-6 rounded-xl border border-white/30 dark:border-white/10">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-primary dark:text-primary font-black text-xs uppercase tracking-widest">
+                        {dateInfo.dateTime}
+                      </p>
+                    </div>
+                    <h3 className="text-xl font-display font-extrabold text-[#161217] dark:text-white leading-tight mb-4 line-clamp-2">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[#4d424e] dark:text-gray-300 text-xs font-semibold">
+                        <span className="material-symbols-outlined text-sm">location_on</span>
+                        <span className="truncate max-w-[140px]">{event.location || 'TBD'}</span>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isRegistered && !isUpdating) {
+                            handleRsvp(event.id, 'going');
+                          } else {
+                            router.push(`/portal/events/${event.id}`);
+                          }
+                        }}
+                        disabled={isUpdating}
+                        className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+                          isRegistered 
+                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                            : 'bg-primary hover:bg-primary/90 text-white'
+                        } disabled:opacity-50`}
+                      >
+                        {isUpdating ? '...' : isRegistered ? 'Registered' : 'Details'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+          <span className="material-symbols-outlined text-6xl text-gray-300 mb-4">event_busy</span>
+          <p className="text-gray-500 dark:text-gray-400">
+            {searchTerm ? 'No events found matching your search.' : 'No upcoming events at this time.'}
+          </p>
+        </div>
+      )}
+
+      {/* Footer Section */}
+      <footer className="mt-24 pt-10 border-t border-[#e3dde4] dark:border-gray-800 flex flex-col md:flex-row items-center justify-between gap-6 pb-12">
+        <div className="flex items-center gap-3 grayscale opacity-60">
+          <div className="size-6 bg-gray-500 rounded flex items-center justify-center text-white">
+            <span className="material-symbols-outlined text-xs">diversity_3</span>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+            Rotaract NYC © {new Date().getFullYear()}
+          </p>
+        </div>
+        <div className="flex gap-8">
+          <Link href="/contact" className="text-xs font-bold text-gray-500 hover:text-primary transition-colors uppercase tracking-widest">
+            Contact Support
+          </Link>
+          <Link href="/about" className="text-xs font-bold text-gray-500 hover:text-primary transition-colors uppercase tracking-widest">
+            About Us
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }

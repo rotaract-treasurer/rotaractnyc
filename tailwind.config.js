@@ -10,12 +10,13 @@ module.exports = {
     extend: {
       colors: {
         // Primary colors for membership page design
-        primary: '#141414',
+        primary: '#8f29a3',
         'primary-dark': '#169aa6',
+        'secondary-accent': '#C9B38C',
         accent: '#EBC85B',
         'rotaract-blue': '#005dAA',
-        'background-light': '#f5f5f7',
-        'background-dark': '#191919',
+        'background-light': '#f9fafa',
+        'background-dark': '#1a1a1f',
         'surface-light': '#ffffff',
         'surface-dark': '#1e1e1e',
         'text-main': '#101817',
@@ -31,7 +32,8 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Manrope', 'system-ui', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Manrope', 'sans-serif'],
+        display: ['Epilogue', 'Plus Jakarta Sans', 'Manrope', 'sans-serif'],
+        body: ['Manrope', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '0.5rem',
