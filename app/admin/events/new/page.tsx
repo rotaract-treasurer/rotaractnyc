@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
 import LogisticsStep from './_components/LogisticsStep'
@@ -46,6 +46,8 @@ export default function NewEventWizard() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
@@ -67,9 +69,47 @@ export default function NewEventWizard() {
 
   const updateFormData = (updates: Partial<EventFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
+    setHasUnsavedChanges(true)
   }
 
+  // Auto-save draft every 30 seconds if there are unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    const autoSaveInterval = setInterval(() => {
+      if (hasUnsavedChanges && !isSaving) {
+        handleAutoSave()
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(autoSaveInterval)
+  }, [hasUnsavedChanges, isSaving])
+
+  const handleAutoSave = useCallback(async () => {
+    if (!formData.title) return // Don't auto-save if no title
+
+    try {
+      const response = await fetch('/api/admin/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          status: 'draft',
+        }),
+      })
+      
+      if (response.ok) {
+        setLastSaved(new Date())
+        setHasUnsavedChanges(false)
+      }
+    } catch (err) {
+      // Silently fail auto-save
+      console.error('Auto-save failed:', err)
+    }
+  }, [formData])
+
   const handleNext = () => {
+    setError(null)
     if (currentStep < 3) {
       setCurrentStep(prev => prev + 1)
     }
@@ -102,6 +142,8 @@ export default function NewEventWizard() {
       
       const result = await response.json()
       setSuccess('Draft saved successfully!')
+      setLastSaved(new Date())
+      setHasUnsavedChanges(false)
       setTimeout(() => router.push('/admin/events'), 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save draft')
@@ -172,6 +214,18 @@ export default function NewEventWizard() {
               <p className="mt-2 text-slate-600 dark:text-slate-400 text-sm max-w-2xl">
                 Set up a new event with our streamlined wizard. Complete all required fields to publish your event to members.
               </p>
+              {lastSaved && (
+                <p className="mt-2 text-xs text-slate-400 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  Last saved {lastSaved.toLocaleTimeString()}
+                </p>
+              )}
+              {hasUnsavedChanges && !isSaving && (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">pending</span>
+                  Unsaved changes
+                </p>
+              )}
             </div>
             <button
               onClick={() => router.push('/admin/events')}
