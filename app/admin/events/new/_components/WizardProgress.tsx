@@ -41,7 +41,7 @@ export default function WizardProgress({ currentStep }: WizardProgressProps) {
                 }`}
               >
                 {isCompleted ? (
-                  <span className=\"material-symbols-outlined text-lg\">check</span>
+                  <span className="material-symbols-outlined text-lg">check</span>
                 ) : (
                   <span
                     className={`material-symbols-outlined text-lg`}
@@ -63,11 +63,11 @@ export default function WizardProgress({ currentStep }: WizardProgressProps) {
               >
                 {step.label}
               </p>
-              <p className=\"text-xs text-slate-400 mt-0.5\">{step.description}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{step.description}</p>
 
               {/* Active indicator */}
               {isActive && (
-                <div className=\"absolute bottom-0 left-0 right-0 h-1 bg-primary\"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
               )}
 
               {/* Connection line */}
@@ -82,18 +82,18 @@ export default function WizardProgress({ currentStep }: WizardProgressProps) {
       </div>
 
       {/* Progress Bar Detail */}
-      <div className=\"px-8 pt-5 pb-2\">
-        <div className=\"flex items-center justify-between mb-2\">
-          <span className=\"text-xs font-semibold text-slate-500 dark:text-slate-400\">
+      <div className="px-8 pt-5 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Overall Progress
           </span>
-          <span className=\"text-xs font-bold text-primary\">
+          <span className="text-xs font-bold text-primary">
             {Math.round(progressPercent)}% Complete
           </span>
         </div>
-        <div className=\"h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden\">
+        <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
           <div
-            className=\"h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out\"
+            className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
