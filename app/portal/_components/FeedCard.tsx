@@ -125,7 +125,19 @@ export default function FeedCard({ announcement, author }: FeedCardProps) {
   };
 
   return (
-    <article className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-[#2a2a2a] overflow-hidden group">
+    <article className={`bg-white dark:bg-[#1e1e1e] rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border overflow-hidden group ${
+      announcement.pinned 
+        ? 'border-rotaract-blue dark:border-blue-700 ring-2 ring-rotaract-blue/20 dark:ring-blue-700/20' 
+        : 'border-gray-100 dark:border-[#2a2a2a]'
+    }`}>
+      {/* Pinned Badge */}
+      {announcement.pinned && (
+        <div className="bg-gradient-to-r from-rotaract-blue to-blue-600 px-4 py-2 flex items-center gap-2 text-white">
+          <span className="material-symbols-outlined text-[18px]">push_pin</span>
+          <span className="text-sm font-bold uppercase tracking-wide">Pinned Announcement</span>
+        </div>
+      )}
+      
       {/* Card Header */}
       <div className="p-5 pb-3 flex justify-between items-start">
         <div className="flex gap-3">

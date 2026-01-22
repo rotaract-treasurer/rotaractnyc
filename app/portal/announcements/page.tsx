@@ -59,8 +59,8 @@ interface CommunityPost {
 }
 
 type FeedItem = 
-  | { type: 'announcement'; data: Announcement; author?: User }
-  | { type: 'post'; data: CommunityPost };
+  | { type: 'announcement'; data: Announcement; author?: User; sortDate: Date; pinned: boolean; likesCount: number }
+  | { type: 'post'; data: CommunityPost; sortDate: Date; pinned: boolean; likesCount: number };
 
 export default function AnnouncementsPage() {
   const { loading, user, userData } = useAuth();
@@ -77,6 +77,7 @@ export default function AnnouncementsPage() {
   const [lastPostDoc, setLastPostDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const observerTarget = useRef(null);
   const POSTS_PER_PAGE = 10;
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -148,9 +149,9 @@ export default function AnnouncementsPage() {
         setError(error.message);
       });
 
-      // Load community posts with real-time listener
+      // Load initial community posts with real-time listener
       const postsRef = collection(db, 'communityPosts');
-      const postsQuery = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
+      const postsQuery = query(postsRef, orderBy('createdAt', 'desc'), limit(POSTS_PER_PAGE));
 
       const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
         const loadedPosts = snapshot.docs.map((doc) => {
@@ -183,6 +184,8 @@ export default function AnnouncementsPage() {
         });
 
         setCommunityPosts(loadedPosts);
+        setLastPostDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+        setHasMorePosts(snapshot.docs.length === POSTS_PER_PAGE);
         setLoadingData(false);
       }, (error) => {
         console.error('Error loading community posts:', error);
@@ -200,6 +203,87 @@ export default function AnnouncementsPage() {
       setLoadingData(false);
     }
   };
+
+  const loadMorePosts = useCallback(async () => {
+    if (!lastPostDoc || loadingMore || !hasMorePosts) return;
+
+    setLoadingMore(true);
+    const app = getFirebaseClientApp();
+    if (!app) return;
+
+    const db = getFirestore(app);
+
+    try {
+      const postsRef = collection(db, 'communityPosts');
+      const nextQuery = query(
+        postsRef,
+        orderBy('createdAt', 'desc'),
+        startAfter(lastPostDoc),
+        limit(POSTS_PER_PAGE)
+      );
+
+      const snapshot = await getDocs(nextQuery);
+      
+      const morePosts = snapshot.docs.map((doc) => {
+        const data = doc.data() as any;
+        const createdAt: Date | null = data.createdAt?.toDate ? data.createdAt.toDate() : null;
+
+        return {
+          id: doc.id,
+          author: {
+            name: String(data.authorName || 'Member'),
+            role: String(data.authorRole || 'Member'),
+            photoUrl: data.authorPhotoURL ? String(data.authorPhotoURL) : undefined,
+            uid: data.authorUid || '',
+          },
+          timestamp: createdAt ? formatTimeAgo(createdAt) : '',
+          createdAt: createdAt || new Date(),
+          content: {
+            title: data.title ? String(data.title) : undefined,
+            body: String(data.body || ''),
+            type: (data.type as CommunityPost['content']['type']) || 'text',
+            images: Array.isArray(data.images) ? (data.images as string[]) : undefined,
+            document: data.document ? (data.document as CommunityPost['content']['document']) : undefined,
+            link: data.link ? (data.link as CommunityPost['content']['link']) : undefined,
+            event: data.event ? (data.event as CommunityPost['content']['event']) : undefined,
+            spotlight: data.spotlight ? (data.spotlight as CommunityPost['content']['spotlight']) : undefined,
+          },
+          likes: Array.isArray(data.likes) ? data.likes : [],
+          commentsCount: Number(data.commentsCount || 0),
+        } as CommunityPost;
+      });
+
+      setCommunityPosts(prev => [...prev, ...morePosts]);
+      setLastPostDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMorePosts(snapshot.docs.length === POSTS_PER_PAGE);
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [lastPostDoc, loadingMore, hasMorePosts]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMorePosts && !loadingMore) {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMorePosts, loadingMore, loadMorePosts]);
 
   if (loading || loadingData) {
     return (
@@ -365,14 +449,28 @@ export default function AnnouncementsPage() {
             {/* Quick Actions */}
             <DashboardQuickActions />
             
-            {/* Section Heading */}
+            {/* Section Heading with Mobile Sidebar Toggle */}
             <div className="flex flex-col gap-1 pb-2">
-              <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                Announcements
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Stay updated with the latest news and posts from your club
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                    Announcements
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Stay updated with the latest news and posts from your club
+                  </p>
+                </div>
+                {/* Mobile Sidebar Toggle Button */}
+                <button
+                  onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                  className="lg:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    {showMobileSidebar ? 'close' : 'menu'}
+                  </span>
+                  <span className="text-sm font-medium">Widgets</span>
+                </button>
+              </div>
             </div>
 
             {/* Search and Filters */}
@@ -505,12 +603,27 @@ export default function AnnouncementsPage() {
                 }
               })}
               
+              {/* Loading More Indicator */}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rotaract-blue"></div>
+                </div>
+              )}
+
+              {/* Infinite Scroll Trigger */}
+              <div ref={observerTarget} className="h-4"></div>
+              
               {/* End of Feed Indicator */}
-              <div className="flex items-center justify-center py-8">
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full mx-1"></span>
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full mx-1"></span>
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full mx-1"></span>
-              </div>
+              {!hasMorePosts && feedItems.length > 0 && (
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
+                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
+                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
+                  </div>
+                  <p className="text-sm text-gray-400 dark:text-gray-600">You've reached the end</p>
+                </div>
+              )}
             </>
           ) : (
             <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-12 text-center">
@@ -549,7 +662,31 @@ export default function AnnouncementsPage() {
         </div>
 
         {/* RIGHT COLUMN: Sidebar (Widgets) */}
-        <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 space-y-6">
+        {/* Mobile Sidebar Overlay */}
+        {showMobileSidebar && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+        )}
+        
+        {/* Sidebar */}
+        <aside className={`
+          lg:block w-full lg:w-[320px] shrink-0 lg:sticky lg:top-24 space-y-6
+          lg:relative
+          fixed inset-y-0 right-0 z-50 bg-gray-50 dark:bg-[#141414] lg:bg-transparent p-6 lg:p-0
+          transform transition-transform duration-300 ease-in-out
+          ${showMobileSidebar ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+          overflow-y-auto
+        `}>
+          {/* Mobile Close Button */}
+          <button
+            onClick={() => setShowMobileSidebar(false)}
+            className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+
           <MemberSpotlight />
           <UpcomingDeadlines />
           <QuickLinks />
