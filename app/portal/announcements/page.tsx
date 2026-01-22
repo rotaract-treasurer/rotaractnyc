@@ -1,8 +1,8 @@
 'use client';
 
 import { useAuth } from '@/lib/firebase/auth';
-import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot, limit } from 'firebase/firestore';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import { Announcement, User } from '@/types/portal';
@@ -72,6 +72,11 @@ export default function AnnouncementsPage() {
   const [filterType, setFilterType] = useState<'all' | 'announcements' | 'posts'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastPostDoc, setLastPostDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const observerTarget = useRef(null);
+  const POSTS_PER_PAGE = 10;
 
   useEffect(() => {
     if (!loading) {
@@ -198,9 +203,77 @@ export default function AnnouncementsPage() {
 
   if (loading || loadingData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-blue"></div>
-      </div>
+      <main className="flex-1 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Dashboard Summary Skeleton */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 animate-pulse h-48"></div>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Main Feed Skeleton */}
+            <div className="flex-1 w-full flex flex-col gap-6">
+              {/* Quick Actions Skeleton */}
+              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-5 animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section Heading Skeleton */}
+              <div className="space-y-2">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 animate-pulse"></div>
+              </div>
+
+              {/* Search and Filters Skeleton */}
+              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4 space-y-4 animate-pulse">
+                <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
+                <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
+              </div>
+
+              {/* Feed Cards Skeleton */}
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-6 animate-pulse">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                    <div className="h-8 bg-gray-100 dark:bg-[#2a2a2a] rounded w-20"></div>
+                    <div className="h-8 bg-gray-100 dark:bg-[#2a2a2a] rounded w-20"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Sidebar Skeleton */}
+            <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 space-y-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4 animate-pulse">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
+                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
+                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </aside>
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -441,9 +514,36 @@ export default function AnnouncementsPage() {
             </>
           ) : (
             <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-12 text-center">
-              <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">forum</span>
-              <p className="text-gray-500 dark:text-gray-400 text-lg">No posts yet</p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Be the first to share something with the club!</p>
+              <div className="max-w-md mx-auto">
+                <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">
+                  {searchQuery ? 'search_off' : 'forum'}
+                </span>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {searchQuery ? 'No results found' : 'No posts yet'}
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+                  {searchQuery 
+                    ? `No posts match "${searchQuery}". Try different keywords or clear your search.`
+                    : 'Be the first to share something with the club!'}
+                </p>
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                    Clear Search
+                  </button>
+                ) : (
+                  <a
+                    href="/portal"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    Create a Post
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>
