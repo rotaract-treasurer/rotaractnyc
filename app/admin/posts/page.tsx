@@ -423,6 +423,33 @@ export default function AdminPostsPage() {
             </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              {/* Status Banner */}
+              <div className={`mb-4 flex items-center gap-3 rounded-lg px-4 py-3 ${
+                form.published 
+                  ? 'bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50' 
+                  : 'bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
+              }`}>
+                <span className={`material-symbols-outlined ${
+                  form.published ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
+                }`}>
+                  {form.published ? 'check_circle' : 'edit_note'}
+                </span>
+                <div className="flex-1">
+                  <p className={`text-sm font-semibold ${
+                    form.published ? 'text-green-900 dark:text-green-300' : 'text-amber-900 dark:text-amber-300'
+                  }`}>
+                    {form.published ? 'Published Post' : 'Draft Post'}
+                  </p>
+                  <p className={`text-xs ${
+                    form.published ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {form.published 
+                      ? 'This post is live and visible to all users' 
+                      : 'This post is saved as a draft and not yet visible'}
+                  </p>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between gap-4 mb-6">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                   Edit Article
@@ -569,7 +596,7 @@ export default function AdminPostsPage() {
                   <button
                     onClick={save}
                     disabled={saving || !form.title.trim() || !form.contentHtml.trim()}
-                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg shadow-primary/20"
                   >
                     {saving ? (
                       <>
@@ -577,8 +604,26 @@ export default function AdminPostsPage() {
                         Saving...
                       </>
                     ) : (
-                      'Save Changes'
+                      <>
+                        <span className="material-symbols-outlined text-[18px]">
+                          {form.published ? 'publish' : 'save'}
+                        </span>
+                        {form.published ? 'Save & Publish' : 'Save as Draft'}
+                      </>
                     )}
+                  </button>
+                  {/* Quick action to toggle publish status */}
+                  <button
+                    onClick={() => {
+                      setForm(f => ({ ...f, published: !f.published }));
+                    }}
+                    className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    title={form.published ? 'Change to draft' : 'Change to published'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {form.published ? 'visibility_off' : 'visibility'}
+                    </span>
+                    {form.published ? 'Make Draft' : 'Make Published'}
                   </button>
                   <button
                     onClick={backToList}

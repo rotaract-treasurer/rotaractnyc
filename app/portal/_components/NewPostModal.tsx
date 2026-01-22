@@ -7,12 +7,21 @@ import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
+import ImageCustomizationModal from './ImageCustomizationModal';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 interface NewPostModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface ImageMetadata {
+  url: string;
+  alt: string;
+  caption: string;
+  filter: string;
+  dimensions: { width: number; height: number };
 }
 
 export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
@@ -22,9 +31,12 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   const [category, setCategory] = useState('Community Service');
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
+  const [imageMetadata, setImageMetadata] = useState<ImageMetadata | null>(null);
+  const [showImageCustomization, setShowImageCustomization] = useState(false);
   const [publicationDate, setPublicationDate] = useState('');
   const [publishImmediately, setPublishImmediately] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [wordCount, setWordCount] = useState(0);
   const [lastEdited, setLastEdited] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,9 +81,17 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
     setFeaturedImage(file);
     const reader = new FileReader();
     reader.onloadend = () => {
-      setFeaturedImagePreview(reader.result as string);
+      const url = reader.result as string;
+      setFeaturedImagePreview(url);
+      // Automatically open customization modal when image is uploaded
+      setShowImageCustomization(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleImageCustomizationSave = (metadata: ImageMetadata) => {
+    setImageMetadata(metadata);
+    setShowImageCustomization(false);
   };
 
   const handleSaveDraft = async () => {
@@ -80,14 +100,73 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       return;
     }
 
+    setSaveStatus('saving');
     setIsSaving(true);
+    
     try {
-      // TODO: Implement save draft API call
-      console.log('Saving draft:', { title, content, category, publishImmediately });
-      alert('Draft saved successfully!');
+      // Create slug from title
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      // Get Firebase ID token
+      const app = getFirebaseClientApp();
+      if (!app) throw new Error('Firebase not initialized');
+      
+      const auth = getAuth(app);
+      const idToken = await auth.currentUser?.getIdToken();
+      
+      if (!idToken) {
+        throw new Error('Not authenticated');
+      }
+
+      // Split content into paragraphs
+      const contentArray = content
+        .split(/<\/p>|<br\s*\/?>/i)
+        .map(p => p.replace(/<[^>]*>/g, '').trim())
+        .filter(Boolean);
+      
+      // Generate excerpt
+      const plainText = content.replace(/<[^>]*>/g, '').trim();
+      const excerpt = plainText.length > 150 
+        ? plainText.substring(0, 150) + '...' 
+        : plainText;
+
+      // Save as draft (published: false)
+      const response = await fetch('/api/admin/posts', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          slug,
+          title,
+          content: contentArray,
+          excerpt,
+          category,
+          date: publicationDate,
+          published: false, // Save as draft
+          author: user?.displayName || user?.email || 'Admin',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save draft');
+      }
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      
+      // Show success message
+      alert('Draft saved successfully! You can continue editing or publish later.');
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Failed to save draft');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      alert(`Failed to save draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
     }
@@ -104,7 +183,9 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       return;
     }
 
+    setSaveStatus('saving');
     setIsSaving(true);
+    
     try {
       // Create slug from title
       const slug = title
@@ -143,7 +224,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         : plainText;
 
       // Create post
-      const response = await fetch('/api/portal/posts', {
+      const response = await fetch('/api/admin/posts', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -156,8 +237,14 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
           excerpt,
           category,
           date: publicationDate,
-          published: publishImmediately,
+          published: publishImmediately, // Respect the publish setting
           featuredImage: imageUrl,
+          imageMetadata: imageMetadata ? {
+            alt: imageMetadata.alt,
+            caption: imageMetadata.caption,
+            filter: imageMetadata.filter,
+          } : undefined,
+          author: user?.displayName || user?.email || 'Admin',
         }),
       });
 
@@ -166,15 +253,21 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         throw new Error(error.error || 'Failed to create post');
       }
 
-      alert('Post published successfully!');
+      setSaveStatus('saved');
+      alert(publishImmediately ? 'Post published successfully!' : 'Post saved as draft!');
       onClose();
+      
       // Reset form
       setTitle('');
       setContent('');
       setFeaturedImage(null);
       setFeaturedImagePreview(null);
+      setImageMetadata(null);
+      setSaveStatus('idle');
     } catch (error) {
       console.error('Error publishing post:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
       alert(`Failed to publish post: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
@@ -198,27 +291,48 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
               <div className="flex flex-col">
                 <h1 className="text-xl font-extrabold text-slate-900 dark:text-white leading-none">Create New Post</h1>
                 <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                  <span className="size-1.5 rounded-full bg-amber-400"></span>
-                  Draft Mode
+                  <span className={`size-1.5 rounded-full ${publishImmediately ? 'bg-green-400' : 'bg-amber-400'}`}></span>
+                  {publishImmediately ? 'Will Publish Immediately' : 'Will Save as Draft'}
                 </span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Save Status Indicator */}
+            {saveStatus === 'saving' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Saving...</span>
+              </div>
+            )}
+            {saveStatus === 'saved' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-[16px]">check_circle</span>
+                <span className="text-xs font-medium text-green-600 dark:text-green-400">Saved!</span>
+              </div>
+            )}
+            {saveStatus === 'error' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[16px]">error</span>
+                <span className="text-xs font-medium text-red-600 dark:text-red-400">Error</span>
+              </div>
+            )}
+            
             <button
               onClick={handleSaveDraft}
-              disabled={isSaving}
-              className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition-colors border border-slate-200 dark:border-zinc-700 disabled:opacity-50"
+              disabled={isSaving || !title.trim()}
+              className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition-colors border border-slate-200 dark:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              <span className="material-symbols-outlined text-[18px]">save</span>
               Save Draft
             </button>
             <button
               onClick={handlePublish}
-              disabled={isSaving}
-              className="px-6 py-2.5 text-sm font-bold bg-[#003a70] hover:bg-[#003a70]/90 text-white rounded-lg shadow-lg shadow-[#003a70]/20 transition-all flex items-center gap-2 disabled:opacity-50"
+              disabled={isSaving || !title.trim() || !content.trim()}
+              className="px-6 py-2.5 text-sm font-bold bg-[#003a70] hover:bg-[#003a70]/90 text-white rounded-lg shadow-lg shadow-[#003a70]/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{isSaving ? 'Publishing...' : 'Publish'}</span>
-              <span className="material-symbols-outlined text-[18px]">send</span>
+              <span>{isSaving ? 'Processing...' : (publishImmediately ? 'Publish' : 'Save as Draft')}</span>
+              <span className="material-symbols-outlined text-[18px]">{publishImmediately ? 'send' : 'save'}</span>
             </button>
             <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 mx-1"></div>
             <button
@@ -315,12 +429,31 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
                 className="group relative flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-200 dark:border-zinc-800 hover:border-[#003a70]/50 dark:hover:border-[#003a70]/50 bg-white dark:bg-zinc-900 rounded-xl cursor-pointer transition-all overflow-hidden"
               >
                 {featuredImagePreview ? (
-                  <Image
-                    src={featuredImagePreview}
-                    alt="Featured image preview"
-                    fill
-                    className="object-cover"
-                  />
+                  <>
+                    <Image
+                      src={featuredImagePreview}
+                      alt="Featured image preview"
+                      fill
+                      className="object-cover"
+                      style={{
+                        filter: imageMetadata?.filter && imageMetadata.filter !== 'none' 
+                          ? imageMetadata.filter 
+                          : 'none',
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowImageCustomization(true);
+                        }}
+                        className="px-4 py-2 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white rounded-lg font-medium text-sm flex items-center gap-2 shadow-lg"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">tune</span>
+                        Customize
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
                     <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-zinc-700 group-hover:text-[#003a70] transition-colors">add_photo_alternate</span>
@@ -337,16 +470,51 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
                 />
               </div>
               {featuredImagePreview && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFeaturedImage(null);
-                    setFeaturedImagePreview(null);
-                  }}
-                  className="text-xs text-red-500 hover:text-red-600 font-medium"
-                >
-                  Remove image
-                </button>
+                <div className="space-y-2">
+                  {imageMetadata && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg space-y-1">
+                      {imageMetadata.alt && (
+                        <p className="text-xs text-slate-600 dark:text-zinc-400">
+                          <span className="font-semibold">Alt:</span> {imageMetadata.alt}
+                        </p>
+                      )}
+                      {imageMetadata.caption && (
+                        <p className="text-xs text-slate-600 dark:text-zinc-400">
+                          <span className="font-semibold">Caption:</span> {imageMetadata.caption}
+                        </p>
+                      )}
+                      {imageMetadata.filter !== 'none' && (
+                        <p className="text-xs text-slate-600 dark:text-zinc-400">
+                          <span className="font-semibold">Filter:</span> {imageMetadata.filter}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowImageCustomization(true);
+                      }}
+                      className="text-xs text-[#003a70] dark:text-blue-400 hover:underline font-medium flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">tune</span>
+                      Customize image
+                    </button>
+                    <span className="text-slate-300 dark:text-zinc-700">•</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFeaturedImage(null);
+                        setFeaturedImagePreview(null);
+                        setImageMetadata(null);
+                      }}
+                      className="text-xs text-red-500 hover:text-red-600 font-medium"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                </div>
               )}
             </section>
 
@@ -422,6 +590,16 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
           </div>
         </footer>
       </div>
+
+      {/* Image Customization Modal */}
+      {featuredImagePreview && (
+        <ImageCustomizationModal
+          isOpen={showImageCustomization}
+          imageUrl={featuredImagePreview}
+          onClose={() => setShowImageCustomization(false)}
+          onSave={handleImageCustomizationSave}
+        />
+      )}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

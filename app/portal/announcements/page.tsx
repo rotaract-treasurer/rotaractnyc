@@ -69,6 +69,9 @@ export default function AnnouncementsPage() {
   const [authors, setAuthors] = useState<Record<string, User>>({});
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'announcements' | 'posts'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!loading) {
@@ -219,27 +222,60 @@ export default function AnnouncementsPage() {
   }
 
   // Merge and sort feed items
-  const feedItems: FeedItem[] = [
+  let feedItems: FeedItem[] = [
     ...announcements.map(announcement => ({
       type: 'announcement' as const,
       data: announcement,
       author: authors[announcement.createdBy],
       sortDate: announcement.createdAt?.toDate?.() || new Date(0),
       pinned: announcement.pinned || false,
+      likesCount: 0, // Announcements don't have likes
     })),
     ...communityPosts.map(post => ({
       type: 'post' as const,
       data: post,
       sortDate: post.createdAt,
       pinned: false,
+      likesCount: post.likes.length,
     }))
-  ].sort((a, b) => {
+  ];
+
+  // Filter by type
+  if (filterType === 'announcements') {
+    feedItems = feedItems.filter(item => item.type === 'announcement');
+  } else if (filterType === 'posts') {
+    feedItems = feedItems.filter(item => item.type === 'post');
+  }
+
+  // Filter by search query
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    feedItems = feedItems.filter(item => {
+      if (item.type === 'announcement') {
+        return item.data.title?.toLowerCase().includes(query) || 
+               item.data.body?.toLowerCase().includes(query);
+      } else {
+        return item.data.content.title?.toLowerCase().includes(query) || 
+               item.data.content.body?.toLowerCase().includes(query);
+      }
+    });
+  }
+
+  // Sort items
+  feedItems.sort((a, b) => {
     // Pinned announcements always come first
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
     
-    // Then sort by date (newest first)
-    return b.sortDate.getTime() - a.sortDate.getTime();
+    // Then sort by preference
+    if (sortBy === 'newest') {
+      return b.sortDate.getTime() - a.sortDate.getTime();
+    } else {
+      // Sort by popularity (likes + comments)
+      const aPopularity = a.likesCount + (a.type === 'post' ? a.data.commentsCount : 0);
+      const bPopularity = b.likesCount + (b.type === 'post' ? b.data.commentsCount : 0);
+      return bPopularity - aPopularity;
+    }
   });
 
   return (
@@ -264,6 +300,105 @@ export default function AnnouncementsPage() {
               <p className="text-gray-500 dark:text-gray-400 text-sm">
                 Stay updated with the latest news and posts from your club
               </p>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4 space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search announcements and posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rotaract-blue focus:border-transparent transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Filters Row */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Type Filter */}
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg p-1">
+                  <button
+                    onClick={() => setFilterType('all')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      filterType === 'all'
+                        ? 'bg-white dark:bg-[#3a3a3a] text-rotaract-blue shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setFilterType('announcements')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      filterType === 'announcements'
+                        ? 'bg-white dark:bg-[#3a3a3a] text-rotaract-blue shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Announcements
+                  </button>
+                  <button
+                    onClick={() => setFilterType('posts')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      filterType === 'posts'
+                        ? 'bg-white dark:bg-[#3a3a3a] text-rotaract-blue shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Posts
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+                {/* Sort Options */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Sort by:</span>
+                  <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg p-1">
+                    <button
+                      onClick={() => setSortBy('newest')}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${
+                        sortBy === 'newest'
+                          ? 'bg-white dark:bg-[#3a3a3a] text-rotaract-blue shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">schedule</span>
+                      Newest
+                    </button>
+                    <button
+                      onClick={() => setSortBy('popular')}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1 ${
+                        sortBy === 'popular'
+                          ? 'bg-white dark:bg-[#3a3a3a] text-rotaract-blue shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">trending_up</span>
+                      Popular
+                    </button>
+                  </div>
+                </div>
+
+                {/* Results count */}
+                <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                  {feedItems.length} {feedItems.length === 1 ? 'item' : 'items'}
+                </div>
+              </div>
             </div>
 
           {/* Unified Feed */}

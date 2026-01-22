@@ -426,11 +426,12 @@ export default function EventsPage() {
             return (
               <div 
                 key={event.id}
-                className="group event-card relative overflow-hidden rounded-xl h-[360px] shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onClick={() => router.push(`/portal/events/${event.id}`)}
+                className="group event-card relative overflow-hidden rounded-xl h-[360px] shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer"
               >
                 {/* Event Image/Background */}
                 <div 
-                  className="event-image absolute inset-0 bg-cover bg-center transition-transform duration-500 bg-gradient-to-br from-primary to-blue-500"
+                  className="event-image absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 bg-gradient-to-br from-primary to-blue-500"
                   style={{
                     backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.7) 100%), linear-gradient(135deg, #a855f7 0%, #6366f1 100%)`
                   }}
@@ -438,24 +439,39 @@ export default function EventsPage() {
                 
                 {/* Visibility Badge */}
                 <div className="absolute top-3 left-3 z-10 flex gap-2">
-                  <span className={`px-2.5 py-0.5 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider rounded-md ${
+                  <span className={`px-2.5 py-0.5 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider rounded-md transition-all group-hover:scale-105 ${
                     event.visibility === 'member'
                       ? 'bg-secondary-accent/80 text-white'
                       : 'bg-white/80 text-gray-800'
                   }`}>
                     {event.visibility === 'member' ? 'Members' : 'Public'}
                   </span>
+                  {isRegistered && (
+                    <span className="px-2.5 py-0.5 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider rounded-md bg-green-600/90 text-white transition-all group-hover:scale-105">
+                      ✓ Registered
+                    </span>
+                  )}
                 </div>
 
+                {/* Attendee Count Badge */}
+                {attendeeCount > 0 && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <span className="px-2.5 py-1 backdrop-blur-sm text-xs font-semibold rounded-full bg-white/90 text-gray-800 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm">group</span>
+                      {attendeeCount}
+                    </span>
+                  </div>
+                )}
+
                 {/* Content Card */}
-                <div className="absolute bottom-3 inset-x-3">
-                  <div className="glass-panel backdrop-blur-lg bg-white/75 dark:bg-gray-900/75 p-5 rounded-lg border border-white/40 dark:border-white/10">
+                <div className="absolute bottom-3 inset-x-3 transition-all duration-300 group-hover:bottom-4">
+                  <div className="glass-panel backdrop-blur-lg bg-white/85 dark:bg-gray-900/85 p-5 rounded-lg border border-white/50 dark:border-white/20 shadow-lg transition-all group-hover:bg-white/95 dark:group-hover:bg-gray-900/95">
                     <div className="flex justify-between items-start mb-1.5">
                       <p className="text-primary dark:text-primary font-bold text-[11px] uppercase tracking-wide">
                         {dateInfo.dateTime}
                       </p>
                     </div>
-                    <h3 className="text-lg font-display font-bold text-[#161217] dark:text-white leading-tight mb-3 line-clamp-2">
+                    <h3 className="text-lg font-display font-bold text-[#161217] dark:text-white leading-tight mb-3 line-clamp-2 group-hover:text-primary transition-colors">
                       {event.title}
                     </h3>
                     <div className="flex items-center justify-between">
@@ -468,18 +484,16 @@ export default function EventsPage() {
                           e.stopPropagation();
                           if (!isRegistered && !isUpdating) {
                             handleRsvp(event.id, 'going');
-                          } else {
-                            router.push(`/portal/events/${event.id}`);
                           }
                         }}
-                        disabled={isUpdating}
-                        className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                        disabled={isUpdating || isRegistered}
+                        className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all transform hover:scale-105 ${
                           isRegistered 
-                            ? 'bg-green-600 hover:bg-green-700 text-white' 
-                            : 'bg-primary hover:bg-primary/90 text-white'
-                        } disabled:opacity-50`}
+                            ? 'bg-green-600 text-white cursor-default' 
+                            : 'bg-primary hover:bg-primary/90 text-white hover:shadow-md'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
-                        {isUpdating ? '...' : isRegistered ? 'Registered' : 'Details'}
+                        {isUpdating ? '...' : isRegistered ? 'Going ✓' : 'RSVP Now'}
                       </button>
                     </div>
                   </div>
