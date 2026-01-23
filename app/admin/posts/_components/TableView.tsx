@@ -100,7 +100,8 @@ export function TableView({ posts, onEdit, onDelete }: TableViewProps) {
             posts.map((post) => (
               <tr 
                 key={post.slug} 
-                className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => onEdit(post.slug)}
+                className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
@@ -131,14 +132,20 @@ export function TableView({ posts, onEdit, onDelete }: TableViewProps) {
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      onClick={() => onEdit(post.slug)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEdit(post.slug)
+                      }}
                       className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                       title="Edit"
                     >
                       <span className="material-symbols-outlined text-[20px]">edit</span>
                     </button>
                     <button
-                      onClick={() => onDelete(post.slug)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(post.slug)
+                      }}
                       className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       title="Delete"
                     >

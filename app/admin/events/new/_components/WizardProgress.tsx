@@ -6,10 +6,11 @@ export default function WizardProgress({ currentStep }: WizardProgressProps) {
   const steps = [
     { number: 1, icon: 'location_on', label: 'Logistics', description: 'Where & when' },
     { number: 2, icon: 'description', label: 'Content', description: 'Details & images' },
-    { number: 3, icon: 'confirmation_number', label: 'Registration', description: 'Ticketing & RSVPs' },
+    { number: 3, icon: 'payments', label: 'Pricing', description: 'Type & costs' },
+    { number: 4, icon: 'fact_check', label: 'Review', description: 'Publish event' },
   ]
 
-  const progressPercent = (currentStep / 3) * 100
+  const progressPercent = (currentStep / 4) * 100
 
   return (
     <>

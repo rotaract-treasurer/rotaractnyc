@@ -77,7 +77,8 @@ export function CardView({ posts, onEdit, onDelete, onCreate }: CardViewProps) {
         return (
           <article
             key={post.slug}
-            className="group relative flex flex-col bg-white dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            onClick={() => onEdit(post.slug)}
+            className="group relative flex flex-col bg-white dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
           >
             {/* Image Container with Placeholder */}
             <div className="relative h-56 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
@@ -91,14 +92,20 @@ export function CardView({ posts, onEdit, onDelete, onCreate }: CardViewProps) {
               {/* Hover Overlay Actions */}
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                 <button
-                  onClick={() => onEdit(post.slug)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit(post.slug)
+                  }}
                   className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors shadow-lg transform hover:scale-110"
                   title="Edit"
                 >
                   <span className="material-symbols-outlined text-[20px]">edit</span>
                 </button>
                 <button
-                  onClick={() => onDelete(post.slug)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(post.slug)
+                  }}
                   className="bg-red-50 text-red-600 w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors shadow-lg"
                   title="Delete"
                 >

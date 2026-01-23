@@ -39,6 +39,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [wordCount, setWordCount] = useState(0);
   const [lastEdited, setLastEdited] = useState('');
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -346,6 +347,95 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
 
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden">
+          {isPreviewMode ? (
+            /* Preview Mode */
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-900">
+              <article className="max-w-4xl mx-auto px-8 py-12">
+                {/* Featured Image Preview */}
+                {featuredImagePreview && (
+                  <div className="mb-8 rounded-xl overflow-hidden">
+                    <div className="relative w-full aspect-video">
+                      <Image
+                        src={featuredImagePreview}
+                        alt={imageMetadata?.alt || title || 'Featured image'}
+                        fill
+                        className="object-cover"
+                        style={{
+                          filter: imageMetadata?.filter && imageMetadata.filter !== 'none' 
+                            ? imageMetadata.filter 
+                            : 'none',
+                        }}
+                      />
+                    </div>
+                    {imageMetadata?.caption && (
+                      <p className="text-sm text-slate-500 dark:text-zinc-400 italic mt-3 text-center">
+                        {imageMetadata.caption}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Category Badge */}
+                <div className="mb-4">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#003a70]/10 text-[#003a70] dark:bg-blue-500/10 dark:text-blue-400">
+                    {category}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-4 leading-tight">
+                  {title || 'Your Post Title'}
+                </h1>
+
+                {/* Meta Info */}
+                <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-zinc-400 mb-8 pb-8 border-b border-slate-200 dark:border-zinc-800">
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">person</span>
+                    {user?.displayName || user?.email || 'Admin'}
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">calendar_today</span>
+                    {new Date(publicationDate).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">schedule</span>
+                    {Math.ceil(wordCount / 200)} min read
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div 
+                  className="prose prose-lg dark:prose-invert max-w-none
+                    prose-headings:font-bold prose-headings:text-slate-900 dark:prose-headings:text-white
+                    prose-p:text-slate-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed
+                    prose-a:text-[#003a70] dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                    prose-strong:text-slate-900 dark:prose-strong:text-white
+                    prose-code:text-[#003a70] dark:prose-code:text-blue-400 prose-code:bg-slate-100 dark:prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                    prose-blockquote:border-l-[#003a70] dark:prose-blockquote:border-l-blue-400 prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-zinc-800/50 prose-blockquote:py-1 prose-blockquote:px-4
+                    prose-img:rounded-xl"
+                  dangerouslySetInnerHTML={{ 
+                    __html: content || '<p class="text-slate-400 dark:text-zinc-500 italic">Your post content will appear here...</p>' 
+                  }}
+                />
+
+                {/* Empty State */}
+                {!content && (
+                  <div className="text-center py-12">
+                    <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-zinc-800 mb-4">article</span>
+                    <p className="text-slate-400 dark:text-zinc-500">Start writing to see your content preview</p>
+                  </div>
+                )}
+              </article>
+            </div>
+          ) : (
+          /* Editor Mode */
+          <>
           {/* Left Column: Editor */}
           <main className="flex-1 overflow-y-auto custom-scrollbar p-10 bg-white dark:bg-zinc-900">
             <div className="max-w-2xl mx-auto space-y-8">
@@ -569,6 +659,8 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
               </div>
             </section>
           </aside>
+          </>
+          )}
         </div>
 
         {/* Footer / Status Bar */}
@@ -584,8 +676,14 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <button className="text-[11px] font-bold text-[#003a70] dark:text-blue-400 uppercase tracking-widest hover:underline">
-              Preview Mode
+            <button 
+              onClick={() => setIsPreviewMode(!isPreviewMode)}
+              className="text-[11px] font-bold text-[#003a70] dark:text-blue-400 uppercase tracking-widest hover:underline flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[14px]">
+                {isPreviewMode ? 'edit' : 'visibility'}
+              </span>
+              {isPreviewMode ? 'Edit Mode' : 'Preview Mode'}
             </button>
           </div>
         </footer>

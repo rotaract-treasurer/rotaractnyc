@@ -30,6 +30,37 @@ export interface User {
   updatedAt: Timestamp;
 }
 
+// Event pricing types
+export type EventType = 'free' | 'paid' | 'service' | 'hybrid';
+export type EventPricingTier = 'member' | 'guest' | 'earlybird' | 'standard';
+
+export interface EventPricing {
+  type: EventType;
+  currency: string; // e.g., 'usd'
+  
+  // Member pricing
+  memberPrice?: number;
+  memberEarlyBirdPrice?: number;
+  memberEarlyBirdDeadline?: Timestamp;
+  
+  // Guest pricing (if allowGuests is true)
+  guestPrice?: number;
+  guestEarlyBirdPrice?: number;
+  
+  // Service hours (for service events)
+  serviceHours?: number;
+  serviceDescription?: string;
+  
+  // Stripe integration
+  stripeProductId?: string;
+  stripePriceIds?: {
+    member?: string;
+    guest?: string;
+    memberEarlyBird?: string;
+    guestEarlyBird?: string;
+  };
+}
+
 // Event type
 export interface Event {
   id: string;
@@ -42,6 +73,24 @@ export interface Event {
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  
+  // Enhanced registration & pricing
+  requiresRegistration: boolean;
+  capacity?: number;
+  registrationDeadline?: Timestamp;
+  allowGuests: boolean;
+  pricing: EventPricing;
+  
+  // Event metadata
+  imageUrl?: string;
+  venueType?: 'physical' | 'virtual' | 'hybrid';
+  virtualLink?: string;
+  category?: string[];
+  tags?: string[];
+  status: 'draft' | 'published' | 'cancelled';
+  
+  // Admin notes
+  adminNotes?: string;
 }
 
 // RSVP type

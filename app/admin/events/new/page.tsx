@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
 import LogisticsStep from './_components/LogisticsStep'
 import ContentStep from './_components/ContentStep'
-import RegistrationStep from './_components/RegistrationStep'
+import PricingStep from './_components/PricingStep'
 import WizardProgress from './_components/WizardProgress'
 import WizardFooter from './_components/WizardFooter'
 
@@ -26,14 +26,26 @@ export type EventFormData = {
   imageUrl: string
   category: 'upcoming' | 'past'
   visibility: 'public' | 'member' | 'board'
+  tags?: string[]
+  adminNotes?: string
   
-  // Registration
+  // Pricing & Registration (Enhanced)
+  eventType: 'free' | 'paid' | 'service' | 'hybrid'
   requiresRegistration: boolean
   capacity?: number
   registrationDeadline?: string
   allowGuests: boolean
+  
+  // Paid event pricing
   memberPrice?: number
+  memberEarlyBirdPrice?: number
+  earlyBirdDeadline?: string
   guestPrice?: number
+  guestEarlyBirdPrice?: number
+  
+  // Service event details
+  serviceHours?: number
+  serviceDescription?: string
   
   // Meta
   status: 'published' | 'draft' | 'cancelled'
@@ -62,6 +74,7 @@ export default function NewEventWizard() {
     imageUrl: '',
     category: 'upcoming',
     visibility: 'member',
+    eventType: 'free',
     requiresRegistration: true,
     allowGuests: true,
     status: 'draft',
@@ -110,7 +123,7 @@ export default function NewEventWizard() {
 
   const handleNext = () => {
     setError(null)
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(prev => prev + 1)
     }
   }
@@ -268,7 +281,77 @@ export default function NewEventWizard() {
               <ContentStep formData={formData} updateFormData={updateFormData} />
             )}
             {currentStep === 3 && (
-              <RegistrationStep formData={formData} updateFormData={updateFormData} />
+              <PricingStep formData={formData} updateFormData={updateFormData} />
+            )}
+            {currentStep === 4 && (
+              <div className="flex flex-col gap-6">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                  <span className="material-symbols-outlined text-3xl text-primary">fact_check</span>
+                  Review & Publish
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Review your event details before publishing. You can still edit after publishing.
+                </p>
+                
+                {/* Summary cards */}
+                <div className="space-y-4">
+                  <div className="p-6 rounded-xl border-2 border-slate-200 dark:border-slate-700">
+                    <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Event Details</h3>
+                    <dl className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <dt className="text-slate-500 dark:text-slate-400">Title</dt>
+                        <dd className="font-semibold text-slate-900 dark:text-white">{formData.title}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500 dark:text-slate-400">Type</dt>
+                        <dd className="font-semibold text-slate-900 dark:text-white capitalize">{formData.eventType}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500 dark:text-slate-400">Date</dt>
+                        <dd className="font-semibold text-slate-900 dark:text-white">{formData.startDate}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500 dark:text-slate-400">Location</dt>
+                        <dd className="font-semibold text-slate-900 dark:text-white">{formData.location || formData.virtualLink}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  
+                  {formData.eventType === 'paid' && (
+                    <div className="p-6 rounded-xl border-2 border-primary/20 bg-primary/5">
+                      <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Pricing</h3>
+                      <dl className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <dt className="text-slate-500 dark:text-slate-400">Member Price</dt>
+                          <dd className="font-bold text-xl text-primary">${formData.memberPrice?.toFixed(2) || '0.00'}</dd>
+                        </div>
+                        {formData.allowGuests && (
+                          <div>
+                            <dt className="text-slate-500 dark:text-slate-400">Guest Price</dt>
+                            <dd className="font-bold text-xl text-slate-700 dark:text-slate-300">${formData.guestPrice?.toFixed(2) || '0.00'}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+                  
+                  {formData.eventType === 'service' && (
+                    <div className="p-6 rounded-xl border-2 border-primary/20 bg-primary/5">
+                      <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Service Info</h3>
+                      <dl className="space-y-2 text-sm">
+                        <div>
+                          <dt className="text-slate-500 dark:text-slate-400">Service Hours</dt>
+                          <dd className="font-bold text-xl text-primary">{formData.serviceHours || 0} hours</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500 dark:text-slate-400">Description</dt>
+                          <dd className="text-slate-900 dark:text-white">{formData.serviceDescription}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
@@ -291,7 +374,8 @@ export default function NewEventWizard() {
               <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed mt-1">
                 {currentStep === 1 && 'Events with accurate locations get 40% higher RSVP rates. Make sure to provide detailed venue information.'}
                 {currentStep === 2 && 'Events with engaging descriptions and quality images receive 60% more registrations.'}
-                {currentStep === 3 && 'Consider setting early bird pricing to boost initial registrations.'}
+                {currentStep === 3 && 'Consider setting early bird pricing to boost initial registrations and member discounts to encourage membership renewals.'}
+                {currentStep === 4 && 'Take a moment to review all details. You can edit the event after publishing if needed.'}
               </p>
             </div>
           </div>

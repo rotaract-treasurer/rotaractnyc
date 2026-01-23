@@ -25,16 +25,28 @@ export type EventDoc = {
   order?: number
   status?: 'published' | 'draft' | 'cancelled'
   attendees?: number
+  attendeeCount?: number
   imageUrl?: string
-  // New wizard fields
+  // Event type and pricing (Enhanced)
+  eventType?: 'free' | 'paid' | 'service' | 'hybrid'
   venueType?: 'physical' | 'virtual' | 'hybrid'
   virtualLink?: string
   requiresRegistration?: boolean
   capacity?: number
   registrationDeadline?: string
   allowGuests?: boolean
+  // Pricing
   memberPrice?: number
+  memberEarlyBirdPrice?: number
+  earlyBirdDeadline?: string
   guestPrice?: number
+  guestEarlyBirdPrice?: number
+  // Service event
+  serviceHours?: number
+  serviceDescription?: string
+  // Admin
+  adminNotes?: string
+  tags?: string[]
 }
 
 export async function GET(req: NextRequest) {
@@ -182,15 +194,26 @@ export async function POST(req: NextRequest) {
     order: Number.isFinite(body.order as number) ? Number(body.order) : 1,
     status: (body.status as 'published' | 'draft' | 'cancelled') || 'published',
     imageUrl: body.imageUrl || '',
-    // New wizard fields
+    // Event type and registration
+    eventType: (body.eventType as 'free' | 'paid' | 'service' | 'hybrid') || 'free',
     venueType: (body.venueType as 'physical' | 'virtual' | 'hybrid') || 'physical',
     virtualLink: body.virtualLink || '',
     requiresRegistration: body.requiresRegistration ?? true,
     capacity: body.capacity,
     registrationDeadline: body.registrationDeadline,
     allowGuests: body.allowGuests ?? true,
+    // Pricing
     memberPrice: body.memberPrice,
+    memberEarlyBirdPrice: body.memberEarlyBirdPrice,
+    earlyBirdDeadline: body.earlyBirdDeadline,
     guestPrice: body.guestPrice,
+    guestEarlyBirdPrice: body.guestEarlyBirdPrice,
+    // Service event
+    serviceHours: body.serviceHours,
+    serviceDescription: body.serviceDescription,
+    // Admin
+    adminNotes: body.adminNotes,
+    tags: body.tags,
   }
 
   const ref = id ? db.collection('portalEvents').doc(id) : db.collection('portalEvents').doc()
@@ -250,6 +273,7 @@ export async function PUT(req: NextRequest) {
   if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl
   
   // Update new wizard fields
+  if (body.eventType !== undefined) updates.eventType = body.eventType as 'free' | 'paid' | 'service' | 'hybrid'
   if (body.venueType !== undefined) updates.venueType = body.venueType as 'physical' | 'virtual' | 'hybrid'
   if (body.virtualLink !== undefined) updates.virtualLink = body.virtualLink
   if (body.requiresRegistration !== undefined) updates.requiresRegistration = body.requiresRegistration
@@ -257,7 +281,14 @@ export async function PUT(req: NextRequest) {
   if (body.registrationDeadline !== undefined) updates.registrationDeadline = body.registrationDeadline
   if (body.allowGuests !== undefined) updates.allowGuests = body.allowGuests
   if (body.memberPrice !== undefined) updates.memberPrice = body.memberPrice
+  if (body.memberEarlyBirdPrice !== undefined) updates.memberEarlyBirdPrice = body.memberEarlyBirdPrice
+  if (body.earlyBirdDeadline !== undefined) updates.earlyBirdDeadline = body.earlyBirdDeadline
   if (body.guestPrice !== undefined) updates.guestPrice = body.guestPrice
+  if (body.guestEarlyBirdPrice !== undefined) updates.guestEarlyBirdPrice = body.guestEarlyBirdPrice
+  if (body.serviceHours !== undefined) updates.serviceHours = body.serviceHours
+  if (body.serviceDescription !== undefined) updates.serviceDescription = body.serviceDescription
+  if (body.adminNotes !== undefined) updates.adminNotes = body.adminNotes
+  if (body.tags !== undefined) updates.tags = body.tags
 
   await db.collection('portalEvents').doc(body.id).set(updates, { merge: true })
   return NextResponse.json({ ok: true })
