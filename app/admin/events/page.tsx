@@ -94,85 +94,42 @@ export default function AdminEventsPage() {
     setLoadingData(true)
     setError(null)
     try {
+      // Use the admin API endpoint instead of direct Firestore queries
+      const res = await fetch('/api/admin/events', { cache: 'no-store' })
+      
+      if (!res.ok) {
+        const errorMsg = await getFriendlyAdminApiError(res, 'Unable to load events.')
+        setError(errorMsg)
+        return
+      }
+
+      const data = await res.json()
+      const allEvents = (data.events || []) as EventRow[]
+      
+      setEvents(allEvents)
+
+      // Load attendee counts from Firestore subcollections
       const app = getFirebaseClientApp();
-      if (!app) {
-        setError('Firebase not initialized')
-        return;
+      if (app) {
+        const db = getFirestore(app);
+        const countsMap = new Map<string, number>();
+        
+        for (const event of allEvents) {
+          try {
+            const rsvpsQuery = query(
+              collection(db, 'portalEvents', event.id, 'rsvps'),
+              where('status', '==', 'going')
+            );
+            const rsvpsSnapshot = await getDocs(rsvpsQuery);
+            countsMap.set(event.id, rsvpsSnapshot.size);
+          } catch (err) {
+            // Skip RSVP count if we can't read it
+            console.warn(`Could not load RSVP count for event ${event.id}`, err);
+          }
+        }
+        
+        setAttendeeCounts(countsMap);
       }
-
-      const db = getFirestore(app);
-      
-      // Load upcoming events from Firestore
-      const eventsRef = collection(db, 'portalEvents');
-      
-      // Query for member-visible events
-      const memberQuery = query(
-        eventsRef,
-        where('visibility', '==', 'member'),
-        where('startAt', '>=', Timestamp.now()),
-        orderBy('startAt', 'asc')
-      );
-      
-      // Query for public events
-      const publicQuery = query(
-        eventsRef,
-        where('visibility', '==', 'public'),
-        where('startAt', '>=', Timestamp.now()),
-        orderBy('startAt', 'asc')
-      );
-      
-      // Query for board events
-      const boardQuery = query(
-        eventsRef,
-        where('visibility', '==', 'board'),
-        where('startAt', '>=', Timestamp.now()),
-        orderBy('startAt', 'asc')
-      );
-      
-      const [memberSnapshot, publicSnapshot, boardSnapshot] = await Promise.all([
-        getDocs(memberQuery),
-        getDocs(publicQuery),
-        getDocs(boardQuery)
-      ]);
-      
-      const memberEvents = memberSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as EventRow[];
-      
-      const publicEvents = publicSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as EventRow[];
-      
-      const boardEvents = boardSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as EventRow[];
-      
-      // Combine and sort by startAt
-      const allEvents = [...memberEvents, ...publicEvents, ...boardEvents].sort((a, b) => {
-        const aTime = a.startAt instanceof Timestamp ? a.startAt.toMillis() : 0;
-        const bTime = b.startAt instanceof Timestamp ? b.startAt.toMillis() : 0;
-        return aTime - bTime;
-      });
-      
-      setEvents(allEvents);
-
-      // Load attendee counts
-      const countsMap = new Map<string, number>();
-      
-      for (const event of allEvents) {
-        // Get total "going" count
-        const rsvpsQuery = query(
-          collection(db, 'portalEvents', event.id, 'rsvps'),
-          where('status', '==', 'going')
-        );
-        const rsvpsSnapshot = await getDocs(rsvpsQuery);
-        countsMap.set(event.id, rsvpsSnapshot.size);
-      }
-      
-      setAttendeeCounts(countsMap);
     } catch (err) {
       console.error('Error loading events:', err);
       setError('Unable to load events.')

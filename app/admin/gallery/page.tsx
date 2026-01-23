@@ -560,7 +560,7 @@ export default function AdminGalleryPage() {
       const body = {
         ...formData,
         imageUrl: finalUrl,
-        storagePath: uploadData?.storagePath || formData.storagePath || '',
+        storagePath: uploadData?.path || formData.storagePath || '',
       }
 
       const method = editingId ? 'PATCH' : 'POST'
