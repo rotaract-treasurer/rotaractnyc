@@ -146,6 +146,14 @@ service cloud.firestore {
         allow delete: if resource.data.authorUid == request.auth.uid || isAdmin();
       }
     }
+
+    // Posts collection (articles & news)
+    match /posts/{postId} {
+      // Members can read published posts
+      allow read: if isMember() && resource.data.published == true;
+      // Board can create/edit posts
+      allow create, update, delete: if isBoard();
+    }
     
     // Documents collection
     match /documents/{documentId} {
