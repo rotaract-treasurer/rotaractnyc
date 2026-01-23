@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 type State =
   | { status: 'loading' }
   | { status: 'unauthenticated' }
-  | { status: 'authenticated'; email: string | null }
+  | { status: 'authenticated'; email: string | null; uid: string | null }
 
 export function useAdminSession() {
   const router = useRouter()
@@ -22,8 +22,10 @@ export function useAdminSession() {
           if (!cancelled) setState({ status: 'unauthenticated' })
           return
         }
-        const json = (await res.json()) as { authenticated: true; email: string | null }
-        if (!cancelled) setState({ status: 'authenticated', email: json.email })
+        const json = (await res.json()) as { authenticated: true; email: string | null; uid?: string | null }
+        if (!cancelled) {
+          setState({ status: 'authenticated', email: json.email, uid: json.uid ?? null })
+        }
       } catch {
         if (!cancelled) setState({ status: 'unauthenticated' })
       }

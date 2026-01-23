@@ -6,6 +6,7 @@ import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type Post = {
   slug: string;
@@ -16,6 +17,7 @@ type Post = {
   excerpt: string;
   content: string[];
   published: boolean;
+  featuredImage?: string;
 };
 
 export default function PortalPostsPage() {
@@ -136,6 +138,16 @@ export default function PortalPostsPage() {
               key={post.slug}
               className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow"
             >
+              {post.featuredImage ? (
+                <div className="relative w-full aspect-[16/9] bg-gray-100 dark:bg-gray-700">
+                  <Image
+                    src={post.featuredImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : null}
               <div className="p-6">
                 {/* Category Badge */}
                 <div className="mb-3">

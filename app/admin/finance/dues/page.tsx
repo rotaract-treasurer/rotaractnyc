@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAdminSession } from '@/lib/admin/useAdminSession';
 import {
   createCycleAction,
   activateCycleAction,
@@ -26,6 +27,7 @@ interface MemberDuesRow {
 }
 
 export default function AdminDuesPage() {
+  const session = useAdminSession();
   const [cycles, setCycles] = useState<DuesCycle[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null);
   const [memberDues, setMemberDues] = useState<MemberDuesRow[]>([]);
@@ -86,8 +88,11 @@ export default function AdminDuesPage() {
   }
 
   async function handleCreateCycle() {
-    // TODO: Get actual admin UID from session
-    const adminUid = 'admin-placeholder'; // Replace with actual auth
+    const adminUid = session.status === 'authenticated' ? session.uid : null;
+    if (!adminUid) {
+      alert('Unable to determine admin identity. Please refresh and try again.');
+      return;
+    }
     
     const result = await createCycleAction(newCycleYear, newCycleAmount, adminUid);
     if (result.success) {
@@ -117,8 +122,11 @@ export default function AdminDuesPage() {
   async function handleMarkPaidOffline() {
     if (!selectedMember || !selectedCycle) return;
 
-    // TODO: Get actual admin UID from session
-    const adminUid = 'admin-placeholder'; // Replace with actual auth
+    const adminUid = session.status === 'authenticated' ? session.uid : null;
+    if (!adminUid) {
+      alert('Unable to determine admin identity. Please refresh and try again.');
+      return;
+    }
 
     const result = await markPaidOfflineAction(
       selectedMember.memberId,
@@ -142,8 +150,11 @@ export default function AdminDuesPage() {
       return;
     }
 
-    // TODO: Get actual admin UID from session
-    const adminUid = 'admin-placeholder'; // Replace with actual auth
+    const adminUid = session.status === 'authenticated' ? session.uid : null;
+    if (!adminUid) {
+      alert('Unable to determine admin identity. Please refresh and try again.');
+      return;
+    }
 
     const result = await waiveDuesAction(
       selectedMember.memberId,

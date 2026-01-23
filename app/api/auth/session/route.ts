@@ -27,7 +27,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 403 })
     }
 
-    return NextResponse.json({ authenticated: true, email })
+    return NextResponse.json({ authenticated: true, email, uid: decoded.uid })
   } catch {
     return NextResponse.json({ authenticated: false }, { status: 401 })
   }
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       expiresIn: ADMIN_SESSION_MAX_AGE_SECONDS * 1000,
     })
 
-    const res = NextResponse.json({ ok: true, email })
+    const res = NextResponse.json({ ok: true, email, uid: decoded.uid })
     res.cookies.set({
       name: ADMIN_SESSION_COOKIE,
       value: sessionCookie,

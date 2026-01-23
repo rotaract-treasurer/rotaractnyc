@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
 type Post = {
@@ -17,6 +18,7 @@ type Post = {
   excerpt: string;
   content: string[];
   published: boolean;
+  featuredImage?: string;
 };
 
 export default function PortalPostDetailPage() {
@@ -125,6 +127,16 @@ export default function PortalPostDetailPage() {
 
       {/* Article */}
       <article className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {post.featuredImage ? (
+          <div className="relative w-full aspect-[16/9] bg-gray-100 dark:bg-gray-700">
+            <Image
+              src={post.featuredImage}
+              alt={post.title}
+              fill
+              className="object-cover"
+            />
+          </div>
+        ) : null}
         {/* Header */}
         <div className="p-8 border-b border-gray-200 dark:border-gray-700">
           {/* Category */}

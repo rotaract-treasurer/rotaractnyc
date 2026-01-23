@@ -24,6 +24,7 @@ export type PostDoc = {
   excerpt: string
   content: string[]
   published: boolean
+  featuredImage?: string
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     excerpt: body.excerpt || '',
     content: Array.isArray(body.content) ? body.content : [],
     published: body.published ?? true,
+    featuredImage: body.featuredImage || '',
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   }
@@ -97,6 +99,7 @@ export async function PUT(req: NextRequest) {
     ...(body.excerpt !== undefined ? { excerpt: body.excerpt } : {}),
     ...(body.content !== undefined ? { content: body.content } : {}),
     ...(body.published !== undefined ? { published: body.published } : {}),
+    ...(body.featuredImage !== undefined ? { featuredImage: body.featuredImage } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   }
 

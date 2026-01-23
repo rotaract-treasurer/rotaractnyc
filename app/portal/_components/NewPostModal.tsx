@@ -95,6 +95,39 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
     setShowImageCustomization(false);
   };
 
+  const uploadFeaturedImage = async (idToken: string) => {
+    if (!featuredImage) return '';
+
+    const formData = new FormData();
+    formData.append('file', featuredImage);
+    formData.append('folder', 'posts');
+
+    const res = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: formData,
+    });
+
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message = payload && typeof payload === 'object' && typeof payload.error === 'string'
+        ? payload.error
+        : 'Image upload failed';
+      throw new Error(message);
+    }
+
+    const url = payload && typeof payload === 'object' && typeof payload.url === 'string'
+      ? payload.url
+      : '';
+    if (!url) {
+      throw new Error('Image upload failed');
+    }
+
+    return url;
+  };
+
   const handleSaveDraft = async () => {
     if (!title.trim()) {
       alert('Please enter a title');
@@ -121,6 +154,8 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       if (!idToken) {
         throw new Error('Not authenticated');
       }
+
+      const imageUrl = await uploadFeaturedImage(idToken);
 
       // Split content into paragraphs
       const contentArray = content
@@ -150,6 +185,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
           date: publicationDate,
           published: false, // Save as draft
           author: user?.displayName || user?.email || 'Admin',
+          featuredImage: imageUrl,
         }),
       });
 
@@ -194,13 +230,6 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      // Upload featured image if present
-      let imageUrl = '';
-      if (featuredImage) {
-        // TODO: Upload image to storage
-        console.log('Would upload image:', featuredImage.name);
-      }
-
       // Get Firebase ID token
       const app = getFirebaseClientApp();
       if (!app) throw new Error('Firebase not initialized');
@@ -211,6 +240,9 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
       if (!idToken) {
         throw new Error('Not authenticated');
       }
+
+      // Upload featured image if present
+      const imageUrl = await uploadFeaturedImage(idToken);
 
       // Split content into paragraphs and filter empty ones
       const contentArray = content
