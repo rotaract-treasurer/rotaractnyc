@@ -345,13 +345,6 @@ export default function AdminGalleryPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('order-asc')
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
-  const [form, setForm] = useState<Omit<GalleryRow, 'id'>>({
-    title: '',
-    alt: '',
-    imageUrl: '',
-    storagePath: '',
-    order: 1,
-  })
 
   const refresh = useCallback(async () => {
     setLoadingData(true)
@@ -597,46 +590,6 @@ export default function AdminGalleryPage() {
     }
   }
 
-  const save = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      const upload = await uploadIfNeeded()
-
-      if (upload) {
-        setForm((f) => ({ ...f, imageUrl: upload.url, storagePath: upload.path }))
-        setFile(null)
-      }
-
-      const payload = {
-        ...(editingId ? { id: editingId } : {}),
-        title: form.title,
-        alt: form.alt,
-        imageUrl: upload?.url || form.imageUrl,
-        storagePath: upload?.path || form.storagePath,
-        order: Number(form.order) || 1,
-      }
-
-      const res = await fetch('/api/admin/gallery', {
-        method: editingId ? 'PUT' : 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!res.ok) {
-        setError(await getFriendlyAdminApiError(res, 'Unable to save gallery item.'))
-        return
-      }
-
-      resetForm()
-      await refresh()
-    } catch {
-      setError('Unable to save gallery item.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const remove = async (id: string) => {
     if (!confirm('Delete this gallery item?')) return
     setError(null)
@@ -725,7 +678,7 @@ export default function AdminGalleryPage() {
           )}
 
           {/* Upload Hero Section */}
-          {!showForm && (
+          {!showModal && (
             <div className="group relative w-full cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 transition-all duration-300 ease-out hover:border-primary hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800 md:p-12">
               <div
                 onClick={startNew}
@@ -743,118 +696,6 @@ export default function AdminGalleryPage() {
                 <button className="mt-2 rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-primary shadow-sm transition-all group-hover:shadow-md dark:border-slate-600 dark:bg-slate-700">
                   Browse Files
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Form Section */}
-          {showForm && (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="mb-6 text-xl font-bold text-slate-900 dark:text-white">
-                {editingId ? 'Edit Image' : 'Add New Image'}
-              </h3>
-
-              <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
-                      placeholder="Event photos 2024"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Alt Text
-                    </label>
-                    <input
-                      type="text"
-                      value={form.alt}
-                      onChange={(e) => setForm((f) => ({ ...f, alt: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
-                      placeholder="Description for accessibility"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Display Order
-                    </label>
-                    <input
-                      type="number"
-                      value={form.order}
-                      onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
-                      placeholder="1"
-                      min="1"
-                    />
-                  </div>
-
-                  <div>
-                    <DragDropFile
-                      label="Upload Image"
-                      accept="image/*"
-                      file={file}
-                      onFile={setFile}
-                      uploadedUrl={form.imageUrl || undefined}
-                      hint="Upload to Firebase Storage"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={form.imageUrl}
-                    onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Auto-filled when you upload a file
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={save}
-                    disabled={saving || uploading || !form.title || !form.alt || (!file && !form.imageUrl)}
-                    className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {uploading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Uploading...
-                      </span>
-                    ) : saving ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Saving...
-                      </span>
-                    ) : editingId ? (
-                      'Save Changes'
-                    ) : (
-                      'Create Image'
-                    )}
-                  </button>
-                  <button
-                    onClick={resetForm}
-                    className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -1026,6 +867,16 @@ export default function AdminGalleryPage() {
           </div>
         </div>
       )}
+
+      {/* Add Photo Modal */}
+      <AddPhotoModal
+        isOpen={showModal}
+        onClose={closeModal}
+        editingItem={editingItem}
+        onSave={handleSaveFromModal}
+        saving={saving}
+        uploading={uploading}
+      />
     </div>
   )
 }

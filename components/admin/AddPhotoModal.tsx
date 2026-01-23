@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DragDropFile from '@/components/admin/DragDropFile'
 
 type GalleryRow = {
@@ -34,11 +34,32 @@ export default function AddPhotoModal({
   const [file, setFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [form, setForm] = useState<Omit<GalleryRow, 'id'>>({
-    title: editingItem?.title || '',
-    alt: editingItem?.alt || '',
-    imageUrl: editingItem?.imageUrl || '',
-    order: editingItem?.order || 1,
+    title: '',
+    alt: '',
+    imageUrl: '',
+    order: 1,
   })
+
+  // Update form when editingItem changes
+  useEffect(() => {
+    if (editingItem) {
+      setForm({
+        title: editingItem.title,
+        alt: editingItem.alt,
+        imageUrl: editingItem.imageUrl,
+        storagePath: editingItem.storagePath || '',
+        order: editingItem.order,
+      })
+    } else {
+      setForm({
+        title: '',
+        alt: '',
+        imageUrl: '',
+        order: 1,
+      })
+      setFile(null)
+    }
+  }, [editingItem, isOpen])
 
   // Album and tag state
   const [selectedAlbum, setSelectedAlbum] = useState<string>('')
@@ -166,20 +187,56 @@ export default function AddPhotoModal({
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Upload Image
               </label>
-              <div className="flex flex-col items-center justify-center gap-6 rounded-xl border-2 border-dashed border-[#dae2e7] dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 px-6 py-12 transition-all hover:border-primary/50 group cursor-pointer">
+              
+              {/* Custom Drag & Drop UI */}
+              <div 
+                onClick={() => document.getElementById('file-upload-input')?.click()}
+                className="flex flex-col items-center justify-center gap-6 rounded-xl border-2 border-dashed border-[#dae2e7] dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 px-6 py-12 transition-all hover:border-primary/50 group cursor-pointer"
+              >
                 <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-4xl">cloud_upload</span>
                 </div>
                 <div className="flex max-w-[480px] flex-col items-center gap-2">
-                  <DragDropFile
-                    label=""
-                    accept="image/*"
-                    file={file}
-                    onFile={handleFileSelect}
-                    uploadedUrl={form.imageUrl || undefined}
-                    hint="Supported formats: JPG, PNG. Max file size: 10MB."
-                  />
+                  <p className="text-[#101618] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] text-center">
+                    Drag &amp; drop your photos here or <span className="text-primary underline cursor-pointer">click to browse</span>
+                  </p>
+                  <p className="text-[#5e7d8d] text-sm font-normal leading-normal text-center">
+                    Supported formats: JPG, PNG. Max file size: 10MB.
+                  </p>
                 </div>
+                
+                {/* Hidden File Input */}
+                <input
+                  id="file-upload-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0] || null
+                    handleFileSelect(selectedFile)
+                  }}
+                  className="hidden"
+                />
+                
+                {/* File Preview */}
+                {file && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Selected: {file.name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                )}
+                
+                {/* Show uploaded URL if exists */}
+                {!file && form.imageUrl && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      ✓ Image already uploaded
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Progress Bar (Active State) */}
