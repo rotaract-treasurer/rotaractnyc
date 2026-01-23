@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAdminSession } from '@/lib/admin/useAdminSession'
 import { getFriendlyAdminApiError } from '@/lib/admin/apiError'
-import DragDropFile from '@/components/admin/DragDropFile'
+import AddPhotoModal from '@/components/admin/AddPhotoModal'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type GalleryRow = {
@@ -338,8 +338,8 @@ export default function AdminGalleryPage() {
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<GalleryRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false) // Form hidden by default
-  const [file, setFile] = useState<File | null>(null)
+  const [editingItem, setEditingItem] = useState<GalleryRow | null>(null)
+  const [showModal, setShowModal] = useState(false) // Modal state
   const [viewMode, setViewMode] = useState<ViewMode>('masonry')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
@@ -492,37 +492,24 @@ export default function AdminGalleryPage() {
   }
 
   const startNew = () => {
-    resetForm()
-    setShowForm(true)
+    setEditingId(null)
+    setEditingItem(null)
+    setShowModal(true)
   }
 
   const startEdit = (row: GalleryRow) => {
     setEditingId(row.id)
-    setFile(null)
-    setForm({
-      title: row.title,
-      alt: row.alt,
-      imageUrl: row.imageUrl,
-      storagePath: row.storagePath || '',
-      order: row.order,
-    })
-    setShowForm(true)
+    setEditingItem(row)
+    setShowModal(true)
   }
 
-  const resetForm = () => {
+  const closeModal = () => {
     setEditingId(null)
-    setFile(null)
-    setShowForm(false)
-    setForm({
-      title: '',
-      alt: '',
-      imageUrl: '',
-      storagePath: '',
-      order: 1,
-    })
+    setEditingItem(null)
+    setShowModal(false)
   }
 
-  const uploadIfNeeded = async () => {
+  const uploadIfNeeded = async (file: File | null) => {
     if (!file) return null
 
     setUploading(true)
@@ -559,6 +546,54 @@ export default function AdminGalleryPage() {
       return null
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleSaveFromModal = async (formData: Omit<GalleryRow, 'id'>, file: File | null) => {
+    setError(null)
+    setSaving(true)
+
+    try {
+      // Upload file if provided
+      const uploadData = await uploadIfNeeded(file)
+      const finalUrl = uploadData?.url || formData.imageUrl
+
+      if (!finalUrl) {
+        setError('Please provide an image (either upload a file or provide a URL)')
+        setSaving(false)
+        return
+      }
+
+      const body = {
+        ...formData,
+        imageUrl: finalUrl,
+        storagePath: uploadData?.storagePath || formData.storagePath || '',
+      }
+
+      const method = editingId ? 'PATCH' : 'POST'
+      const url = editingId
+        ? `/api/admin/gallery?id=${encodeURIComponent(editingId)}`
+        : '/api/admin/gallery'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        setError(await getFriendlyAdminApiError(res, 'Unable to save gallery item.'))
+        setSaving(false)
+        return
+      }
+
+      await refresh()
+      closeModal()
+    } catch (err) {
+      setError('Unable to save gallery item.')
+      console.error(err)
+    } finally {
+      setSaving(false)
     }
   }
 

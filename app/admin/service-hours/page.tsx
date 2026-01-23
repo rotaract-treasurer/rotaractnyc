@@ -27,6 +27,7 @@ export default function ServiceHoursReviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[Service Hours] Auth state:', { loading, hasUserData: !!userData, role: userData?.role });
     if (!loading && userData) {
       loadSubmissions();
     } else if (!loading && !userData) {
@@ -35,6 +36,7 @@ export default function ServiceHoursReviewPage() {
   }, [loading, userData, filter]);
 
   const loadSubmissions = async () => {
+    console.log('[Service Hours] Loading submissions...');
     setLoadingData(true);
     setError(null);
     const app = getFirebaseClientApp();
@@ -47,6 +49,7 @@ export default function ServiceHoursReviewPage() {
     const db = getFirestore(app);
     
     try {
+      console.log('[Service Hours] Querying serviceHours collection with filter:', filter);
       const submissionsRef = collection(db, 'serviceHours');
       let submissionsQuery;
 
@@ -93,11 +96,20 @@ export default function ServiceHoursReviewPage() {
         })
       );
 
+      console.log('[Service Hours] Loaded submissions:', submissionsData.length);
       setSubmissions(submissionsData);
     } catch (error) {
-      console.error('Error loading submissions:', error);
-      setError(`Failed to load submissions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('[Service Hours] Error loading submissions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if it's a permission error
+      if (errorMessage.includes('Missing or insufficient permissions') || errorMessage.includes('permission')) {
+        setError(`Permission Error: Your role may not be synced to Firebase custom claims. Please visit /admin/fix-permissions to sync your role, then sign out and back in.`);
+      } else {
+        setError(`Failed to load submissions: ${errorMessage}`);
+      }
     } finally {
+      console.log('[Service Hours] Finished loading, setting loadingData to false');
       setLoadingData(false);
     }
   };
@@ -145,8 +157,11 @@ export default function ServiceHoursReviewPage() {
       .filter(s => s.status === 'approved')
       .reduce((sum, s) => sum + s.hours, 0);
   };
-
-  if (loading || loadingData) {
+flex-col items-center justify-center min-h-screen gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {loading ? 'Authenticating...' : 'Loading service hours...'}
+        </p
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -175,24 +190,39 @@ export default function ServiceHoursReviewPage() {
 
   // Show error if there's one
   if (error) {
+    const isPermissionError = error.includes('Permission Error') || error.includes('permission');
+    
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="text-center max-w-md">
           <span className="material-symbols-outlined text-6xl text-red-500 mb-4">
-            error
+            {isPermissionError ? 'lock' : 'error'}
           </span>
           <h1 className="text-2xl font-bold text-[#141414] dark:text-white mb-2">
-            Error Loading Service Hours
+            {isPermissionError ? 'Permission Error' : 'Error Loading Service Hours'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {error}
           </p>
-          <button
-            onClick={() => loadSubmissions()}
-            className="px-6 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="flex gap-3 justify-center">
+            {isPermissionError && (
+              <button
+                onClick={() => window.location.href = '/admin/fix-permissions'}
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-colors"
+              >
+                Fix Permissions
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setError(null);
+                loadSubmissions();
+              }}
+              className="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-[#141414] dark:text-white font-bold rounded-lg transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
