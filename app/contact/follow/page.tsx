@@ -187,7 +187,7 @@ export default function FollowPage() {
             Subscribe to our newsletter for comprehensive monthly updates
           </p>
           <a
-            href="/contact/newsletter"
+            href="/newsletter-sign-up"
             className="inline-block bg-white text-rotaract-pink font-semibold px-8 py-3 rounded-full border-2 border-rotaract-pink hover:bg-rotaract-pink hover:text-white transition-all"
           >
             Subscribe to Newsletter

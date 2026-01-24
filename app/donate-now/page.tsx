@@ -25,7 +25,7 @@ export default function DonateNowPage() {
               Email Us About Donating
             </a>
             <Link
-              href="/contact-us"
+              href="/contact"
               className="inline-flex justify-center rounded-lg border border-rotaract-pink/30 bg-white px-6 py-3 font-semibold text-rotaract-pink hover:bg-rotaract-pink/5 transition-colors"
             >
               Contact Us

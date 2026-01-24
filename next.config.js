@@ -81,6 +81,55 @@ const nextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/contact-us',
+        destination: '/contact',
+        permanent: true,
+      },
+      {
+        source: '/contact/newsletter',
+        destination: '/newsletter-sign-up',
+        permanent: true,
+      },
+      {
+        source: '/contact/follow',
+        destination: '/follow-us',
+        permanent: true,
+      },
+      {
+        source: '/about/faq',
+        destination: '/frequently-asked-questions',
+        permanent: true,
+      },
+      {
+        source: '/about/board',
+        destination: '/leadership',
+        permanent: true,
+      },
+      {
+        source: '/about/membership',
+        destination: '/membership-requirements',
+        permanent: true,
+      },
+      {
+        source: '/about/mission',
+        destination: '/mission',
+        permanent: true,
+      },
+      {
+        source: '/events/meetings',
+        destination: '/meetings',
+        permanent: true,
+      },
+      {
+        source: '/sisterclubs',
+        destination: '/about/sister-clubs',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

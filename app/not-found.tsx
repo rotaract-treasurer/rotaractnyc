@@ -46,7 +46,7 @@ export default function NotFound() {
           <Link href="/rcun-news" className="text-primary hover:underline">
             News
           </Link>
-          <Link href="/contact-us" className="text-primary hover:underline">
+          <Link href="/contact" className="text-primary hover:underline">
             Contact
           </Link>
         </div>

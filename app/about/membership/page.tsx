@@ -240,7 +240,7 @@ export default function MembershipPage() {
 
         <div className="text-center mb-8">
           <p className="text-sm text-stone-500 dark:text-stone-400">
-            Questions about requirements? <a href="/about/faq" className="text-primary font-bold hover:underline">Read the FAQ</a> or <a href="/contact" className="text-primary font-bold hover:underline">Contact Us</a>.
+            Questions about requirements? <a href="/frequently-asked-questions" className="text-primary font-bold hover:underline">Read the FAQ</a> or <a href="/contact" className="text-primary font-bold hover:underline">Contact Us</a>.
           </p>
         </div>
       </section>

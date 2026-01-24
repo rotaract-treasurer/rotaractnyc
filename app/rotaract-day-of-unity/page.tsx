@@ -73,7 +73,7 @@ export default function RotaractDayOfUnityPage() {
               </p>
               <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <Link
-                  href="/contact-us"
+                  href="/contact"
                   className="inline-flex justify-center rounded-lg bg-rotaract-pink px-6 py-3 font-semibold text-white hover:bg-rotaract-darkpink transition-colors"
                 >
                   Contact Us

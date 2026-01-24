@@ -279,7 +279,7 @@ export default function MissionPage() {
               Join a community of passionate individuals dedicated to making a real difference.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/about/membership" className="px-8 py-4 bg-primary text-white rounded font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg">
+              <Link href="/membership-requirements" className="px-8 py-4 bg-primary text-white rounded font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg">
                 Become a Member
               </Link>
               <Link href="/donate-now" className="px-8 py-4 bg-transparent border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded font-bold text-lg hover:border-primary hover:text-primary transition-colors">

@@ -180,7 +180,7 @@ export default function MeetingsPage() {
             Become a member and be part of our vibrant community
           </p>
           <a
-            href="/about/membership"
+            href="/membership-requirements"
             className="inline-block bg-white text-rotaract-pink font-semibold px-8 py-3 rounded-full border-2 border-rotaract-pink hover:bg-rotaract-pink hover:text-white transition-all"
           >
             Learn About Membership

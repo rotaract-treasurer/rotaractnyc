@@ -240,7 +240,7 @@ export default function HelpCenterPage() {
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
-              href="/about/membership"
+              href="/membership-requirements"
               className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-transparent hover:border-[#17b0cf]/30 dark:hover:border-[#17b0cf]/50 transition-all group"
             >
               <svg className="w-6 h-6 text-[#17b0cf] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ export default function HelpCenterPage() {
               <span className="font-medium text-gray-700 dark:text-gray-200">Events &amp; Calendar</span>
             </Link>
             <Link
-              href="/about/board"
+              href="/leadership"
               className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-transparent hover:border-[#17b0cf]/30 dark:hover:border-[#17b0cf]/50 transition-all group"
             >
               <svg className="w-6 h-6 text-[#17b0cf] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -54,7 +54,7 @@ export default function Error({
 
         <p className="mt-8 text-sm text-text-muted dark:text-gray-500">
           Need help?{' '}
-          <Link href="/contact-us" className="text-primary hover:underline">
+          <Link href="/contact" className="text-primary hover:underline">
             Contact support
           </Link>
         </p>

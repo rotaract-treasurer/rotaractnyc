@@ -26,7 +26,7 @@ const Navbar = () => {
         { name: 'Membership', href: '/membership-requirements' },
         { name: 'Board Members', href: '/leadership' },
         { name: 'Frequently Asked Questions', href: '/frequently-asked-questions' },
-        { name: 'Sister-Clubs', href: '/sisterclubs' },
+        { name: 'Sister-Clubs', href: '/about/sister-clubs' },
       ],
     },
     {
@@ -40,11 +40,11 @@ const Navbar = () => {
     { name: 'News', href: '/rcun-news' },
     {
       name: 'Contact',
-      href: '/contact-us',
+      href: '/contact',
       submenu: [
         { name: 'Follow Us', href: '/follow-us' },
         { name: 'Newsletter Sign Up', href: '/newsletter-sign-up' },
-        { name: 'Contact Us', href: '/contact-us' },
+        { name: 'Contact Us', href: '/contact' },
       ],
     },
   ]

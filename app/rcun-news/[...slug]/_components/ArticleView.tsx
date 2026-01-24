@@ -199,7 +199,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
                   </p>
                   <p className="text-gray-600 text-sm">
                     Check back soon for the full content, or{' '}
-                    <Link href="/contact-us" className="text-rotaract-blue hover:underline font-medium">
+                    <Link href="/contact" className="text-rotaract-blue hover:underline font-medium">
                       contact us
                     </Link>{' '}
                     for more information.
@@ -236,7 +236,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
               <FaArrowLeft /> More Articles
             </Link>
             <Link
-              href="/contact-us"
+              href="/contact"
               className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-rotaract-blue to-rotaract-pink text-white font-bold hover:shadow-lg transition-all"
             >
               Contact Us
@@ -259,7 +259,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
               Get the latest stories from RCUN delivered straight to your inbox every week.
             </p>
             <Link
-              href="/contact/newsletter"
+              href="/newsletter-sign-up"
               className="inline-block bg-white text-rotaract-blue font-bold px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
             >
               Subscribe to Newsletter

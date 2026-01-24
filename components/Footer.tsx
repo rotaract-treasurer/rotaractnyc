@@ -68,7 +68,7 @@ const Footer = async () => {
                 </Link>
               </li>
               <li>
-                <Link href="/contact-us" className="text-gray-700 hover:text-rotaract-pink transition-colors">
+                <Link href="/contact" className="text-gray-700 hover:text-rotaract-pink transition-colors">
                   Contact Us
                 </Link>
               </li>

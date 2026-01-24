@@ -19,8 +19,8 @@ const searchData: SearchResult[] = [
   { title: 'Member Benefits', description: 'Exclusive benefits available through our member portal.', url: '/member-benefits', type: 'page' },
   { title: 'Leadership Board', description: 'Meet our current board members and leadership team.', url: '/leadership', type: 'page' },
   { title: 'News & Updates', description: 'Latest news, articles, and updates from our club.', url: '/rcun-news', type: 'news' },
-  { title: 'Sister Clubs', description: 'Our partner Rotaract clubs around the world.', url: '/sisterclubs', type: 'page' },
-  { title: 'Contact Us', description: 'Get in touch with our club leadership and committees.', url: '/contact-us', type: 'page' },
+  { title: 'Sister Clubs', description: 'Our partner Rotaract clubs around the world.', url: '/about/sister-clubs', type: 'page' },
+  { title: 'Contact Us', description: 'Get in touch with our club leadership and committees.', url: '/contact', type: 'page' },
   { title: 'FAQ', description: 'Frequently asked questions about our club and membership.', url: '/frequently-asked-questions', type: 'page' },
   { title: 'Help Center', description: 'Get help with membership, events, and club resources.', url: '/help', type: 'page' },
 ]

@@ -704,7 +704,7 @@ export default function EventsPage() {
 
             <div className="mt-12 flex justify-center">
               <Link
-                href="/events/meetings"
+                href="/meetings"
                 className="inline-flex items-center justify-center rounded-full border-2 border-primary bg-transparent px-8 py-3 font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
               >
                 View Meeting Schedule
