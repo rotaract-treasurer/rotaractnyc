@@ -22,7 +22,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
       </div>
 
       {/* Event Type Selector */}
-      <div>
+      <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
         <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-4">
           Event Type
         </label>
@@ -31,7 +31,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
           <button
             type="button"
             onClick={() => updateFormData({ eventType: 'free', requiresRegistration: true })}
-            className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            className={`p-6 rounded-2xl border-2 transition-all text-left shadow-sm ${
               eventType === 'free'
                 ? 'border-primary bg-primary/10 shadow-lg'
                 : 'border-slate-200 dark:border-slate-700 hover:border-primary/50'
@@ -56,7 +56,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
           <button
             type="button"
             onClick={() => updateFormData({ eventType: 'paid', requiresRegistration: true })}
-            className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            className={`p-6 rounded-2xl border-2 transition-all text-left shadow-sm ${
               eventType === 'paid'
                 ? 'border-primary bg-primary/10 shadow-lg'
                 : 'border-slate-200 dark:border-slate-700 hover:border-primary/50'
@@ -81,7 +81,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
           <button
             type="button"
             onClick={() => updateFormData({ eventType: 'service', requiresRegistration: true })}
-            className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            className={`p-6 rounded-2xl border-2 transition-all text-left shadow-sm ${
               eventType === 'service'
                 ? 'border-primary bg-primary/10 shadow-lg'
                 : 'border-slate-200 dark:border-slate-700 hover:border-primary/50'
@@ -106,7 +106,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
 
       {/* Free Event - Simple RSVP */}
       {eventType === 'free' && (
-        <div className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+        <div className="p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/70 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <span className="material-symbols-outlined text-primary text-2xl">how_to_reg</span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">RSVP Configuration</h3>
@@ -122,12 +122,12 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 value={formData.capacity || ''}
                 onChange={(e) => updateFormData({ capacity: parseInt(e.target.value) || undefined })}
                 min="1"
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                 placeholder="Leave empty for unlimited capacity"
               />
             </div>
 
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/60">
               <input
                 type="checkbox"
                 id="allowGuests-free"
@@ -148,7 +148,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
       {eventType === 'paid' && (
         <div className="space-y-6">
           {/* Pricing Configuration */}
-          <div className="p-6 rounded-2xl border-2 border-primary/20 bg-primary/5">
+          <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <span className="material-symbols-outlined text-primary text-2xl">sell</span>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pricing Structure</h3>
@@ -174,7 +174,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                       onChange={(e) => updateFormData({ memberPrice: parseFloat(e.target.value) || undefined })}
                       min="0"
                       step="0.01"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
                       placeholder="25.00"
                     />
                   </div>
@@ -192,7 +192,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                       onChange={(e) => updateFormData({ memberEarlyBirdPrice: parseFloat(e.target.value) || undefined })}
                       min="0"
                       step="0.01"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                       placeholder="20.00"
                     />
                   </div>
@@ -207,7 +207,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                       type="datetime-local"
                       value={formData.earlyBirdDeadline || ''}
                       onChange={(e) => updateFormData({ earlyBirdDeadline: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                     />
                   </div>
                 )}
@@ -245,7 +245,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                           onChange={(e) => updateFormData({ guestPrice: parseFloat(e.target.value) || undefined })}
                           min="0"
                           step="0.01"
-                          className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
                           placeholder="35.00"
                         />
                       </div>
@@ -263,7 +263,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                           onChange={(e) => updateFormData({ guestEarlyBirdPrice: parseFloat(e.target.value) || undefined })}
                           min="0"
                           step="0.01"
-                          className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                           placeholder="30.00"
                         />
                       </div>
@@ -282,7 +282,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
 
           {/* Additional Settings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Event Capacity
               </label>
@@ -291,13 +291,13 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 value={formData.capacity || ''}
                 onChange={(e) => updateFormData({ capacity: parseInt(e.target.value) || undefined })}
                 min="1"
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                 placeholder="e.g. 100"
               />
               <p className="text-xs text-slate-400 mt-1">Leave empty for unlimited</p>
             </div>
 
-            <div>
+            <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Registration Deadline
               </label>
@@ -305,13 +305,13 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 type="datetime-local"
                 value={formData.registrationDeadline || ''}
                 onChange={(e) => updateFormData({ registrationDeadline: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
           </div>
 
           {/* Pricing Preview */}
-          <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <div className="p-6 rounded-2xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-700/80 shadow-sm">
             <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">preview</span>
               Pricing Preview
@@ -348,7 +348,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
 
       {/* Service Event - Service Hours */}
       {eventType === 'service' && (
-        <div className="p-6 rounded-2xl border-2 border-primary/20 bg-primary/5">
+        <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <span className="material-symbols-outlined text-primary text-2xl">schedule</span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Service Hours Configuration</h3>
@@ -365,7 +365,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 onChange={(e) => updateFormData({ serviceHours: parseFloat(e.target.value) || undefined })}
                 min="0"
                 step="0.5"
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none text-lg font-semibold"
                 placeholder="4.0"
               />
               <p className="text-xs text-slate-400 mt-1">
@@ -381,7 +381,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 value={formData.serviceDescription || ''}
                 onChange={(e) => updateFormData({ serviceDescription: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none resize-none"
                 placeholder="Describe the volunteer work (e.g., Food distribution, park cleanup, tutoring)"
               />
             </div>
@@ -395,12 +395,12 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
                 value={formData.capacity || ''}
                 onChange={(e) => updateFormData({ capacity: parseInt(e.target.value) || undefined })}
                 min="1"
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary outline-none"
                 placeholder="e.g. 20 volunteers"
               />
             </div>
 
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/60">
               <input
                 type="checkbox"
                 id="allowGuests-service"
@@ -418,7 +418,7 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
       )}
 
       {/* Info Box */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+      <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/70 shadow-sm">
         <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
         <div className="flex-1 text-sm text-blue-900 dark:text-blue-100">
           <p className="font-semibold mb-1">Pricing Tips</p>

@@ -287,46 +287,43 @@ export default function AdminPagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-rotaract-darkpink flex items-center gap-2">
-                <FaFileAlt /> Pages
-              </h1>
-              <p className="text-gray-600 mt-1">Edit static page content (Firestore)</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg transition-colors"
-              >
-                <FaArrowLeft /> Dashboard
-              </Link>
-              <button
-                onClick={async () => {
-                  await adminSignOut()
-                  router.push('/')
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-              >
-                <FaSignOutAlt /> Sign Out
-              </button>
-            </div>
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <FaFileAlt className="text-primary" /> Pages
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Edit static page content (Firestore)</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/dashboard"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white border border-slate-200/70 text-slate-700 dark:text-slate-300 dark:bg-slate-900/70 dark:hover:bg-slate-900 rounded-lg transition-colors"
+            >
+              <FaArrowLeft /> Dashboard
+            </Link>
+            <button
+              onClick={async () => {
+                await adminSignOut()
+                router.push('/')
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            >
+              <FaSignOutAlt /> Sign Out
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="bg-white/80 dark:bg-slate-900/70 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 shadow-sm p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700">Page</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Page</label>
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value as CmsPageSlug)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
+                className="px-3 py-2 border border-slate-200/70 dark:border-slate-700/70 rounded-lg bg-white/80 dark:bg-slate-900/80"
               >
                 {SLUGS.map((s) => (
                   <option key={s.slug} value={s.slug}>
@@ -337,20 +334,20 @@ export default function AdminPagesPage() {
             </div>
             <button
               onClick={seed}
-              className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+              className="px-3 py-2 text-sm bg-white/70 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-700/70 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-white dark:hover:bg-slate-900"
             >
               Seed Defaults
             </button>
           </div>
 
           {error ? (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mb-4 bg-red-50/80 border border-red-200/70 text-red-700 px-4 py-3 rounded-2xl">
               {error}
             </div>
           ) : null}
 
           {loading ? (
-            <div className="text-gray-600">Loading…</div>
+            <div className="text-slate-600 dark:text-slate-400">Loading…</div>
           ) : (
             <div className="space-y-4">
               <div>

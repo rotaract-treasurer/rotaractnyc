@@ -40,32 +40,32 @@ export default function AdminInviteMemberPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
+    <div className="space-y-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
           <Link 
             href="/admin/members"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-primary hover:underline text-sm font-medium"
           >
             ← Back to Members
           </Link>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
-          <h1 className="text-3xl font-bold mb-2">Invite New Member</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <div className="bg-white/80 dark:bg-slate-900/70 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 shadow-sm p-8">
+          <h1 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white">Invite New Member</h1>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
             Send an invitation email with a secure onboarding link
           </p>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="mb-4 p-4 bg-red-50/80 dark:bg-red-900/20 border border-red-200/70 dark:border-red-800/70 rounded-2xl">
               <p className="text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-800 dark:text-green-200">
+            <div className="mb-4 p-4 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-200/70 dark:border-emerald-800/70 rounded-2xl">
+              <p className="text-emerald-800 dark:text-emerald-200">
                 ✓ Invitation sent successfully! The member will receive an email with onboarding instructions.
               </p>
             </div>
@@ -73,7 +73,7 @@ export default function AdminInviteMemberPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
+              <label htmlFor="email" className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Email Address *
               </label>
               <input
@@ -82,13 +82,13 @@ export default function AdminInviteMemberPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                className="w-full px-4 py-2 border border-slate-200/70 dark:border-slate-700/70 rounded-lg focus:ring-2 focus:ring-primary/50 bg-white/90 dark:bg-slate-900/80"
                 placeholder="member@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium mb-2">
+              <label htmlFor="firstName" className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 First Name *
               </label>
               <input
@@ -97,13 +97,13 @@ export default function AdminInviteMemberPage() {
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                className="w-full px-4 py-2 border border-slate-200/70 dark:border-slate-700/70 rounded-lg focus:ring-2 focus:ring-primary/50 bg-white/90 dark:bg-slate-900/80"
                 placeholder="John"
               />
             </div>
 
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium mb-2">
+              <label htmlFor="lastName" className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Last Name *
               </label>
               <input
@@ -112,12 +112,12 @@ export default function AdminInviteMemberPage() {
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                className="w-full px-4 py-2 border border-slate-200/70 dark:border-slate-700/70 rounded-lg focus:ring-2 focus:ring-primary/50 bg-white/90 dark:bg-slate-900/80"
                 placeholder="Doe"
               />
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/70 rounded-2xl p-4">
               <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
                 What happens next?
               </h3>
@@ -135,59 +135,59 @@ export default function AdminInviteMemberPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="w-full bg-primary hover:bg-primary/90 disabled:bg-slate-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
               {loading ? 'Sending Invitation...' : 'Send Invitation'}
             </button>
           </form>
         </div>
 
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-3">Onboarding Process</h2>
+        <div className="bg-white/80 dark:bg-slate-900/70 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 shadow-sm p-6">
+          <h2 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Onboarding Process</h2>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold">
                 1
               </div>
               <div>
                 <h3 className="font-semibold">Email Verification</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Member clicks the link in the email and verifies their identity
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold">
                 2
               </div>
               <div>
                 <h3 className="font-semibold">Profile Completion</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Member fills out their profile (name, bio, photo, role/company)
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold">
                 3
               </div>
               <div>
                 <h3 className="font-semibold">Dues Payment</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Secure $85 payment via Stripe Checkout
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300 rounded-full flex items-center justify-center font-bold">
                 ✓
               </div>
               <div>
                 <h3 className="font-semibold">Active Member</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Member gets full portal access and receives confirmation email
                 </p>
               </div>

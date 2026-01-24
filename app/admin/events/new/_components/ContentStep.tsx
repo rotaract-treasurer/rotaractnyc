@@ -25,7 +25,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
 
       <div className="grid grid-cols-1 gap-6">
         {/* Event Description */}
-        <div>
+        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Event Description <span className="text-red-500">*</span>
           </label>
@@ -33,7 +33,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
             value={formData.description}
             onChange={(e) => updateFormData({ description: e.target.value })}
             rows={8}
-            className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white resize-none"
             placeholder="Describe your event in detail. What can attendees expect? What should they bring? Any special instructions?"
           />
           <p className="text-xs text-slate-400 mt-1">
@@ -42,7 +42,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
         </div>
 
         {/* Event Image */}
-        <div>
+        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Event Image
           </label>
@@ -50,11 +50,11 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
             type="url"
             value={formData.imageUrl}
             onChange={(e) => handleImageUrlChange(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
             placeholder="https://example.com/image.jpg"
           />
           {imagePreview && (
-            <div className="mt-4 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="mt-4 rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
               <img
                 src={imagePreview}
                 alt="Event preview"
@@ -69,7 +69,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
         </div>
 
         {/* Visibility Settings */}
-        <div>
+        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Event Visibility
           </label>
@@ -125,7 +125,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
         </div>
 
         {/* Event Category */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 p-6 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Event Type
@@ -133,7 +133,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
             <select
               value={formData.category}
               onChange={(e) => updateFormData({ category: e.target.value as 'upcoming' | 'past' })}
-              className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none text-slate-900 dark:text-white"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/80 outline-none text-slate-900 dark:text-white"
             >
               <option value="upcoming">Upcoming Event</option>
               <option value="past">Past Event</option>
@@ -142,7 +142,7 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
         </div>
 
         {/* Additional Info Cards */}
-        <div className="mt-4 p-5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+        <div className="mt-2 p-5 rounded-2xl border border-blue-200/70 dark:border-blue-800/70 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm">
           <div className="flex gap-3">
             <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">lightbulb</span>
             <div>

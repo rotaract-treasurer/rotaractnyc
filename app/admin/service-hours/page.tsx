@@ -161,7 +161,7 @@ export default function ServiceHoursReviewPage() {
   // Show loading state
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {loading ? 'Authenticating...' : 'Loading service hours...'}
@@ -173,7 +173,7 @@ export default function ServiceHoursReviewPage() {
   // Show loading state during initial auth
   if (!userData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-16">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -182,7 +182,7 @@ export default function ServiceHoursReviewPage() {
   // Check if user has admin access
   if (!userData || (userData.role !== 'ADMIN' && userData.role !== 'BOARD')) {
     return (
-      <div className="flex items-center justify-center min-h-screen px-4">
+      <div className="flex items-center justify-center py-16 px-4">
         <div className="text-center">
           <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
             lock
@@ -203,7 +203,7 @@ export default function ServiceHoursReviewPage() {
     const isPermissionError = error.includes('Permission Error') || error.includes('permission');
     
     return (
-      <div className="flex items-center justify-center min-h-screen px-4">
+      <div className="flex items-center justify-center py-16 px-4">
         <div className="text-center max-w-md">
           <span className="material-symbols-outlined text-6xl text-red-500 mb-4">
             {isPermissionError ? 'lock' : 'error'}

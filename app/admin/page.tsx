@@ -17,10 +17,11 @@ export default function AdminPage() {
   }, [session.status, router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-pink mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 relative">
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
+      <div className="relative text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
       </div>
     </div>
   )
