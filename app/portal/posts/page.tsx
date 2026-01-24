@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Link from 'next/link';
@@ -50,16 +50,21 @@ export default function PortalPostsPage() {
       // Only fetch published posts
       const postsQuery = query(
         postsRef,
-        where('published', '==', true),
-        orderBy('date', 'desc')
+        where('published', '==', true)
       );
-      
+
       const snapshot = await getDocs(postsQuery);
-      const postsData = snapshot.docs.map(doc => ({
-        ...doc.data() as Post,
-        slug: doc.id,
-      }));
-      
+      const postsData = snapshot.docs
+        .map(doc => ({
+          ...doc.data() as Post,
+          slug: doc.id,
+        }))
+        .sort((a, b) => {
+          const aTime = a.date ? new Date(a.date).getTime() : 0;
+          const bTime = b.date ? new Date(b.date).getTime() : 0;
+          return bTime - aTime;
+        });
+
       setPosts(postsData);
     } catch (err) {
       console.error('Error loading posts:', err);

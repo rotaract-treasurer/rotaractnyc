@@ -209,33 +209,34 @@ export default function PortalDashboard() {
       const blogPostsRef = collection(db, 'posts');
       const blogPostsQuery = query(
         blogPostsRef,
-        where('published', '==', true),
-        orderBy('date', 'desc')
+        where('published', '==', true)
       );
       
       const unsubscribeBlogPosts = onSnapshot(blogPostsQuery, (snapshot) => {
-        const loadedBlogPosts = snapshot.docs.map((doc) => {
-          const data = doc.data() as any;
-          // Parse date string to Date object
-          let createdAt: Date;
-          if (data.date) {
-            createdAt = new Date(data.date);
-          } else {
-            createdAt = new Date();
-          }
+        const loadedBlogPosts = snapshot.docs
+          .map((doc) => {
+            const data = doc.data() as any;
+            // Parse date string to Date object
+            let createdAt: Date;
+            if (data.date) {
+              createdAt = new Date(data.date);
+            } else {
+              createdAt = new Date();
+            }
 
-          return {
-            slug: doc.id,
-            title: String(data.title || ''),
-            date: String(data.date || ''),
-            author: String(data.author || 'Rotaract Club of New York'),
-            category: String(data.category || 'News'),
-            excerpt: String(data.excerpt || ''),
-            content: Array.isArray(data.content) ? data.content.map((x: any) => String(x)) : [],
-            published: data.published !== false,
-            createdAt,
-          } as BlogPost;
-        });
+            return {
+              slug: doc.id,
+              title: String(data.title || ''),
+              date: String(data.date || ''),
+              author: String(data.author || 'Rotaract Club of New York'),
+              category: String(data.category || 'News'),
+              excerpt: String(data.excerpt || ''),
+              content: Array.isArray(data.content) ? data.content.map((x: any) => String(x)) : [],
+              published: data.published !== false,
+              createdAt,
+            } as BlogPost;
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         setBlogPosts(loadedBlogPosts);
       }, (error) => {
