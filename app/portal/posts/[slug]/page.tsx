@@ -115,7 +115,7 @@ export default function PortalPostDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container-main py-8">
       {/* Back Link */}
       <Link
         href="/portal/posts"
@@ -126,7 +126,7 @@ export default function PortalPostDetailPage() {
       </Link>
 
       {/* Article */}
-      <article className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <article className="card overflow-hidden">
         {post.featuredImage ? (
           <div className="relative w-full aspect-[16/9] bg-gray-100 dark:bg-gray-700">
             <Image
@@ -138,16 +138,16 @@ export default function PortalPostDetailPage() {
           </div>
         ) : null}
         {/* Header */}
-        <div className="p-8 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 sm:p-8 lg:p-10 border-b border-gray-200 dark:border-gray-700">
           {/* Category */}
           <div className="mb-4">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+            <span className="badge-primary">
               {post.category}
             </span>
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             {post.title}
           </h1>
 
@@ -165,8 +165,8 @@ export default function PortalPostDetailPage() {
         </div>
 
         {/* Content */}
-        <div className="p-8">
-          <div className="prose prose-lg dark:prose-invert max-w-none">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="prose prose-base sm:prose-lg lg:prose-xl dark:prose-invert max-w-none prose-img:rounded-lg prose-headings:font-bold prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
             {post.content.map((paragraph, index) => {
               // Check if paragraph contains HTML
               const hasHTML = /<[a-z][\s\S]*>/i.test(paragraph);
@@ -176,13 +176,13 @@ export default function PortalPostDetailPage() {
                   <div
                     key={index}
                     dangerouslySetInnerHTML={{ __html: paragraph }}
-                    className="mb-4"
+                    className="mb-6"
                   />
                 );
               }
               
               return (
-                <p key={index} className="mb-4 text-gray-700 dark:text-gray-300">
+                <p key={index} className="mb-6 text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
                   {paragraph}
                 </p>
               );
@@ -191,7 +191,7 @@ export default function PortalPostDetailPage() {
         </div>
 
         {/* Footer */}
-        <div className="p-8 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        <div className="p-6 sm:p-8 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Published by {post.author}
