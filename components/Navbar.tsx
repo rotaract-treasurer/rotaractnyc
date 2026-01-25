@@ -50,8 +50,8 @@ const Navbar = () => {
   ]
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-      <div className="container mx-auto px-4">
+    <nav className="nav-container fixed inset-x-0 top-0">
+      <div className="container-main">
         <div className="flex justify-between items-center h-[var(--nav-height)]">
           <Link href="/" className="flex items-center">
             <Image
@@ -72,14 +72,14 @@ const Navbar = () => {
                   className={
                     'font-medium transition-colors py-2 ' +
                     (isMenuItemActive(item)
-                      ? 'text-rotaract-pink'
-                      : 'text-gray-800 dark:text-gray-200 hover:text-rotaract-pink')
+                      ? 'text-primary dark:text-primary-400'
+                      : 'text-text-primary dark:text-text-primary-dark hover:text-primary dark:hover:text-primary-400')
                   }
                 >
                   {item.name}
                 </Link>
                 {item.submenu && (
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 overflow-hidden">
+                  <div className="dropdown-menu top-full left-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                     {item.submenu.map((subitem) => {
                       const subIsActive = isActiveHref(subitem.href)
                       return (
@@ -89,8 +89,8 @@ const Navbar = () => {
                           className={
                             'block px-4 py-3 transition-colors ' +
                             (subIsActive
-                              ? 'bg-rotaract-pink/10 text-rotaract-darkpink'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-rotaract-pink/10 hover:text-rotaract-darkpink')
+                              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                              : 'text-text-secondary dark:text-text-secondary-dark hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300')
                           }
                         >
                           {subitem.name}
@@ -105,7 +105,7 @@ const Navbar = () => {
             <DarkModeToggle />
             <Link
               href="/portal/login"
-              className="px-6 py-2 bg-rotaract-pink hover:bg-rotaract-darkpink text-white font-semibold rounded-lg transition-colors shadow-sm"
+              className="btn-primary"
             >
               Member Login
             </Link>
@@ -115,7 +115,7 @@ const Navbar = () => {
             <DarkModeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-rotaract-darkpink text-2xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="text-primary dark:text-primary-400 text-2xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               aria-label={isOpen ? 'Close menu' : 'Open menu'}
             >
               <span className="material-symbols-outlined text-3xl">
@@ -140,8 +140,8 @@ const Navbar = () => {
                     className={
                       'block font-medium py-2 ' +
                       (isMenuItemActive(item)
-                        ? 'text-rotaract-pink'
-                        : 'text-gray-800 dark:text-gray-200 hover:text-rotaract-pink')
+                        ? 'text-primary dark:text-primary-400'
+                        : 'text-text-primary dark:text-text-primary-dark hover:text-primary dark:hover:text-primary-400')
                     }
                     onClick={() => setIsOpen(false)}
                   >
@@ -158,8 +158,8 @@ const Navbar = () => {
                             className={
                               'block py-1 ' +
                               (subIsActive
-                                ? 'text-rotaract-pink'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-rotaract-pink')
+                                ? 'text-primary dark:text-primary-400'
+                                : 'text-text-muted dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-400')
                             }
                             onClick={() => setIsOpen(false)}
                           >
@@ -173,7 +173,7 @@ const Navbar = () => {
               ))}
               <Link
                 href="/portal/login"
-                className="block w-full text-center mt-4 px-6 py-2 bg-rotaract-pink hover:bg-rotaract-darkpink text-white font-semibold rounded-lg transition-colors shadow-sm"
+                className="btn-primary w-full text-center mt-4"
                 onClick={() => setIsOpen(false)}
               >
                 Member Login

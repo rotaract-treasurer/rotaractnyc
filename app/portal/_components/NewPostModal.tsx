@@ -310,21 +310,24 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start justify-center p-4 md:p-8 overflow-y-auto">
-      <div className="w-full max-w-[1100px] max-h-[90vh] my-8 bg-white dark:bg-[#0a0a0a] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-zinc-800">
+    <div className="modal-backdrop z-[9999] flex items-start justify-center p-4 md:p-8 overflow-y-auto" onClick={onClose}>
+      <div 
+        className="w-full max-w-[1100px] max-h-[90vh] my-8 modal-content flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <header className="flex items-center justify-between px-8 py-5 border-b border-slate-100 dark:border-zinc-800 shrink-0">
+        <header className="modal-header shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="text-[#003a70] dark:text-blue-400">
+              <div className="text-blue-900 dark:text-blue-400">
                 <svg className="size-6" fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                   <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z"></path>
                 </svg>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-xl font-extrabold text-slate-900 dark:text-white leading-none">Create New Post</h1>
-                <span className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                  <span className={`size-1.5 rounded-full ${publishImmediately ? 'bg-green-400' : 'bg-amber-400'}`}></span>
+                <h1 className="text-xl font-extrabold text-text-primary dark:text-text-primary-dark leading-none">Create New Post</h1>
+                <span className="text-xs font-medium text-text-muted dark:text-text-muted-dark uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                  <span className={`size-1.5 rounded-full ${publishImmediately ? 'bg-status-success' : 'bg-status-warning'}`}></span>
                   {publishImmediately ? 'Will Publish Immediately' : 'Will Save as Draft'}
                 </span>
               </div>
@@ -333,28 +336,28 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
           <div className="flex items-center gap-3">
             {/* Save Status Indicator */}
             {saveStatus === 'saving' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <div className="badge-info flex items-center gap-2">
                 <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Saving...</span>
+                <span>Saving...</span>
               </div>
             )}
             {saveStatus === 'saved' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-[16px]">check_circle</span>
-                <span className="text-xs font-medium text-green-600 dark:text-green-400">Saved!</span>
+              <div className="badge-success flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <span>Saved!</span>
               </div>
             )}
             {saveStatus === 'error' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[16px]">error</span>
-                <span className="text-xs font-medium text-red-600 dark:text-red-400">Error</span>
+              <div className="badge-error flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px]">error</span>
+                <span>Error</span>
               </div>
             )}
             
             <button
               onClick={handleSaveDraft}
               disabled={isSaving || !title.trim()}
-              className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition-colors border border-slate-200 dark:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn-outline btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-[18px]">save</span>
               Save Draft
@@ -362,15 +365,15 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
             <button
               onClick={handlePublish}
               disabled={isSaving || !title.trim() || !content.trim()}
-              className="px-6 py-2.5 text-sm font-bold bg-[#003a70] hover:bg-[#003a70]/90 text-white rounded-lg shadow-lg shadow-[#003a70]/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-blue disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isSaving ? 'Processing...' : (publishImmediately ? 'Publish' : 'Save as Draft')}</span>
-              <span className="material-symbols-outlined text-[18px]">{publishImmediately ? 'send' : 'save'}</span>
+              <span className="material-symbols-outlined text-[18px] ml-1">{publishImmediately ? 'send' : 'save'}</span>
             </button>
-            <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 mx-1"></div>
+            <div className="w-px h-6 bg-border-light dark:bg-border-dark mx-1"></div>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+              className="p-2 text-text-muted hover:text-text-primary dark:hover:text-text-primary-dark"
             >
               <span className="material-symbols-outlined">close</span>
             </button>

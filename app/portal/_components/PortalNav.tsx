@@ -40,8 +40,8 @@ export default function PortalNav() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md border-b border-[#e5e5e5] dark:border-[#333]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="nav-container">
+      <div className="container-main">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
@@ -62,11 +62,11 @@ export default function PortalNav() {
           {/* Search Bar (Centered) */}
           <div className="flex-1 max-w-md hidden md:flex">
             <label className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted dark:text-text-muted-dark">
                 <span className="material-symbols-outlined text-[20px]">search</span>
               </div>
               <input 
-                className="block w-full pl-10 pr-3 py-2 border-none rounded-lg leading-5 bg-[#f2f2f2] dark:bg-[#2a2a2a] text-sm text-primary dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rotaract-blue/50 transition-shadow"
+                className="input-search"
                 placeholder="Search announcements, members, or events..."
                 type="text"
                 value={searchQuery}
@@ -86,11 +86,7 @@ export default function PortalNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`text-sm font-medium transition-colors py-5 ${
-                      isActive
-                        ? 'font-bold text-primary dark:text-white border-b-2 border-primary dark:border-white'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-rotaract-blue'
-                    }`}
+                    className={isActive ? 'nav-link-active py-5' : 'nav-link py-5'}
                   >
                     {item.label}
                   </Link>
@@ -98,43 +94,43 @@ export default function PortalNav() {
               })}
             </nav>
 
-            <div className="flex items-center gap-3 pl-6 border-l border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-3 pl-6 border-l border-border-light dark:border-border-dark">
               {canCreatePosts && (
                 <button
                   onClick={() => setShowNewPostModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#003a70] hover:bg-[#003a70]/90 text-white text-sm font-bold transition-all shadow-lg shadow-[#003a70]/20"
+                  className="btn-blue btn-sm shadow-lg shadow-blue-900/20"
                 >
                   <span className="material-symbols-outlined text-[18px]">add</span>
-                  <span className="hidden sm:inline">New Post</span>
+                  <span className="hidden sm:inline ml-1">New Post</span>
                 </button>
               )}
               
               {showAdminLink ? (
                 <Link
                   href="/admin"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+                  className="btn-outline btn-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                  <span className="hidden sm:inline">Admin</span>
+                  <span className="hidden sm:inline ml-1">Admin</span>
                 </Link>
               ) : null}
 
               <button
                 onClick={() => setShowNotifications((v) => !v)}
-                className="relative p-1 text-gray-500 hover:text-primary dark:hover:text-white transition-colors"
+                className="relative p-1 text-text-muted dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-400 transition-colors"
                 aria-label="Notifications"
               >
                 <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#141414]"></span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-status-error rounded-full border-2 border-surface-light dark:border-surface-dark-secondary"></span>
               </button>
 
               {showNotifications ? (
-                <div className="absolute right-4 top-16 w-72 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-gray-200 dark:border-[#2a2a2a] p-3">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No notifications yet.</p>
+                <div className="dropdown-menu right-4 top-16 w-72 p-3">
+                  <p className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">Notifications</p>
+                  <p className="mt-1 text-xs text-text-muted dark:text-text-muted-dark">No notifications yet.</p>
                   <button
                     onClick={() => setShowNotifications(false)}
-                    className="mt-3 w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#2a2a2a] text-sm font-semibold"
+                    className="btn-secondary btn-sm w-full mt-3"
                   >
                     Close
                   </button>
@@ -143,45 +139,34 @@ export default function PortalNav() {
               
               <div className="relative group">
                 <div 
-                  className="w-9 h-9 rounded-full bg-cover bg-center border border-gray-200 dark:border-gray-700 cursor-pointer"
-                  style={user?.photoURL ? { backgroundImage: `url(${user.photoURL})` } : {}}
+                  className="avatar avatar-md border border-border-light dark:border-border-dark cursor-pointer"
+                  style={user?.photoURL ? { backgroundImage: `url(${user.photoURL})`, backgroundSize: 'cover' } : {}}
                 >
                   {!user?.photoURL && (
-                    <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                    </div>
+                    <span className="material-symbols-outlined text-[18px] text-text-muted">person</span>
                   )}
                 </div>
                 
                 {/* Dropdown menu */}
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-gray-200 dark:border-[#2a2a2a] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <div className="p-3 border-b border-gray-100 dark:border-[#2a2a2a]">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{userData?.name || user?.displayName}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{userData?.role || 'Member'}</p>
+                <div className="dropdown-menu right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-3 border-b border-border-light dark:border-border-dark">
+                    <p className="text-sm font-medium text-text-primary dark:text-text-primary-dark">{userData?.name || user?.displayName}</p>
+                    <p className="text-xs text-text-muted dark:text-text-muted-dark">{userData?.role || 'Member'}</p>
                   </div>
 
-                  <Link
-                    href="/portal/settings"
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] flex items-center gap-2"
-                  >
+                  <Link href="/portal/settings" className="dropdown-item">
                     <span className="material-symbols-outlined text-[18px]">settings</span>
                     Settings
                   </Link>
 
                   {isAdmin(userData?.role) ? (
-                    <Link
-                      href="/admin"
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] flex items-center gap-2"
-                    >
+                    <Link href="/admin" className="dropdown-item">
                       <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
                       Admin
                     </Link>
                   ) : null}
 
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] flex items-center gap-2"
-                  >
+                  <button onClick={handleSignOut} className="dropdown-item">
                     <span className="material-symbols-outlined text-[18px]">logout</span>
                     Sign out
                   </button>

@@ -35,24 +35,27 @@ function PortalShell({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex items-center justify-center antialiased text-[#141414] dark:text-white">
-        <p className="text-sm text-gray-600 dark:text-gray-300">Loading…</p>
+      <div className="page-bg font-display flex items-center justify-center antialiased text-text-primary dark:text-text-primary-dark">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-text-muted dark:text-text-muted-dark">Loading…</p>
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex items-center justify-center antialiased text-[#141414] dark:text-white px-6">
-        <div className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#2a2a2a] bg-white/80 dark:bg-[#1e1e1e]/80 backdrop-blur p-6">
-          <h1 className="text-xl font-bold">Sign in required</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+      <div className="page-bg font-display flex items-center justify-center antialiased text-text-primary dark:text-text-primary-dark px-6">
+        <div className="card w-full max-w-lg p-6">
+          <h1 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Sign in required</h1>
+          <p className="mt-2 text-sm text-text-muted dark:text-text-muted-dark">
             Please sign in to access the member portal.
           </p>
           <div className="mt-5 flex gap-3">
             <button
               onClick={() => (window.location.href = '/portal/login')}
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
+              className="btn-primary"
             >
               Go to login
             </button>
@@ -67,13 +70,13 @@ function PortalShell({ children }: { children: React.ReactNode }) {
 
   if (!isApproved) {
     return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex items-center justify-center antialiased text-[#141414] dark:text-white px-6">
-        <div className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#2a2a2a] bg-white/80 dark:bg-[#1e1e1e]/80 backdrop-blur p-6">
-          <h1 className="text-xl font-bold">Awaiting approval</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+      <div className="page-bg font-display flex items-center justify-center antialiased text-text-primary dark:text-text-primary-dark px-6">
+        <div className="card w-full max-w-lg p-6">
+          <h1 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Awaiting approval</h1>
+          <p className="mt-2 text-sm text-text-muted dark:text-text-muted-dark">
             Your portal account is pending member approval. An admin needs to approve your account before you can view member content.
           </p>
-          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-3 text-xs text-text-muted dark:text-text-muted-dark">
             Signed in as: {user.email}
           </p>
           <div className="mt-5 flex gap-3">
@@ -82,13 +85,13 @@ function PortalShell({ children }: { children: React.ReactNode }) {
                 await signOut();
                 window.location.href = '/portal/login';
               }}
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
+              className="btn-primary"
             >
               Sign out
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-[#2a2a2a] text-sm font-semibold"
+              className="btn-outline"
             >
               Refresh
             </button>
@@ -99,9 +102,9 @@ function PortalShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col antialiased text-[#141414] dark:text-white">
+    <div className="page-bg font-display flex flex-col antialiased text-text-primary dark:text-text-primary-dark">
       <PortalNav />
-      <div className="px-6 pt-6">
+      <div className="container-main pt-6">
         <DuesBanner memberId={user.uid} />
       </div>
       {children}

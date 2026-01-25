@@ -36,13 +36,13 @@ const Footer = async () => {
   const settings = await getSettings()
 
   return (
-    <footer className="bg-white border-t border-gray-100">
-      <div className="container mx-auto px-4 py-12">
+    <footer className="bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark">
+      <div className="container-main py-12">
         <div className="grid md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">About Us</h3>
-            <p className="text-gray-700 leading-relaxed">
+            <h3 className="text-xl font-bold mb-4 text-primary dark:text-primary-400">About Us</h3>
+            <p className="text-text-secondary dark:text-text-secondary-dark leading-relaxed">
               Rotaract Club of New York at the United Nations - Building leadership
               through service and fellowship.
             </p>
@@ -50,25 +50,25 @@ const Footer = async () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">Quick Links</h3>
+            <h3 className="text-xl font-bold mb-4 text-primary dark:text-primary-400">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/mission" className="text-gray-700 hover:text-rotaract-pink transition-colors">
+                <Link href="/mission" className="text-text-secondary dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary-400 transition-colors">
                   Mission
                 </Link>
               </li>
               <li>
-                <Link href="/membership-requirements" className="text-gray-700 hover:text-rotaract-pink transition-colors">
+                <Link href="/membership-requirements" className="text-text-secondary dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary-400 transition-colors">
                   Membership
                 </Link>
               </li>
               <li>
-                <Link href="/events" className="text-gray-700 hover:text-rotaract-pink transition-colors">
+                <Link href="/events" className="text-text-secondary dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary-400 transition-colors">
                   Events
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-700 hover:text-rotaract-pink transition-colors">
+                <Link href="/contact" className="text-text-secondary dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary-400 transition-colors">
                   Contact Us
                 </Link>
               </li>
@@ -77,15 +77,15 @@ const Footer = async () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">Contact</h3>
-            <ul className="space-y-2 text-gray-700">
+            <h3 className="text-xl font-bold mb-4 text-primary dark:text-primary-400">Contact</h3>
+            <ul className="space-y-2 text-text-secondary dark:text-text-secondary-dark">
               {settings.addressLines.map((line) => (
                 <li key={line}>{line}</li>
               ))}
               <li>
                 <a
                   href={`mailto:${settings.contactEmail}`}
-                  className="hover:text-rotaract-pink transition-colors"
+                  className="hover:text-primary dark:hover:text-primary-400 transition-colors"
                 >
                   {settings.contactEmail}
                 </a>
@@ -95,13 +95,13 @@ const Footer = async () => {
 
           {/* Social Media */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-rotaract-darkpink">Follow Us</h3>
+            <h3 className="text-xl font-bold mb-4 text-primary dark:text-primary-400">Follow Us</h3>
             <div className="flex space-x-4">
               <a
                 href={settings.facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 text-2xl text-gray-700 hover:border-rotaract-pink/30 hover:text-rotaract-pink transition-colors"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
                 <FaFacebook />
               </a>
@@ -109,7 +109,7 @@ const Footer = async () => {
                 href={settings.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 text-2xl text-gray-700 hover:border-rotaract-pink/30 hover:text-rotaract-pink transition-colors"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
                 <FaLinkedin />
               </a>
@@ -117,29 +117,29 @@ const Footer = async () => {
                 href={settings.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 text-2xl text-gray-700 hover:border-rotaract-pink/30 hover:text-rotaract-pink transition-colors"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
                 <FaInstagram />
               </a>
             </div>
             <div className="mt-6">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-text-muted dark:text-text-muted-dark">
                 {settings.meetingLabel}<br />
-                <span className="text-rotaract-darkpink font-semibold">{settings.meetingTime}</span>
+                <span className="text-primary dark:text-primary-400 font-semibold">{settings.meetingTime}</span>
               </p>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-100 mt-10 pt-8 text-center text-gray-600">
+        <div className="border-t border-border-light dark:border-border-dark mt-10 pt-8 text-center text-text-muted dark:text-text-muted-dark">
           <p>&copy; {new Date().getFullYear()} Rotaract Club at the United Nations. All rights reserved.</p>
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-text-muted dark:text-text-muted-dark">
             Sponsored by{' '}
             <a
               href="https://www.nyrotary.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-gray-700 hover:text-rotaract-pink transition-colors"
+              className="font-semibold text-text-secondary dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary-400 transition-colors"
             >
               The Rotary Club of New York
             </a>

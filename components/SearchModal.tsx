@@ -91,49 +91,54 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[70vh] overflow-hidden">
+    <div className="modal-backdrop flex items-start justify-center pt-20" onClick={onClose}>
+      <div 
+        className="modal-content w-full max-w-2xl mx-4 max-h-[70vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Search Input */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-gray-400 text-2xl">search</span>
+        <div className="modal-header">
+          <div className="flex items-center gap-3 flex-1">
+            <span className="material-symbols-outlined text-text-muted text-2xl">search</span>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search pages, events, news..."
-              className="flex-1 text-xl bg-transparent border-none outline-none text-text-main dark:text-white placeholder-gray-400"
+              className="flex-1 text-xl bg-transparent border-none outline-none text-text-primary dark:text-text-primary-dark placeholder-text-muted"
               autoFocus
             />
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <span className="material-symbols-outlined text-gray-400">close</span>
-            </button>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            <span className="material-symbols-outlined text-text-muted">close</span>
+          </button>
         </div>
 
         {/* Search Results */}
         <div className="overflow-y-auto max-h-96">
           {results.length === 0 && query && (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              <span className="material-symbols-outlined text-4xl mb-4 block">search_off</span>
-              <p>No results found for "{query}"</p>
-              <p className="text-sm mt-2">Try different keywords or check out our <Link href="/help" className="text-primary hover:underline">Help Center</Link></p>
+            <div className="empty-state">
+              <span className="material-symbols-outlined text-4xl mb-4 text-text-muted">search_off</span>
+              <p className="text-text-muted dark:text-text-muted-dark">No results found for "{query}"</p>
+              <p className="text-sm mt-2 text-text-muted dark:text-text-muted-dark">
+                Try different keywords or check out our <Link href="/help" className="text-primary hover:underline">Help Center</Link>
+              </p>
             </div>
           )}
 
           {results.length === 0 && !query && (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              <span className="material-symbols-outlined text-4xl mb-4 block">travel_explore</span>
-              <p>Start typing to search...</p>
+            <div className="empty-state">
+              <span className="material-symbols-outlined text-4xl mb-4 text-text-muted">travel_explore</span>
+              <p className="text-text-muted dark:text-text-muted-dark">Start typing to search...</p>
               <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">membership</span>
-                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">events</span>
-                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">about</span>
-                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">contact</span>
+                <span className="badge-neutral">membership</span>
+                <span className="badge-neutral">events</span>
+                <span className="badge-neutral">about</span>
+                <span className="badge-neutral">contact</span>
               </div>
             </div>
           )}
@@ -143,8 +148,8 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
               key={result.url}
               href={result.url}
               onClick={onClose}
-              className={`block p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
-                index === selectedIndex ? 'bg-gray-50 dark:bg-gray-700' : ''
+              className={`block p-4 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors border-b border-border-light dark:border-border-dark last:border-b-0 ${
+                index === selectedIndex ? 'bg-gray-50 dark:bg-zinc-800' : ''
               }`}
             >
               <div className="flex items-start gap-3">
@@ -152,23 +157,23 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
                   {getTypeIcon(result.type)}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-text-main dark:text-white truncate">
+                  <h3 className="font-medium text-text-primary dark:text-text-primary-dark truncate">
                     {result.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+                  <p className="text-sm text-text-muted dark:text-text-muted-dark line-clamp-2 mt-1">
                     {result.description}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-500 uppercase font-medium">
+                    <span className="text-xs text-text-muted uppercase font-medium">
                       {result.type}
                     </span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                    <span className="text-xs text-text-muted">•</span>
+                    <span className="text-xs text-text-muted">
                       {result.url}
                     </span>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-gray-400 text-lg">arrow_outward</span>
+                <span className="material-symbols-outlined text-text-muted text-lg">arrow_outward</span>
               </div>
             </Link>
           ))}
@@ -176,8 +181,8 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-zinc-900 border-t border-border-light dark:border-border-dark">
+            <div className="flex items-center justify-between text-xs text-text-muted dark:text-text-muted-dark">
               <span>Use ↑↓ to navigate, Enter to select, Esc to close</span>
               <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
             </div>

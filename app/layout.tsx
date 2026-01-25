@@ -35,8 +35,9 @@ export default function RootLayout({
         <SkipToContent />
         <PWARegister />
         <GlobalKeyboardShortcuts />
-        <RouteChrome>{children}</RouteChrome>
-        <Footer />
+        <RouteChrome footer={<Footer />}>
+          {children}
+        </RouteChrome>
         <Analytics />
       </body>
     </html>

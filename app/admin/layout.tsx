@@ -12,7 +12,6 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const session = useAdminSession()
   const isLoginPage = pathname === '/admin/login'
   const isRootPage = pathname === '/admin'
 
@@ -39,26 +38,27 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (session.status === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-display flex items-center justify-center antialiased text-slate-900 dark:text-white relative">
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-        <p className="relative text-sm text-slate-600 dark:text-slate-400">Loading…</p>
+      <div className="page-bg-alt font-display flex items-center justify-center antialiased text-text-primary dark:text-text-primary-dark">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-text-muted dark:text-text-muted-dark">Loading…</p>
+        </div>
       </div>
     )
   }
 
   if (session.status !== 'authenticated') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-display flex items-center justify-center antialiased text-slate-900 dark:text-white px-6 relative">
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-        <div className="relative w-full max-w-lg rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur p-6 shadow-sm">
-          <h1 className="text-xl font-bold">Sign in required</h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+      <div className="page-bg-alt font-display flex items-center justify-center antialiased text-text-primary dark:text-text-primary-dark px-6">
+        <div className="card w-full max-w-lg p-6">
+          <h1 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Sign in required</h1>
+          <p className="mt-2 text-sm text-text-muted dark:text-text-muted-dark">
             Please sign in to access the admin panel.
           </p>
           <div className="mt-5 flex gap-3">
             <button
               onClick={() => (window.location.href = '/admin/login')}
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
+              className="btn-primary"
             >
               Go to login
             </button>
@@ -69,14 +69,11 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-display antialiased text-slate-900 dark:text-white relative">
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-      <div className="relative">
-        <AdminNav />
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
-      </div>
+    <div className="page-bg-alt font-display antialiased text-text-primary dark:text-text-primary-dark">
+      <AdminNav />
+      <main className="container-main py-8">
+        {children}
+      </main>
     </div>
   )
 }
