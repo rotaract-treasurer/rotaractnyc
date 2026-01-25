@@ -5,8 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { canManageFinances, isAdmin, canManagePosts } from '@/lib/portal/roles';
-import NewPostModal from './NewPostModal';
+import { canManageFinances, isAdmin } from '@/lib/portal/roles';
 
 export default function PortalNav() {
   const { user, userData, signOut } = useAuth();
@@ -14,8 +13,6 @@ export default function PortalNav() {
   const [searchQuery, setSearchQuery] = useState('');
   const showAdminLink = isAdmin(userData?.role);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const canCreatePosts = canManagePosts(userData?.role);
 
   const navItems = [
     { href: '/portal/announcements', label: 'Feed' },
@@ -95,16 +92,6 @@ export default function PortalNav() {
             </nav>
 
             <div className="flex items-center gap-3 pl-6 border-l border-border-light dark:border-border-dark">
-              {canCreatePosts && (
-                <button
-                  onClick={() => setShowNewPostModal(true)}
-                  className="btn-blue btn-sm shadow-lg shadow-blue-900/20"
-                >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                  <span className="hidden sm:inline ml-1">New Post</span>
-                </button>
-              )}
-              
               {showAdminLink ? (
                 <Link
                   href="/admin"
@@ -176,9 +163,6 @@ export default function PortalNav() {
           </div>
         </div>
       </div>
-      
-      {/* New Post Modal */}
-      <NewPostModal isOpen={showNewPostModal} onClose={() => setShowNewPostModal(false)} />
     </header>
   );
 }
