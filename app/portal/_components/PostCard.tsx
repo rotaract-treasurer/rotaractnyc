@@ -236,12 +236,12 @@ export function PostCard({ postId, author, timestamp, content, likes, commentsCo
 
   return (
     <article 
-      className={`rounded-xl overflow-hidden shadow-sm hover:shadow-md border transition-all duration-300 ${
+      className={`rounded-xl overflow-hidden shadow-md hover:shadow-lg border transition-all duration-300 ${
         content.type === 'announcement' 
-          ? 'relative bg-gradient-to-br from-indigo-600 to-purple-700'
+          ? 'relative bg-gradient-to-br from-indigo-600 to-purple-700 border-indigo-500'
           : content.type === 'spotlight'
-          ? 'relative bg-gradient-to-br from-amber-500 to-amber-600'
-          : 'bg-white dark:bg-[#1e1e1e] border-gray-100 dark:border-[#2a2a2a]'
+          ? 'relative bg-gradient-to-br from-amber-500 to-amber-600 border-amber-400'
+          : 'bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-[#2a2a2a]'
       }`}
     >
       {(content.type === 'announcement' || content.type === 'spotlight') && (

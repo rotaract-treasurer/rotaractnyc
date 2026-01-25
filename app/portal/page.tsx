@@ -354,7 +354,7 @@ export default function PortalDashboard() {
             {/* Main Feed Skeleton */}
             <div className="flex-1 w-full flex flex-col gap-6">
               {/* Quick Actions Skeleton */}
-              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-5 animate-pulse">
+              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-5 animate-pulse">
                 <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[...Array(5)].map((_, i) => (
@@ -370,14 +370,14 @@ export default function PortalDashboard() {
               </div>
 
               {/* Search and Filters Skeleton */}
-              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4 space-y-4 animate-pulse">
+              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4 space-y-4 animate-pulse">
                 <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
                 <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
               </div>
 
               {/* Feed Cards Skeleton */}
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-6 animate-pulse">
+                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-6 animate-pulse">
                   <div className="flex items-start gap-3 mb-4">
                     <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                     <div className="flex-1 space-y-2">
@@ -401,7 +401,7 @@ export default function PortalDashboard() {
             {/* Sidebar Skeleton */}
             <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 space-y-6">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4 animate-pulse">
+                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4 animate-pulse">
                   <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
                   <div className="space-y-3">
                     <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
@@ -539,7 +539,7 @@ export default function PortalDashboard() {
             </div>
 
             {/* Create Post Composer */}
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-4">
+            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4">
               <div className="flex items-center gap-3">
                 {/* User Avatar */}
                 <div 
@@ -598,7 +598,7 @@ export default function PortalDashboard() {
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-3">
+            <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-3">
               {/* Type Filter */}
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg p-1">
                 <button
@@ -704,7 +704,7 @@ export default function PortalDashboard() {
                   );
                 } else if (item.type === 'blogPost') {
                   return (
-                    <div key={`blogPost-${item.data.slug}`} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] overflow-hidden hover:shadow-lg transition-all">
+                    <div key={`blogPost-${item.data.slug}`} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] overflow-hidden hover:shadow-lg transition-all">
                       <div className="p-6">
                         {/* Category Badge */}
                         <div className="mb-3">
@@ -737,7 +737,7 @@ export default function PortalDashboard() {
                         </div>
                         
                         {/* Read More Link */}
-                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-[#2a2a2a]">
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#2a2a2a]">
                           <a 
                             href={`/portal/posts/${item.data.slug}`}
                             className="inline-flex items-center gap-2 text-sm font-semibold text-[#003a70] dark:text-blue-400 hover:gap-3 transition-all"
@@ -776,7 +776,7 @@ export default function PortalDashboard() {
               )}
             </>
           ) : (
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-12 text-center">
+            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-12 text-center">
               <div className="max-w-md mx-auto">
                 <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">
                   {searchQuery ? 'search_off' : 'forum'}

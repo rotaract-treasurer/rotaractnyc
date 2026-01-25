@@ -125,10 +125,10 @@ export default function FeedCard({ announcement, author }: FeedCardProps) {
   };
 
   return (
-    <article className={`bg-white dark:bg-[#1e1e1e] rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border overflow-hidden group ${
+    <article className={`bg-white dark:bg-[#1e1e1e] rounded-xl shadow-md hover:shadow-lg border overflow-hidden group ${
       announcement.pinned 
         ? 'border-rotaract-blue dark:border-blue-700 ring-2 ring-rotaract-blue/20 dark:ring-blue-700/20' 
-        : 'border-gray-100 dark:border-[#2a2a2a]'
+        : 'border-gray-200 dark:border-[#2a2a2a]'
     }`}>
       {/* Pinned Badge */}
       {announcement.pinned && (
