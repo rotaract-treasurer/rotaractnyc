@@ -33,7 +33,15 @@ export async function GET(req: NextRequest) {
   if (isFirebaseAdminConfigured()) {
     try {
       const db = getFirebaseAdminDb()
-      const snap = await db.collection('events').doc(id).get()
+      
+      // Try portalEvents first (new unified collection)
+      let snap = await db.collection('portalEvents').doc(id).get()
+      
+      // Fall back to legacy events collection
+      if (!snap.exists) {
+        snap = await db.collection('events').doc(id).get()
+      }
+      
       if (snap.exists) {
         const data = snap.data() as Record<string, unknown>
         event = {

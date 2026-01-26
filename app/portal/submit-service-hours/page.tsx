@@ -57,7 +57,8 @@ export default function SubmitServiceHoursPage() {
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       
-      const eventsRef = collection(db, 'events');
+      // Read from portalEvents (where admin/portal events are stored)
+      const eventsRef = collection(db, 'portalEvents');
       const eventsQuery = query(
         eventsRef,
         where('startAt', '>=', Timestamp.fromDate(sixtyDaysAgo)),

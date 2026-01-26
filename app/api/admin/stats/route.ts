@@ -19,14 +19,17 @@ export async function GET(req: NextRequest) {
       return data.status === 'active'
     }).length
     
-    // Get events count
-    const eventsSnap = await db.collection('events').get()
+    // Get events count from portalEvents (admin-managed events)
+    const eventsSnap = await db.collection('portalEvents').get()
     const eventCount = eventsSnap.size
     
     // Get active/upcoming events
     const upcomingEvents = eventsSnap.docs.filter((doc) => {
       const data = doc.data()
-      return data.category === 'upcoming'
+      // Check both category and startAt for upcoming status
+      const startAt = data.startAt?.toDate?.()
+      const isUpcoming = startAt ? startAt > new Date() : data.category === 'upcoming'
+      return isUpcoming
     }).length
     
     // Get posts count
