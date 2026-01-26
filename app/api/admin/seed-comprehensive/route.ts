@@ -86,9 +86,10 @@ export async function POST(req: NextRequest) {
 
     // ========================================================================
     // EVENTS (Free, Paid, Zoom, Service, Hybrid)
+    // Stored in 'portalEvents' collection (used by both admin and portal)
     // ========================================================================
     for (const event of TEST_EVENTS) {
-      const ref = db.collection('events').doc(event.id)
+      const ref = db.collection('portalEvents').doc(event.id)
       
       // Calculate start and end timestamps
       const startDate = event.startDate.includes('T') 
