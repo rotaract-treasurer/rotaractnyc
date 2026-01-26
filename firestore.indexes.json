@@ -49,6 +49,14 @@
       ]
     },
     {
+      "collectionGroup": "portalEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "startAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "serviceHours",
       "queryScope": "COLLECTION",
       "fields": [
