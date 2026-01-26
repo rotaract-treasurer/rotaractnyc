@@ -8,6 +8,7 @@ import { getFirebaseClientApp } from '@/lib/firebase/client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 type Post = {
   slug: string;
@@ -175,7 +176,7 @@ export default function PortalPostDetailPage() {
                 return (
                   <div
                     key={index}
-                    dangerouslySetInnerHTML={{ __html: paragraph }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(paragraph) }}
                     className="mb-6"
                   />
                 );

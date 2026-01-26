@@ -27,6 +27,7 @@ interface MemberDues {
 
 type MemberType = 'professional' | 'student';
 
+// Dues amounts in cents - central config at lib/config/dues.ts
 const DUES_AMOUNTS = {
   professional: 8500, // $85.00 in cents
   student: 6500, // $65.00 in cents

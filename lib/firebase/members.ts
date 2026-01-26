@@ -27,7 +27,7 @@ export async function createMember(data: {
     status: data.status || 'PENDING_PROFILE',
     isAdmin: data.isAdmin || false,
     dues: {
-      amount: 8500, // $85 in cents
+      amount: 8500, // $85 in cents - see lib/config/dues.ts for central config
       currency: 'USD',
       paid: false,
     },

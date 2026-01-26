@@ -22,7 +22,7 @@ export async function createDuesCycle(data: CreateCycleData & { createdBy: strin
     label: getRotaryYearLabel(cycleId),
     startDate: startDate,
     endDate: endDate,
-    amount: data.amount || 8500, // Default $85
+    amount: data.amount || 8500, // Default $85 - see lib/config/dues.ts
     currency: 'USD',
     isActive: false, // Admin must manually activate
     graceDays: data.graceDays || 30,

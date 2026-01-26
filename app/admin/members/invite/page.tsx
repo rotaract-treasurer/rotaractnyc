@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { inviteMember } from './actions';
 import Link from 'next/link';
+import { useAdminSession } from '@/lib/admin/useAdminSession';
 
 export default function AdminInviteMemberPage() {
+  const session = useAdminSession();
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -16,13 +18,18 @@ export default function AdminInviteMemberPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Get admin UID from authenticated session
+    if (session.status !== 'authenticated' || !session.uid) {
+      setError('You must be logged in to invite members');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(false);
 
-    // TODO: Get actual admin UID from session/auth
-    // For now, using a placeholder
-    const adminUid = 'admin-uid'; // This should come from your auth system
+    const adminUid = session.uid;
 
     const result = await inviteMember({
       ...formData,

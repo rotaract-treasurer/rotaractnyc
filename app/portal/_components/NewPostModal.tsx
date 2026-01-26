@@ -8,6 +8,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import ImageCustomizationModal from './ImageCustomizationModal';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
@@ -455,7 +456,7 @@ export default function NewPostModal({ isOpen, onClose }: NewPostModalProps) {
                     prose-blockquote:border-l-[#003a70] dark:prose-blockquote:border-l-blue-400 prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-zinc-800/50 prose-blockquote:py-1 prose-blockquote:px-4
                     prose-img:rounded-xl"
                   dangerouslySetInnerHTML={{ 
-                    __html: content || '<p class="text-slate-400 dark:text-zinc-500 italic">Your post content will appear here...</p>' 
+                    __html: sanitizeHtml(content) || '<p class="text-slate-400 dark:text-zinc-500 italic">Your post content will appear here...</p>' 
                   }}
                 />
 

@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate member type and get amount
+    // TODO: Consider centralizing to lib/config/dues.ts for single source of truth
     const DUES_AMOUNTS: { [key: string]: number } = {
       professional: 8500, // $85.00 in cents
       student: 6500, // $65.00 in cents

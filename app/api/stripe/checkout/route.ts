@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
               description: 'One-year membership to Rotaract NYC',
               images: [], // Add club logo URL if available
             },
-            unit_amount: 8500, // $85.00 in cents
+            unit_amount: 8500, // $85.00 in cents - Consider using DUES_CONFIG.PROFESSIONAL_AMOUNT_CENTS
           },
           quantity: 1,
         },
