@@ -14,48 +14,14 @@ export async function GET() {
   try {
     const db = getFirebaseAdminDb()
     
-    // Collect events from both portalEvents and legacy events collection
-    // portalEvents takes priority (if same ID exists in both)
-    const eventMap = new Map<string, Record<string, unknown>>()
-    
-    // First, load legacy events (will be overwritten by portalEvents)
-    const legacySnap = await db.collection('events').get()
-    for (const d of legacySnap.docs) {
-      const data = d.data()
-      eventMap.set(d.id, {
-        id: d.id,
-        title: data.title,
-        description: data.description,
-        location: data.location,
-        date: data.date,
-        time: data.time,
-        startDate: data.startDate,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        timezone: data.timezone,
-        category: data.category,
-        order: data.order || 0,
-        imageUrl: data.imageUrl,
-        eventType: data.eventType,
-        venueType: data.venueType,
-        virtualLink: data.virtualLink,
-        memberPrice: data.memberPrice,
-        guestPrice: data.guestPrice,
-        requiresRegistration: data.requiresRegistration,
-        capacity: data.capacity,
-        status: data.status,
-        source: 'legacy',
-      })
-    }
-    
-    // Then, load portalEvents with public visibility (overwrites legacy)
+    // Load public events from portalEvents collection only
     const portalEventsSnap = await db.collection('portalEvents')
       .where('visibility', '==', 'public')
       .get()
     
-    for (const d of portalEventsSnap.docs) {
+    const events = portalEventsSnap.docs.map((d) => {
       const data = d.data()
-      eventMap.set(d.id, {
+      return {
         id: d.id,
         title: data.title,
         description: data.description,
@@ -77,12 +43,8 @@ export async function GET() {
         requiresRegistration: data.requiresRegistration,
         capacity: data.capacity,
         status: data.status,
-        source: 'portalEvents',
-      })
-    }
-    
-    // Convert map to array
-    const events = Array.from(eventMap.values())
+      }
+    })
     
     // Sort: upcoming first by order, then past by order
     events.sort((a, b) => {

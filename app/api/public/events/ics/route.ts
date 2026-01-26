@@ -34,13 +34,8 @@ export async function GET(req: NextRequest) {
     try {
       const db = getFirebaseAdminDb()
       
-      // Try portalEvents first (new unified collection)
-      let snap = await db.collection('portalEvents').doc(id).get()
-      
-      // Fall back to legacy events collection
-      if (!snap.exists) {
-        snap = await db.collection('events').doc(id).get()
-      }
+      // Get event from portalEvents collection
+      const snap = await db.collection('portalEvents').doc(id).get()
       
       if (snap.exists) {
         const data = snap.data() as Record<string, unknown>

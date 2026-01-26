@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const batch = db.batch()
 
   for (const e of DEFAULT_EVENTS) {
-    const ref = db.collection('events').doc(e.id)
+    const ref = db.collection('portalEvents').doc(e.id)
     batch.set(
       ref,
       {
@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
         description: e.description,
         category: e.category,
         order: e.order,
+        visibility: 'public',
+        status: 'published',
         seeded: true,
         updatedAt: FieldValue.serverTimestamp(),
         createdAt: FieldValue.serverTimestamp(),
