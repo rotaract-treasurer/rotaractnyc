@@ -63,15 +63,15 @@ export default function ContactPage() {
     <div className="bg-white">
       {/* Intro */}
       <section className="relative overflow-hidden pt-14 pb-10">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-pink/10 blur-3xl" />
-        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-darkpink/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-primary/10 blur-3xl" />
         <div className="container mx-auto px-4 relative">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-rotaract-darkpink tracking-tight">Contact</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary tracking-tight">Contact</h1>
             <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-700">
               Reach out about membership, volunteering, partnerships, or upcoming events.
             </p>
@@ -90,7 +90,7 @@ export default function ContactPage() {
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-gradient-to-br from-rotaract-pink to-rotaract-darkpink text-white shadow-soft hover:shadow-soft-hover transition-all"
+              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-gradient-to-br from-primary to-primary-800 text-white shadow-soft hover:shadow-soft-hover transition-all"
             >
               <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
               <div className="relative flex items-start justify-between">
@@ -136,7 +136,7 @@ export default function ContactPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-rotaract-darkpink text-white shadow-soft hover:shadow-soft-hover transition-all"
+              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-primary-800 text-white shadow-soft hover:shadow-soft-hover transition-all"
             >
               <div className="absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-white/10" />
               <div className="relative flex items-start justify-between">
@@ -164,13 +164,13 @@ export default function ContactPage() {
             viewport={{ once: true }}
             className="rounded-2xl bg-gray-50 border border-gray-100 shadow-soft p-8 md:p-12 text-center relative overflow-hidden"
           >
-            <div className="absolute -top-16 -left-16 h-56 w-56 rounded-full bg-rotaract-pink/10 blur-2xl" />
-            <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-rotaract-darkpink/10 blur-2xl" />
+            <div className="absolute -top-16 -left-16 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
+            <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
             <div className="relative max-w-2xl mx-auto">
-              <div className="w-12 h-12 bg-rotaract-pink/10 border border-rotaract-pink/15 text-rotaract-darkpink rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-primary/10 border border-primary/15 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
                 <FaEnvelope className="text-xl" />
               </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-rotaract-darkpink">Stay Connected</h2>
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-primary">Stay Connected</h2>
               <p className="text-gray-700 mt-3 text-lg">
                 Get updates on volunteering, socials, and guest speakers.
               </p>
@@ -181,11 +181,11 @@ export default function ContactPage() {
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="flex-1 max-w-md w-full px-5 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-rotaract-pink"
+                  className="flex-1 max-w-md w-full px-5 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-xl bg-rotaract-pink text-white font-semibold hover:bg-rotaract-darkpink transition-colors whitespace-nowrap"
+                  className="px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-600 transition-colors whitespace-nowrap"
                 >
                   Join Newsletter
                 </button>
@@ -204,7 +204,7 @@ export default function ContactPage() {
             {/* Form */}
             <div className="p-8 md:p-12 flex flex-col justify-center gap-8">
               <div>
-                <h2 className="text-3xl font-bold text-rotaract-darkpink mb-2">Get in Touch</h2>
+                <h2 className="text-3xl font-bold text-primary mb-2">Get in Touch</h2>
                 <p className="text-gray-700">Have a question about membership or volunteering? Send us a message.</p>
                 <p className="text-sm text-gray-500 mt-2 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm text-primary">schedule</span>
@@ -324,7 +324,7 @@ export default function ContactPage() {
               <div className="absolute bottom-6 left-6 right-6 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2 lg:left-12 lg:right-12">
                 <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/30">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-rotaract-pink/10 border border-rotaract-pink/15 flex items-center justify-center shrink-0 text-rotaract-darkpink">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0 text-primary">
                       <FaMapMarkerAlt />
                     </div>
                     <div>
@@ -335,7 +335,7 @@ export default function ContactPage() {
                         Every 2nd &amp; 4th Thursday, 7:00–9:00 PM EST
                       </p>
                       <a
-                        className="inline-flex items-center gap-1 text-rotaract-pink text-xs font-semibold mt-3 hover:text-rotaract-darkpink transition-colors"
+                        className="inline-flex items-center gap-1 text-primary text-xs font-semibold mt-3 hover:text-primary-600 transition-colors"
                         href="https://www.google.com/maps/search/?api=1&query=216+East+45th+Street,+New+York,+NY+10017"
                         target="_blank"
                         rel="noopener noreferrer"
