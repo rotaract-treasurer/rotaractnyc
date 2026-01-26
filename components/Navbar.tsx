@@ -104,6 +104,12 @@ const Navbar = () => {
             <SearchButton />
             <DarkModeToggle />
             <Link
+              href="/membership-requirements"
+              className="px-4 py-2 rounded-lg border border-primary/30 text-primary font-semibold hover:bg-primary/5 transition-colors"
+            >
+              Join Us
+            </Link>
+            <Link
               href="/portal/login"
               className="btn-primary"
             >
@@ -171,13 +177,22 @@ const Navbar = () => {
                   )}
                 </div>
               ))}
-              <Link
-                href="/portal/login"
-                className="btn-primary w-full text-center mt-4"
-                onClick={() => setIsOpen(false)}
-              >
-                Member Login
-              </Link>
+              <div className="flex flex-col gap-2 mt-4">
+                <Link
+                  href="/membership-requirements"
+                  className="w-full text-center px-4 py-3 rounded-lg border border-primary/30 text-primary font-semibold hover:bg-primary/5 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Join Us
+                </Link>
+                <Link
+                  href="/portal/login"
+                  className="btn-primary w-full text-center"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Member Login
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -27,9 +27,9 @@ export default function Home() {
           transition={{ duration: 1 }}
           className="relative z-20 max-w-[1280px] px-6 text-center flex flex-col items-center gap-6"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 border border-accent/40 backdrop-blur-sm mb-4">
-            <span className="material-symbols-outlined text-accent text-sm">star</span>
-            <span className="text-accent text-xs font-bold uppercase tracking-widest">Est. New York City</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-2">
+            <span className="material-symbols-outlined text-accent text-sm">verified</span>
+            <span className="text-white/90 text-xs font-bold uppercase tracking-widest">Rotary International Partner</span>
           </div>
           
           <h1 className="text-white text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] drop-shadow-sm">
@@ -39,24 +39,24 @@ export default function Home() {
             </span>
           </h1>
           
-          <p className="text-gray-100 text-lg md:text-xl font-medium max-w-2xl leading-relaxed opacity-90">
-            The Rotaract Club of NYC brings together people ages 18-30 to exchange ideas with leaders in the community, develop leadership skills, and have fun through service.
+          <p className="text-gray-100 text-lg md:text-xl font-medium max-w-xl leading-relaxed">
+            Join NYC&apos;s community of young professionals (18-30) making an impact through service, leadership, and global fellowship.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
+          <div className="flex flex-col sm:flex-row gap-4 mt-6">
             <Link
               href="/membership-requirements"
-              className="h-12 px-8 bg-accent hover:bg-[#c59d52] text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2"
+              className="h-14 px-10 bg-primary hover:bg-primary-600 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-lg"
             >
-              Become a Member
+              Join Us
               <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </Link>
             <Link
-              href="/about"
-              className="h-12 px-8 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+              href="/events"
+              className="h-14 px-8 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
             >
-              <span className="material-symbols-outlined text-lg">play_circle</span>
-              Learn Our Story
+              <span className="material-symbols-outlined text-lg">calendar_today</span>
+              See Upcoming Events
             </Link>
           </div>
         </motion.div>
@@ -80,28 +80,35 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
-          {[
-            { value: '5k+', label: 'Service Hours' },
-            { value: '120', label: 'Active Members' },
-            { value: '$50k', label: 'Funds Raised' },
-            { value: '15', label: 'Global Partners' },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="text-center"
-            >
-              <div className="text-4xl md:text-5xl font-black text-accent mb-2">{stat.value}</div>
-              <div className="text-sm font-bold uppercase tracking-wider text-text-muted dark:text-gray-400">
-                {stat.label}
-              </div>
-            </motion.div>
-          ))}
+      <section className="py-16 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-background-dark">
+        <div className="max-w-[1280px] mx-auto px-6">
+          <div className="text-center mb-10">
+            <p className="text-sm font-bold uppercase tracking-wider text-primary mb-2">Our Impact Since 2010</p>
+            <h3 className="text-2xl font-bold text-text-main dark:text-white">Numbers That Matter</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { value: '5k+', label: 'Service Hours', icon: 'schedule' },
+              { value: '120', label: 'Active Members', icon: 'groups' },
+              { value: '$50k', label: 'Funds Raised', icon: 'volunteer_activism' },
+              { value: '15', label: 'Global Partners', icon: 'public' },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                className="text-center p-6 rounded-xl bg-slate-50 dark:bg-surface-dark"
+              >
+                <span className="material-symbols-outlined text-primary text-2xl mb-3">{stat.icon}</span>
+                <div className="text-3xl md:text-4xl font-black text-primary mb-1">{stat.value}</div>
+                <div className="text-sm font-medium text-text-muted dark:text-gray-400">
+                  {stat.label}
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -250,25 +257,28 @@ export default function Home() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="relative z-10 max-w-3xl mx-auto flex flex-col gap-8 items-center"
+          className="relative z-10 max-w-3xl mx-auto flex flex-col gap-6 items-center"
         >
+          <span className="material-symbols-outlined text-white/30 text-6xl">diversity_3</span>
           <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">
             Ready to make a difference?
           </h2>
-          <p className="text-blue-100 text-lg md:text-xl font-medium max-w-xl">
-            Join us at our next meeting to meet the members and see what Rotaract NYC is all about.
+          <p className="text-white/80 text-lg md:text-xl font-medium max-w-xl">
+            Join us at our next meeting—no commitment required. Meet members, learn about projects, and see if Rotaract is right for you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <Link
               href="/meetings"
-              className="h-14 px-8 bg-accent hover:bg-white hover:text-primary text-white font-bold text-lg rounded-lg transition-all shadow-xl flex items-center justify-center gap-2"
+              className="h-14 px-8 bg-white hover:bg-accent text-primary hover:text-white font-bold text-lg rounded-lg transition-all shadow-xl flex items-center justify-center gap-2"
             >
+              <span className="material-symbols-outlined">event</span>
               Attend a Meeting
             </Link>
             <Link
               href="/contact"
-              className="h-14 px-8 bg-transparent border-2 border-white/30 hover:bg-white/10 text-white font-bold text-lg rounded-lg transition-all flex items-center justify-center gap-2"
+              className="h-14 px-8 bg-transparent border-2 border-white/40 hover:bg-white/10 text-white font-bold text-lg rounded-lg transition-all flex items-center justify-center gap-2"
             >
+              <span className="material-symbols-outlined">mail</span>
               Contact Us
             </Link>
           </div>

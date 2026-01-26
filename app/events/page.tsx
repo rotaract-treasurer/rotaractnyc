@@ -675,7 +675,41 @@ export default function EventsPage() {
                         {event.description}
                       </p>
 
-                      {event.startDate ? (
+                      {event.category === 'upcoming' && event.startDate ? (
+                        <div className="mt-5 flex flex-col gap-3">
+                          {/* Primary RSVP action */}
+                          <a
+                            href={`mailto:rotaractnewyorkcity@gmail.com?subject=RSVP: ${encodeURIComponent(event.title)}&body=Hi, I would like to RSVP for ${encodeURIComponent(event.title)} on ${event.date}.`}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-600"
+                          >
+                            <span className="material-symbols-outlined text-lg">how_to_reg</span>
+                            RSVP for This Event
+                          </a>
+                          
+                          {/* Calendar actions */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {googleUrl ? (
+                              <a
+                                href={googleUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-surface-light px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-surface-dark dark:text-slate-200 dark:hover:bg-slate-700"
+                              >
+                                <span className="material-symbols-outlined text-sm">calendar_add_on</span>
+                                Add to Calendar
+                              </a>
+                            ) : null}
+
+                            <a
+                              href={`/api/public/events/ics?id=${encodeURIComponent(event.id)}`}
+                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-surface-light px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-surface-dark dark:text-slate-200 dark:hover:bg-slate-700"
+                            >
+                              <span className="material-symbols-outlined text-sm">download</span>
+                              .ics File
+                            </a>
+                          </div>
+                        </div>
+                      ) : event.startDate ? (
                         <div className="mt-5 flex flex-wrap items-center gap-2">
                           {googleUrl ? (
                             <a

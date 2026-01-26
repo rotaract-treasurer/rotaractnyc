@@ -14,7 +14,7 @@ export default function DuesPage() {
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10">
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-8 text-primary-dark">
+            <div className="size-8 text-primary">
               <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                 <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" />
               </svg>
@@ -22,7 +22,7 @@ export default function DuesPage() {
             <h2 className="text-lg font-extrabold tracking-tight">Rotaract NYC</h2>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="/" className="text-sm font-medium hover:text-primary-dark transition-colors">
+            <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
               Club Site
             </Link>
             <Link href="/" className="bg-gray-100 dark:bg-white/10 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
@@ -62,13 +62,13 @@ export default function DuesPage() {
               <div className="flex justify-between items-end mb-8">
                 <div>
                   <h2 className="text-2xl font-extrabold tracking-tight mb-1">Where your $150 goes</h2>
-                  <p className="text-primary-dark font-bold flex items-center gap-1">
+                  <p className="text-primary font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">verified</span>
                     100% NYC focused initiatives
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-4xl font-black text-text-main dark:text-white">$150</span>
+                  <span className="text-4xl font-black text-primary">$150</span>
                   <p className="text-xs text-text-muted font-bold uppercase tracking-wider">Annual Dues</p>
                 </div>
               </div>
@@ -147,10 +147,32 @@ export default function DuesPage() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-white/5 flex items-center gap-3">
-                <div className="size-2 rounded-full bg-accent" />
-                <p className="text-sm font-semibold text-accent uppercase tracking-widest">
+                <div className="size-2 rounded-full bg-primary" />
+                <p className="text-sm font-semibold text-primary uppercase tracking-widest">
                   Rotaract NYC is a 501(c)(3) non-profit
                 </p>
+              </div>
+            </div>
+            
+            {/* FAQ Section */}
+            <div className="bg-white dark:bg-surface-dark p-8 rounded-xl shadow-soft border border-gray-200 dark:border-white/5">
+              <h3 className="text-xl font-extrabold mb-6">Frequently Asked Questions</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-bold text-text-main dark:text-white">What&apos;s included in my dues?</h4>
+                  <p className="text-sm text-text-muted mt-1">Full access to all club meetings, events, service projects, networking opportunities, and Rotary International affiliation.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-text-main dark:text-white">Can I get a refund?</h4>
+                  <p className="text-sm text-text-muted mt-1">Dues are non-refundable but can be transferred to another member within 30 days if needed.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-text-main dark:text-white">When are dues collected?</h4>
+                  <p className="text-sm text-text-muted mt-1">Dues are collected annually starting July 1st. New members can join anytime with pro-rated dues.</p>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-white/5">
+                <p className="text-sm text-text-muted">Questions? Email <a href="mailto:treasury@rotaractnyc.org" className="text-primary font-semibold hover:underline">treasury@rotaractnyc.org</a></p>
               </div>
             </div>
           </div>
@@ -235,14 +257,14 @@ export default function DuesPage() {
                     <input
                       type="text"
                       placeholder="123"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-white/10 dark:bg-white/5 focus:ring-2 focus:ring-primary-dark focus:border-primary-dark transition-all"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-white/10 dark:bg-white/5 focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-primary-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary-dark/20 hover:bg-primary-dark/90 transition-all flex items-center justify-center gap-2 mt-6"
+                  className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary-600 transition-all flex items-center justify-center gap-2 mt-6"
                 >
                   <span>Complete $150 Payment</span>
                   <span className="material-symbols-outlined">lock</span>
@@ -268,12 +290,12 @@ export default function DuesPage() {
       <footer className="py-12 border-t border-gray-200 dark:border-white/10 text-center">
         <p className="text-sm text-text-muted">
           Questions? Email our treasurer at{' '}
-          <a href="mailto:treasury@rotaractnyc.org" className="text-primary-dark font-bold hover:underline">
+          <a href="mailto:treasury@rotaractnyc.org" className="text-primary font-bold hover:underline">
             treasury@rotaractnyc.org
           </a>
         </p>
         <p className="text-xs text-text-muted/60 mt-2">
-          © 2024 Rotaract Club of NYC. Member of Rotary International District 7230.
+          © 2026 Rotaract Club of NYC. Member of Rotary International District 7230.
         </p>
       </footer>
     </div>

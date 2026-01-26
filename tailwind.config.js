@@ -13,19 +13,19 @@ module.exports = {
         // UNIFIED DESIGN SYSTEM - Rotaract NYC
         // ========================================
         
-        // Primary Brand Colors
+        // Primary Brand Colors - Rotary Cranberry
         primary: {
-          DEFAULT: '#8f29a3',
-          50: '#faf5fb',
-          100: '#f4eaf7',
-          200: '#ebd5f0',
-          300: '#dbb4e3',
-          400: '#c687d2',
-          500: '#8f29a3',
-          600: '#7f248f',
-          700: '#6a1e77',
-          800: '#591a64',
-          900: '#4b1854',
+          DEFAULT: '#9B1B30',
+          50: '#fef2f3',
+          100: '#fde6e8',
+          200: '#fbd0d6',
+          300: '#f7aab5',
+          400: '#f07a8d',
+          500: '#e54d66',
+          600: '#d12d4a',
+          700: '#9B1B30',
+          800: '#8b1a2d',
+          900: '#771a2c',
         },
         
         // Secondary/Accent Colors
@@ -58,10 +58,11 @@ module.exports = {
           900: '#005dAA',
         },
         
-        // Legacy Rotaract Pink (backward compatibility)
+        // Rotary/Rotaract Brand Colors
         rotaract: {
-          pink: '#ac005a',
-          darkpink: '#5a0732',
+          pink: '#9B1B30',
+          darkpink: '#771a2c',
+          cranberry: '#9B1B30',
           white: '#ffffff',
           blue: '#005dAA',
         },

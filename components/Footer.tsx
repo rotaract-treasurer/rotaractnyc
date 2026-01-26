@@ -101,25 +101,28 @@ const Footer = async () => {
                 href={settings.facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Facebook"
                 className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
-                <FaFacebook />
+                <FaFacebook aria-hidden="true" />
               </a>
               <a
                 href={settings.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Connect with us on LinkedIn"
                 className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
-                <FaLinkedin />
+                <FaLinkedin aria-hidden="true" />
               </a>
               <a
                 href={settings.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
                 className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-2xl text-text-secondary dark:text-text-secondary-dark hover:border-primary/30 hover:text-primary dark:hover:text-primary-400 transition-colors"
               >
-                <FaInstagram />
+                <FaInstagram aria-hidden="true" />
               </a>
             </div>
             <div className="mt-6">

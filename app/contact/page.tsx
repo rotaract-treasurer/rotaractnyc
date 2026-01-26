@@ -206,25 +206,31 @@ export default function ContactPage() {
               <div>
                 <h2 className="text-3xl font-bold text-rotaract-darkpink mb-2">Get in Touch</h2>
                 <p className="text-gray-700">Have a question about membership or volunteering? Send us a message.</p>
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                  We typically respond within 24-48 hours
+                </p>
               </div>
 
               <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
                 {error ? (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">error</span>
                     {error}
                   </div>
                 ) : null}
 
                 {success ? (
-                  <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-                    Message sent. Thanks for reaching out!
+                  <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                    Message sent successfully! We'll be in touch soon.
                   </div>
                 ) : null}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <label htmlFor="name" className="text-sm font-semibold text-gray-700 ml-1">
-                      Name
+                      Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -232,13 +238,13 @@ export default function ContactPage() {
                       name="name"
                       required
                       placeholder="Jane Doe"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-rotaract-pink"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <label htmlFor="email" className="text-sm font-semibold text-gray-700 ml-1">
-                      Email
+                      Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -246,7 +252,7 @@ export default function ContactPage() {
                       name="email"
                       required
                       placeholder="jane@example.com"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-rotaract-pink"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                 </div>
@@ -258,7 +264,7 @@ export default function ContactPage() {
                   <select
                     id="topic"
                     name="topic"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-rotaract-pink"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     defaultValue="Membership Inquiry"
                   >
                     <option>Membership Inquiry</option>
@@ -267,6 +273,7 @@ export default function ContactPage() {
                     <option>Partnerships</option>
                     <option>Other</option>
                   </select>
+                  <p className="text-xs text-gray-500 ml-1">Select the topic that best describes your inquiry</p>
                 </div>
 
                 {/* Keep subject field for compatibility, but hide it from the UI */}
@@ -274,24 +281,34 @@ export default function ContactPage() {
 
                 <div className="space-y-1.5">
                   <label htmlFor="message" className="text-sm font-semibold text-gray-700 ml-1">
-                    Message
+                    Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     id="message"
                     name="message"
                     required
                     rows={5}
-                    placeholder="How can we help you?"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-rotaract-pink resize-none"
+                    placeholder="How can we help you? Please include any relevant details..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 w-full bg-gray-900 text-white font-semibold rounded-xl py-3.5 hover:opacity-90 transition-opacity disabled:opacity-60"
+                  className="mt-2 w-full bg-primary text-white font-semibold rounded-xl py-3.5 hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Sending…' : 'Send Message'}
+                  {loading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined">send</span>
+                      Send Message
+                    </>
+                  )}
                 </button>
               </form>
             </div>
