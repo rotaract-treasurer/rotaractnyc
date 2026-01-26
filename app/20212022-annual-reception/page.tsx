@@ -57,34 +57,38 @@ export default function AnnualReception20212022Page() {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-background-dark">
       {/* Hero */}
-      <section className="relative pt-32 pb-14 overflow-hidden bg-white">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-pink/10 blur-3xl" />
-        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-darkpink/10 blur-3xl" />
+      <section className="relative pt-32 pb-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary-800"></div>
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.4\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')" }}></div>
 
-        <div className="container mx-auto px-4 relative max-w-5xl">
+        <div className="container mx-auto px-4 relative z-10 max-w-5xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-rotaract-darkpink tracking-tight">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-6">
+              <span className="material-symbols-outlined text-accent text-sm">celebration</span>
+              <span className="text-white/90 text-sm font-semibold">Special Event</span>
+            </span>
+            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight">
               2021-2022 Annual Reception
             </h1>
-            <p className="mt-4 text-lg text-gray-700 leading-relaxed max-w-3xl">
+            <p className="mt-6 text-xl text-white/80 leading-relaxed max-w-3xl">
               A special evening celebrating the year&apos;s achievements, recognizing our members, partners, and supporters who made our service and fellowship possible.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/20212022"
-                className="inline-flex justify-center rounded-lg border border-rotaract-pink/30 bg-white px-6 py-3 font-semibold text-rotaract-pink hover:bg-rotaract-pink/5 transition-colors"
+                className="inline-flex items-center justify-center gap-2 h-14 px-8 border-2 border-white/30 text-white font-bold rounded-full transition-all hover:bg-white/10"
               >
                 View 2021-2022 Gallery
               </Link>
               <Link
                 href="/events"
-                className="inline-flex justify-center rounded-lg bg-rotaract-pink px-6 py-3 font-semibold text-white hover:bg-rotaract-darkpink transition-colors"
+                className="inline-flex items-center justify-center gap-2 h-14 px-8 bg-white text-primary font-bold rounded-full transition-all hover:bg-accent hover:text-white hover:scale-105 shadow-xl"
               >
                 Upcoming Events
               </Link>
@@ -114,7 +118,7 @@ export default function AnnualReception20212022Page() {
                       alt={`Annual reception ${index + 1}`}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-rotaract-darkpink/0 group-hover:bg-rotaract-darkpink/20 transition-colors duration-300" />
+                    <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/30 transition-colors duration-300" />
                   </div>
                 </motion.div>
               ))}
@@ -130,7 +134,7 @@ export default function AnnualReception20212022Page() {
           onClick={() => setSelectedImage(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white text-4xl hover:text-rotaract-pink"
+            className="absolute top-4 right-4 text-white text-4xl hover:text-accent"
             onClick={() => setSelectedImage(null)}
           >
             ×

@@ -191,7 +191,7 @@ export default function AdminEventDetailPage() {
   if (session.status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-pink" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     )
   }
@@ -215,7 +215,7 @@ export default function AdminEventDetailPage() {
           </p>
           <button
             onClick={() => router.push('/admin/events')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rotaract-pink hover:bg-rotaract-darkpink text-white rounded-lg font-semibold transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
           >
             <FaArrowLeft />
             Back to Events
@@ -234,7 +234,7 @@ export default function AdminEventDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 mb-6">
           <button
             onClick={() => router.push('/admin/events')}
-            className="hover:text-rotaract-pink transition-colors"
+            className="hover:text-primary transition-colors"
           >
             Events
           </button>
@@ -251,7 +251,7 @@ export default function AdminEventDetailPage() {
         {/* Hero Section */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
           {/* Event Image */}
-          <div className="relative h-64 md:h-80 w-full overflow-hidden bg-gradient-to-br from-rotaract-pink to-rotaract-darkpink">
+          <div className="relative h-64 md:h-80 w-full overflow-hidden bg-gradient-to-br from-primary to-primary-800">
             {event.imageUrl ? (
               <div
                 className="absolute inset-0 bg-cover bg-center"
@@ -286,8 +286,8 @@ export default function AdminEventDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               {/* Date & Time */}
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rotaract-pink/10 flex items-center justify-center">
-                  <FaClock className="text-rotaract-pink text-lg" />
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <FaClock className="text-primary text-lg" />
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
@@ -369,7 +369,7 @@ export default function AdminEventDetailPage() {
               </button>
               <button
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-rotaract-pink hover:bg-rotaract-darkpink text-white rounded-lg font-semibold transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
               >
                 <FaEdit />
                 Edit Event

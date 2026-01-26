@@ -27,7 +27,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Fundraising: 'bg-red-500 text-white',
   Charity: 'bg-red-500 text-white',
   Internal: 'bg-gray-700 text-white',
-  News: 'bg-rotaract-pink text-white',
+  News: 'bg-primary text-white',
 }
 
 interface ArticleViewProps {
@@ -86,7 +86,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-gray-100 z-50 no-print">
         <motion.div
-          className="h-full bg-gradient-to-r from-rotaract-blue to-rotaract-pink"
+          className="h-full bg-gradient-to-r from-rotaract-blue to-primary"
           style={{ width: `${readingProgress}%` }}
           initial={{ width: 0 }}
           transition={{ duration: 0.1 }}
@@ -237,7 +237,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
             </Link>
             <Link
               href="/contact"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-rotaract-blue to-rotaract-pink text-white font-bold hover:shadow-lg transition-all"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary-600 hover:shadow-lg transition-all"
             >
               Contact Us
             </Link>
@@ -252,7 +252,7 @@ export function ArticleView({ article: initialArticle, slug }: ArticleViewProps)
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-br from-rotaract-blue to-rotaract-pink p-8 md:p-12 rounded-2xl shadow-xl text-white text-center"
+            className="bg-primary p-8 md:p-12 rounded-2xl shadow-xl text-white text-center"
           >
             <h3 className="text-3xl font-bold mb-4">Stay Updated</h3>
             <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">

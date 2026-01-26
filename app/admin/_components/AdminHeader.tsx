@@ -18,13 +18,13 @@ export default function AdminHeader({
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-rotaract-darkpink">{title}</h1>
+            <h1 className="text-3xl font-bold text-primary">{title}</h1>
             {subtitle ? <p className="text-gray-600 mt-1">{subtitle}</p> : null}
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/admin/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-primary/30 text-primary rounded-lg transition-colors"
             >
               Dashboard
             </Link>

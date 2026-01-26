@@ -101,10 +101,9 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-pink/10 blur-3xl" />
-      <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-darkpink/10 blur-3xl" />
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-8">
+    <div className="relative min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-8 relative z-10 border border-gray-100">
         <div className="text-center">
           <Image
             src="/Rotaract%20Logo%20(1).png"
@@ -113,7 +112,7 @@ export default function AdminLogin() {
             height={100}
             className="mx-auto"
           />
-          <h2 className="mt-6 text-3xl font-bold text-rotaract-darkpink">
+          <h2 className="mt-6 text-3xl font-bold text-primary">
             Admin Portal
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -140,7 +139,7 @@ export default function AdminLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-rotaract-pink focus:border-rotaract-pink"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 placeholder="admin@rotaractnyc.org"
               />
             </div>
@@ -156,7 +155,7 @@ export default function AdminLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-rotaract-pink focus:border-rotaract-pink"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 placeholder="••••••••"
               />
             </div>
@@ -165,7 +164,7 @@ export default function AdminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-rotaract-pink hover:bg-rotaract-darkpink focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rotaract-pink disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>

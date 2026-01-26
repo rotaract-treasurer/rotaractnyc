@@ -371,7 +371,7 @@ export default function AdminPagesPage() {
               {state.slug === 'faq' ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold text-rotaract-darkpink">FAQs</h3>
+                    <h3 className="text-lg font-semibold text-primary">FAQs</h3>
                     <button
                       type="button"
                       onClick={() =>
@@ -383,7 +383,7 @@ export default function AdminPagesPage() {
                           }
                         })
                       }
-                      className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                      className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                     >
                       Add FAQ
                     </button>
@@ -462,7 +462,7 @@ export default function AdminPagesPage() {
 
                   return (
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-rotaract-darkpink">Membership Content</h3>
+                      <h3 className="text-lg font-semibold text-primary">Membership Content</h3>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Membership Form URL</label>
@@ -479,7 +479,7 @@ export default function AdminPagesPage() {
                           <button
                             type="button"
                             onClick={() => setData({ ...data, benefits: [...data.benefits, ''] })}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Benefit
                           </button>
@@ -535,7 +535,7 @@ export default function AdminPagesPage() {
                                 ],
                               })
                             }
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Requirement
                           </button>
@@ -617,7 +617,7 @@ export default function AdminPagesPage() {
                           <button
                             type="button"
                             onClick={() => setData({ ...data, membershipTypes: [...data.membershipTypes, ''] })}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Type
                           </button>
@@ -695,7 +695,7 @@ export default function AdminPagesPage() {
 
                   return (
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-rotaract-darkpink">Sister Clubs Content</h3>
+                      <h3 className="text-lg font-semibold text-primary">Sister Clubs Content</h3>
 
                       <div className="border border-gray-100 rounded-lg p-4">
                         <div className="flex items-center justify-between gap-3 mb-3">
@@ -703,7 +703,7 @@ export default function AdminPagesPage() {
                           <button
                             type="button"
                             onClick={() => setData({ ...data, introParagraphs: [...data.introParagraphs, ''] })}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Paragraph
                           </button>
@@ -747,7 +747,7 @@ export default function AdminPagesPage() {
                                 clubs: [...data.clubs, { name: '', sinceYear: '', location: '', presidents: '' }],
                               })
                             }
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Club
                           </button>
@@ -831,7 +831,7 @@ export default function AdminPagesPage() {
                           <button
                             type="button"
                             onClick={() => setData({ ...data, benefits: [...data.benefits, { title: '', description: '' }] })}
-                            className="px-3 py-2 text-sm bg-white border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-sm bg-white border border-primary/30 text-primary rounded-lg hover:bg-gray-50"
                           >
                             Add Benefit
                           </button>
@@ -892,7 +892,7 @@ export default function AdminPagesPage() {
                 <button
                   type="button"
                   onClick={() => setShowAdvanced((v) => !v)}
-                  className="text-sm text-rotaract-darkpink hover:underline"
+                  className="text-sm text-primary hover:underline"
                 >
                   {showAdvanced ? 'Hide' : 'Show'} advanced JSON preview
                 </button>
@@ -907,7 +907,7 @@ export default function AdminPagesPage() {
                 <button
                   onClick={save}
                   disabled={saving || !canSave}
-                  className="px-4 py-2 bg-rotaract-pink text-white rounded-lg hover:bg-rotaract-darkpink disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>

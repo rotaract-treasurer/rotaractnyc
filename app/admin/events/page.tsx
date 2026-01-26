@@ -185,7 +185,7 @@ export default function AdminEventsPage() {
   if (session.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-pink" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     )
   }
@@ -351,7 +351,7 @@ export default function AdminEventsPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Link
             href="/admin/events/new"
-            className="px-4 py-1.5 bg-rotaract-pink hover:bg-rotaract-darkpink text-white rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 bg-primary hover:bg-primary-600 text-white rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
           >
             <FaPlus className="text-base" />
             Create Event

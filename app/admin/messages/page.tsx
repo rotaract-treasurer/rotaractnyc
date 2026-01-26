@@ -90,7 +90,7 @@ export default function AdminMessagesPage() {
   if (session.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-pink" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     )
   }
@@ -103,7 +103,7 @@ export default function AdminMessagesPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-rotaract-darkpink flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
                 <FaEnvelope /> Messages
               </h1>
               <p className="text-gray-600 mt-1">View contact form messages</p>
@@ -111,7 +111,7 @@ export default function AdminMessagesPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/admin/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-rotaract-pink/30 text-rotaract-darkpink rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-primary/30 text-primary rounded-lg transition-colors"
               >
                 <FaArrowLeft /> Dashboard
               </Link>
@@ -147,7 +147,7 @@ export default function AdminMessagesPage() {
                 <div key={m.id} className="border border-gray-100 rounded-lg p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="font-semibold text-rotaract-darkpink">{m.subject}</div>
+                      <div className="font-semibold text-primary">{m.subject}</div>
                       <div className="text-sm text-gray-600">{m.name} · {m.email}</div>
                     </div>
                     <button
