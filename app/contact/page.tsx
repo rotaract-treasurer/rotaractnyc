@@ -1,18 +1,44 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { FaEnvelope, FaInstagram, FaLinkedin, FaMapMarkerAlt, FaTwitter } from 'react-icons/fa'
-import { useState } from 'react'
+import { FaEnvelope, FaInstagram, FaLinkedin, FaMapMarkerAlt, FaFacebook, FaArrowRight, FaClock, FaPhone, FaGlobe } from 'react-icons/fa'
+import { useState, useRef } from 'react'
+import Image from 'next/image'
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 30 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+  }
+}
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
 
 export default function ContactPage() {
   const router = useRouter()
+  const heroRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"]
+  })
+  
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
+  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-
   const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -60,294 +86,658 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="bg-white">
-      {/* Intro */}
-      <section className="relative overflow-hidden pt-14 pb-10">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-primary/10 blur-3xl" />
+    <div className="bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen">
+      {/* Premium Hero Section */}
+      <section ref={heroRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+          <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
+          <motion.div 
+            className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-primary/5 blur-3xl"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div 
+            className="absolute bottom-1/4 left-1/4 w-80 h-80 rounded-full bg-amber-500/5 blur-3xl"
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+          />
+        </div>
+
+        {/* Decorative grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:64px_64px]" />
+        
+        <motion.div 
+          style={{ opacity: heroOpacity, scale: heroScale }}
+          className="container mx-auto px-4 relative z-10 text-center"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary-300 text-sm font-medium mb-8"
+          >
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            We&apos;d love to hear from you
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6"
+          >
+            <span className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 dark:from-white dark:via-primary-300 dark:to-white bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+              Get in Touch
+            </span>
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed"
+          >
+            Reach out about membership, volunteering, partnerships, or upcoming events. 
+            We&apos;re here to help you make a difference.
+          </motion.p>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="mt-10 flex flex-wrap items-center justify-center gap-6"
+          >
+            <a 
+              href="#contact-form" 
+              className="group inline-flex items-center gap-3 px-8 py-4 bg-primary hover:bg-primary-600 text-white font-semibold rounded-2xl transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+            >
+              Send a Message
+              <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </a>
+            <a 
+              href="#location" 
+              className="inline-flex items-center gap-3 px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-0.5"
+            >
+              <FaMapMarkerAlt className="text-primary" />
+              Visit Us
+            </a>
+          </motion.div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-6 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-start justify-center p-2"
+          >
+            <motion.div className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* Quick Contact Cards */}
+      <section className="py-20 relative">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            {/* Email Card */}
+            <motion.a
+              href="mailto:rotaractnewyorkcity@gmail.com"
+              variants={fadeInUp}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 shadow-lg hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center mb-6 shadow-lg shadow-primary/25">
+                  <FaEnvelope className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Us</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Send us an email anytime</p>
+                <span className="inline-flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
+                  rotaractnewyorkcity@gmail.com
+                  <FaArrowRight className="text-sm" />
+                </span>
+              </div>
+            </motion.a>
+
+            {/* Location Card */}
+            <motion.a
+              href="#location"
+              variants={fadeInUp}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 shadow-lg hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-6 shadow-lg shadow-amber-500/25">
+                  <FaMapMarkerAlt className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Visit Us</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Join our weekly meetings</p>
+                <span className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-500 font-semibold group-hover:gap-3 transition-all">
+                  216 E 45th St, NYC
+                  <FaArrowRight className="text-sm" />
+                </span>
+              </div>
+            </motion.a>
+
+            {/* Meeting Times Card */}
+            <motion.div
+              variants={fadeInUp}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 shadow-lg hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25">
+                  <FaClock className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Meeting Times</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Every 2nd & 4th Thursday</p>
+                <span className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-500 font-semibold">
+                  7:00 – 9:00 PM EST
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Social Connect Section */}
+      <section className="py-20 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
         <div className="container mx-auto px-4 relative">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary tracking-tight">Contact</h1>
-            <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-700">
-              Reach out about membership, volunteering, partnerships, or upcoming events.
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300 text-sm font-semibold mb-4">
+              Connect With Us
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              Follow Our Journey
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Stay updated with our latest events, volunteer opportunities, and community impact.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Instagram */}
+            <motion.a
+              href="http://instagram.com/rotaractnyc"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 text-white shadow-xl hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+              <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-white/10 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-12">
+                  <FaInstagram className="text-4xl" />
+                  <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-semibold">Follow</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm mb-1">@rotaractnyc</p>
+                  <h3 className="text-2xl font-bold">Instagram</h3>
+                  <p className="text-white/70 text-sm mt-2">Photos, stories & reels</p>
+                </div>
+              </div>
+            </motion.a>
+
+            {/* LinkedIn */}
+            <motion.a
+              href="https://www.linkedin.com/company/rotaract-at-the-un-nyc/"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-xl hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+              <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-white/10 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-12">
+                  <FaLinkedin className="text-4xl" />
+                  <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-semibold">Connect</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm mb-1">Rotaract at the UN</p>
+                  <h3 className="text-2xl font-bold">LinkedIn</h3>
+                  <p className="text-white/70 text-sm mt-2">Professional network</p>
+                </div>
+              </div>
+            </motion.a>
+
+            {/* Facebook */}
+            <motion.a
+              href="https://www.facebook.com/rotaractnewyorkcity/"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+              <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-white/10 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-12">
+                  <FaFacebook className="text-4xl" />
+                  <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-semibold">Like</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm mb-1">Community page</p>
+                  <h3 className="text-2xl font-bold">Facebook</h3>
+                  <p className="text-white/70 text-sm mt-2">Events & updates</p>
+                </div>
+              </div>
+            </motion.a>
+
+            {/* All Socials */}
+            <motion.a
+              href="/follow-us"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-700 text-white shadow-xl hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.1)_0%,_transparent_50%)] group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-12">
+                  <FaGlobe className="text-4xl" />
+                  <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-semibold">Explore</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm mb-1">All platforms</p>
+                  <h3 className="text-2xl font-bold">More Links</h3>
+                  <p className="text-white/70 text-sm mt-2">Find us everywhere</p>
+                </div>
+              </div>
+            </motion.a>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Form Section */}
+      <section id="contact-form" className="py-24 relative">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+            {/* Left Column - Info */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="lg:sticky lg:top-32"
+            >
+              <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300 text-sm font-semibold mb-6">
+                Send a Message
+              </span>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+                Have a Question?<br />
+                <span className="text-primary">We&apos;re Here to Help</span>
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                Whether you&apos;re interested in joining our club, have questions about volunteering, 
+                or want to explore partnership opportunities, we&apos;d love to hear from you.
+              </p>
+
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                    <FaClock className="text-xl text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Quick Response</h4>
+                    <p className="text-gray-600 dark:text-gray-400">We typically respond within 24-48 hours</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                    <FaEnvelope className="text-xl text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Direct Support</h4>
+                    <p className="text-gray-600 dark:text-gray-400">rotaractnewyorkcity@gmail.com</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                    <FaMapMarkerAlt className="text-xl text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">In-Person Meetings</h4>
+                    <p className="text-gray-600 dark:text-gray-400">Every 2nd & 4th Thursday, 7-9 PM</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right Column - Form */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <form 
+                className="relative bg-white dark:bg-gray-800/50 rounded-3xl p-8 md:p-10 shadow-xl border border-gray-100 dark:border-gray-700/50"
+                onSubmit={handleSubmit}
+              >
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+                
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400 px-5 py-4 rounded-2xl flex items-center gap-3"
+                  >
+                    <span className="material-symbols-outlined text-lg">error</span>
+                    {error}
+                  </motion.div>
+                )}
+
+                {success && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 px-5 py-4 rounded-2xl flex items-center gap-3"
+                  >
+                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                    Message sent successfully! We&apos;ll be in touch soon.
+                  </motion.div>
+                )}
+
+                <div className="space-y-6 relative">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label htmlFor="name" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        required
+                        placeholder="Jane Doe"
+                        onFocus={() => setFocusedField('name')}
+                        onBlur={() => setFocusedField(null)}
+                        className={`w-full bg-gray-50 dark:bg-gray-900/50 border-2 rounded-xl px-5 py-4 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none transition-all duration-300 ${
+                          focusedField === 'name' 
+                            ? 'border-primary ring-4 ring-primary/10' 
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        required
+                        placeholder="jane@example.com"
+                        onFocus={() => setFocusedField('email')}
+                        onBlur={() => setFocusedField(null)}
+                        className={`w-full bg-gray-50 dark:bg-gray-900/50 border-2 rounded-xl px-5 py-4 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none transition-all duration-300 ${
+                          focusedField === 'email' 
+                            ? 'border-primary ring-4 ring-primary/10' 
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="topic" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      How can we help?
+                    </label>
+                    <select
+                      id="topic"
+                      name="topic"
+                      onFocus={() => setFocusedField('topic')}
+                      onBlur={() => setFocusedField(null)}
+                      className={`w-full bg-gray-50 dark:bg-gray-900/50 border-2 rounded-xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none transition-all duration-300 ${
+                        focusedField === 'topic' 
+                          ? 'border-primary ring-4 ring-primary/10' 
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                      defaultValue="Membership Inquiry"
+                    >
+                      <option>Membership Inquiry</option>
+                      <option>Volunteering Opportunities</option>
+                      <option>Guest Speaker Proposal</option>
+                      <option>Partnerships & Sponsorships</option>
+                      <option>Press & Media</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+
+                  <input type="hidden" name="subject" value="" />
+
+                  <div className="space-y-2">
+                    <label htmlFor="message" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Your Message <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      required
+                      rows={5}
+                      placeholder="Tell us more about how we can help you..."
+                      onFocus={() => setFocusedField('message')}
+                      onBlur={() => setFocusedField(null)}
+                      className={`w-full bg-gray-50 dark:bg-gray-900/50 border-2 rounded-xl px-5 py-4 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none transition-all duration-300 resize-none ${
+                        focusedField === 'message' 
+                          ? 'border-primary ring-4 ring-primary/10' 
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-primary to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-xl py-4 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                        Sending Message...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined">send</span>
+                        Send Message
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary-600 to-primary-800" />
+        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+        <motion.div 
+          className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-white/10 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.div 
+          className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-white/10 blur-3xl"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 8, repeat: Infinity, delay: 4 }}
+        />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-3xl mx-auto text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 text-white text-sm font-medium mb-8">
+              <FaEnvelope className="text-sm" />
+              Stay in the Loop
+            </div>
+
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Never Miss an Update
+            </h2>
+            <p className="text-xl text-white/80 mb-10">
+              Get the latest news on volunteering opportunities, social events, and guest speakers 
+              delivered straight to your inbox.
+            </p>
+
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 justify-center">
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="flex-1 max-w-md w-full px-6 py-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:border-white/40 focus:ring-4 focus:ring-white/10 transition-all"
+              />
+              <button
+                type="submit"
+                className="px-8 py-4 rounded-2xl bg-white text-primary font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 whitespace-nowrap"
+              >
+                Subscribe Now
+              </button>
+            </form>
+
+            <p className="text-white/60 text-sm mt-6">
+              We respect your privacy. Unsubscribe at any time.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Social bento */}
-      <section className="pb-10">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.a
-              href="http://instagram.com/rotaractnyc"
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-gradient-to-br from-primary to-primary-800 text-white shadow-soft hover:shadow-soft-hover transition-all"
-            >
-              <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-              <div className="relative flex items-start justify-between">
-                <div className="bg-white/15 border border-white/20 rounded-xl p-3">
-                  <FaInstagram className="text-3xl" />
-                </div>
-                <span className="text-white/70 group-hover:text-white transition-colors text-sm font-semibold">Open</span>
-              </div>
-              <div className="relative mt-10">
-                <div className="text-3xl font-extrabold tracking-tight">Instagram</div>
-                <div className="mt-1 text-white/90 font-medium">See photos & stories</div>
-                <div className="mt-1 text-white/70 text-sm">@rotaractnyc</div>
-              </div>
-            </motion.a>
-
-            <motion.a
-              href="https://www.linkedin.com/company/rotaract-at-the-un-nyc/"
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.05 }}
-              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-primary text-white shadow-soft hover:shadow-soft-hover transition-all"
-            >
-              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
-              <div className="relative flex items-start justify-between">
-                <div className="bg-white/15 border border-white/20 rounded-xl p-3">
-                  <FaLinkedin className="text-3xl" />
-                </div>
-                <span className="text-white/70 group-hover:text-white transition-colors text-sm font-semibold">Open</span>
-              </div>
-              <div className="relative mt-10">
-                <div className="text-3xl font-extrabold tracking-tight">LinkedIn</div>
-                <div className="mt-1 text-white/90 font-medium">Connect professionally</div>
-                <div className="mt-1 text-white/70 text-sm">Rotaract at the UN (NYC)</div>
-              </div>
-            </motion.a>
-
-            <motion.a
-              href="/follow-us"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="group relative overflow-hidden rounded-2xl p-8 h-64 md:h-72 bg-primary-800 text-white shadow-soft hover:shadow-soft-hover transition-all"
-            >
-              <div className="absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-white/10" />
-              <div className="relative flex items-start justify-between">
-                <div className="bg-white/15 border border-white/20 rounded-xl p-3">
-                  <FaTwitter className="text-3xl" />
-                </div>
-                <span className="text-white/70 group-hover:text-white transition-colors text-sm font-semibold">Explore</span>
-              </div>
-              <div className="relative mt-10">
-                <div className="text-xs uppercase tracking-widest text-white/70">More</div>
-                <div className="mt-1 text-2xl font-extrabold tracking-tight">Follow Us</div>
-                <div className="mt-1 text-white/80 text-sm">All social links in one place</div>
-              </div>
-            </motion.a>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-10">
+      {/* Location Section */}
+      <section id="location" className="py-24 relative">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="rounded-2xl bg-gray-50 border border-gray-100 shadow-soft p-8 md:p-12 text-center relative overflow-hidden"
+            className="text-center mb-16"
           >
-            <div className="absolute -top-16 -left-16 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
-            <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
-            <div className="relative max-w-2xl mx-auto">
-              <div className="w-12 h-12 bg-primary/10 border border-primary/15 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
-                <FaEnvelope className="text-xl" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-primary">Stay Connected</h2>
-              <p className="text-gray-700 mt-3 text-lg">
-                Get updates on volunteering, socials, and guest speakers.
-              </p>
-
-              <form onSubmit={handleNewsletterSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-                <input
-                  type="email"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="flex-1 max-w-md w-full px-5 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-600 transition-colors whitespace-nowrap"
-                >
-                  Join Newsletter
-                </button>
-              </form>
-
-              <p className="text-xs text-gray-500 mt-3">We respect your privacy. Unsubscribe at any time.</p>
-            </div>
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300 text-sm font-semibold mb-4">
+              Our Location
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              Visit Us in Person
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Join us at our weekly meetings in the heart of Manhattan
+            </p>
           </motion.div>
-        </div>
-      </section>
 
-      {/* Contact + map split */}
-      <section className="pt-10 pb-16">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-soft">
-            {/* Form */}
-            <div className="p-8 md:p-12 flex flex-col justify-center gap-8">
-              <div>
-                <h2 className="text-3xl font-bold text-primary mb-2">Get in Touch</h2>
-                <p className="text-gray-700">Have a question about membership or volunteering? Send us a message.</p>
-                <p className="text-sm text-gray-500 mt-2 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-primary">schedule</span>
-                  We typically respond within 24-48 hours
-                </p>
-              </div>
-
-              <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-                {error ? (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <span className="material-symbols-outlined text-lg">error</span>
-                    {error}
-                  </div>
-                ) : null}
-
-                {success ? (
-                  <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <span className="material-symbols-outlined text-lg">check_circle</span>
-                    Message sent successfully! We'll be in touch soon.
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label htmlFor="name" className="text-sm font-semibold text-gray-700 ml-1">
-                      Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      required
-                      placeholder="Jane Doe"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="email" className="text-sm font-semibold text-gray-700 ml-1">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      required
-                      placeholder="jane@example.com"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="topic" className="text-sm font-semibold text-gray-700 ml-1">
-                    Topic
-                  </label>
-                  <select
-                    id="topic"
-                    name="topic"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    defaultValue="Membership Inquiry"
-                  >
-                    <option>Membership Inquiry</option>
-                    <option>Volunteering Opportunities</option>
-                    <option>Guest Speaker Proposal</option>
-                    <option>Partnerships</option>
-                    <option>Other</option>
-                  </select>
-                  <p className="text-xs text-gray-500 ml-1">Select the topic that best describes your inquiry</p>
-                </div>
-
-                {/* Keep subject field for compatibility, but hide it from the UI */}
-                <input type="hidden" name="subject" value="" />
-
-                <div className="space-y-1.5">
-                  <label htmlFor="message" className="text-sm font-semibold text-gray-700 ml-1">
-                    Message <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    required
-                    rows={5}
-                    placeholder="How can we help you? Please include any relevant details..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-2 w-full bg-primary text-white font-semibold rounded-xl py-3.5 hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined">send</span>
-                      Send Message
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-
-            {/* Map */}
-            <div className="relative min-h-[420px] w-full bg-gray-200 overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative rounded-3xl overflow-hidden shadow-2xl"
+          >
+            {/* Map Background */}
+            <div className="relative h-[500px] w-full">
               <div
-                className="absolute inset-0 bg-cover bg-center grayscale opacity-80"
+                className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: "url('/ce9ea973f79cb6988ad3e2945e3a87ae.jpg')" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent lg:bg-gradient-to-l lg:from-gray-900/60 lg:to-transparent" />
-
-              <div className="absolute bottom-6 left-6 right-6 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2 lg:left-12 lg:right-12">
-                <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/30">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0 text-primary">
-                      <FaMapMarkerAlt />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-gray-900/30" />
+              
+              {/* Location Card */}
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-2xl max-w-lg w-full border border-white/50"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-lg shadow-primary/25">
+                      <FaMapMarkerAlt className="text-2xl text-white" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900">Weekly Meetings</h4>
-                      <p className="text-gray-700 mt-1 text-sm leading-relaxed">
-                        216 East 45th Street<br />
-                        New York, NY 10017<br />
-                        Every 2nd &amp; 4th Thursday, 7:00–9:00 PM EST
-                      </p>
-                      <a
-                        className="inline-flex items-center gap-1 text-primary text-xs font-semibold mt-3 hover:text-primary-600 transition-colors"
-                        href="https://www.google.com/maps/search/?api=1&query=216+East+45th+Street,+New+York,+NY+10017"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Get Directions <span aria-hidden>→</span>
-                      </a>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Weekly Meetings</h3>
+                      <p className="text-primary font-semibold">Every 2nd & 4th Thursday</p>
                     </div>
                   </div>
-                </div>
+
+                  <div className="space-y-4 mb-8">
+                    <div className="flex items-start gap-3">
+                      <FaMapMarkerAlt className="text-primary mt-1 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">Address</p>
+                        <p className="text-gray-600 dark:text-gray-400">216 East 45th Street<br />New York, NY 10017</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <FaClock className="text-primary mt-1 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">Time</p>
+                        <p className="text-gray-600 dark:text-gray-400">7:00 PM – 9:00 PM EST</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=216+East+45th+Street,+New+York,+NY+10017"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-primary-600 text-white font-semibold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+                  >
+                    <FaMapMarkerAlt />
+                    Get Directions
+                    <FaArrowRight className="text-sm" />
+                  </a>
+                </motion.div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
     </div>

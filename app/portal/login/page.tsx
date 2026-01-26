@@ -32,17 +32,17 @@ export default function PortalLoginPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-light">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rotaract-blue"></div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-blue/10 blur-3xl" />
-      <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-rotaract-blue/10 blur-3xl" />
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-rotaract-blue/15 blur-3xl" />
+      <div className="absolute -bottom-56 -left-56 h-[640px] w-[640px] rounded-full bg-primary/10 blur-3xl" />
 
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-8">
+      <div className="relative max-w-md w-full bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 space-y-8 border border-white/50">
         <div className="text-center">
           <Image
             src="/Rotaract%20Logo%20(1).png"
@@ -52,8 +52,8 @@ export default function PortalLoginPage() {
             className="mx-auto h-12 w-auto"
             priority
           />
-          <h1 className="mt-6 text-3xl font-bold text-primary">Member Login</h1>
-          <p className="mt-2 text-sm text-gray-600">Sign in to access the member portal</p>
+          <h1 className="mt-6 text-3xl font-bold text-rotaract-blue">Member Portal</h1>
+          <p className="mt-2 text-sm text-gray-600">Sign in to access exclusive member content</p>
         </div>
 
         <div className="space-y-4">

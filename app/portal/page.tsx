@@ -792,7 +792,7 @@ export default function PortalDashboard() {
                 {searchQuery ? (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-rotaract-blue/90 text-white rounded-lg font-medium transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">close</span>
                     Clear Search
@@ -800,7 +800,7 @@ export default function PortalDashboard() {
                 ) : (
                   <a
                     href="/portal"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-rotaract-blue/90 text-white rounded-lg font-medium transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Create a Post
