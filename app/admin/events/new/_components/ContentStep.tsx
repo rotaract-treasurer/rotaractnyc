@@ -142,9 +142,9 @@ export default function ContentStep({ formData, updateFormData }: ContentStepPro
         </div>
 
         {/* Additional Info Cards */}
-        <div className="mt-2 p-5 rounded-2xl border border-blue-200/70 dark:border-blue-800/70 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm">
+        <div className="mt-2 p-5 rounded-2xl border border-amber-200/70 dark:border-amber-800/70 bg-amber-50/80 dark:bg-amber-900/20 shadow-sm">
           <div className="flex gap-3">
-            <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">lightbulb</span>
+            <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">lightbulb</span>
             <div>
               <p className="text-slate-900 dark:text-white font-bold text-sm mb-1">Writing Tips</p>
               <ul className="text-slate-600 dark:text-slate-400 text-xs space-y-1 list-disc list-inside">

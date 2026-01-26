@@ -242,8 +242,8 @@ export default function AdminMembersPage() {
         )
       case 'BOARD':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
             Board
           </span>
         )

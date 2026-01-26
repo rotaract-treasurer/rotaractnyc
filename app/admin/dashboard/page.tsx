@@ -176,7 +176,7 @@ export default function AdminDashboard() {
               </div>
               <Link
                 href="/admin/events"
-                className="text-sm font-medium text-primary hover:text-blue-700 transition-colors"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 View all
               </Link>
@@ -211,7 +211,7 @@ export default function AdminDashboard() {
               </div>
               <Link
                 href="/admin/members"
-                className="text-sm font-medium text-primary hover:text-blue-700 transition-colors"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 View all
               </Link>

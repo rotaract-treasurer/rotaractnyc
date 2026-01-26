@@ -281,7 +281,7 @@ export default function AdminPostsPage() {
               </button>
               <button
                 onClick={() => setShowNewPostModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/20 hover:bg-blue-700 transition-all active:scale-95"
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
               >
                 <span className="material-symbols-outlined text-[20px]">add</span>
                 Create New Post
@@ -596,7 +596,7 @@ export default function AdminPostsPage() {
                   <button
                     onClick={save}
                     disabled={saving || !form.title.trim() || !form.contentHtml.trim()}
-                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg shadow-primary/20"
+                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg shadow-primary/20"
                   >
                     {saving ? (
                       <>

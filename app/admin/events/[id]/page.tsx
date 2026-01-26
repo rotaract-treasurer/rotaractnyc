@@ -174,7 +174,7 @@ export default function AdminEventDetailPage() {
 
   const getVisibilityBadge = (visibility?: string) => {
     const visibilityMap = {
-      public: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-400', icon: FaEye, label: 'Public' },
+      public: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-800 dark:text-cyan-400', icon: FaEye, label: 'Public' },
       member: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-800 dark:text-purple-400', icon: FaUsers, label: 'Members Only' },
       board: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-400', icon: FaUsers, label: 'Board Only' },
     }
@@ -312,8 +312,8 @@ export default function AdminEventDetailPage() {
               {/* Location */}
               {event.location && (
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <FaMapMarkerAlt className="text-blue-600 dark:text-blue-400 text-lg" />
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FaMapMarkerAlt className="text-primary text-lg" />
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">

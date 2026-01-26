@@ -206,8 +206,8 @@ export default function AdminDuesPage() {
       )}
 
       {/* Current Status */}
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
-        <h2 className="text-lg font-semibold mb-2">Current Status</h2>
+      <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg mb-6">
+        <h2 className="text-lg font-semibold mb-2 text-primary">Current Status</h2>
         <p>
           <strong>Current Rotary Year:</strong> {currentCycleId}
         </p>
@@ -257,7 +257,7 @@ export default function AdminDuesPage() {
           </div>
           <button
             onClick={handleCreateCycle}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+            className="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90"
           >
             Create Cycle
           </button>
@@ -296,7 +296,7 @@ export default function AdminDuesPage() {
                 <tr
                   key={cycle.id}
                   className={
-                    selectedCycle === cycle.id ? 'bg-blue-50' : 'bg-white'
+                    selectedCycle === cycle.id ? 'bg-primary/5' : 'bg-white'
                   }
                 >
                   <td className="px-4 py-2 text-sm">{cycle.id}</td>
@@ -327,7 +327,7 @@ export default function AdminDuesPage() {
                   <td className="px-4 py-2 text-sm space-x-2">
                     <button
                       onClick={() => setSelectedCycle(cycle.id)}
-                      className="text-blue-600 hover:underline text-sm"
+                      className="text-primary hover:underline text-sm"
                     >
                       View Members
                     </button>
@@ -435,7 +435,7 @@ export default function AdminDuesPage() {
                         <>
                           <button
                             onClick={() => openMarkPaidModal(member)}
-                            className="text-blue-600 hover:underline text-sm"
+                            className="text-primary hover:underline text-sm"
                           >
                             Mark Paid
                           </button>
@@ -487,7 +487,7 @@ export default function AdminDuesPage() {
               </button>
               <button
                 onClick={handleMarkPaidOffline}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
               >
                 Mark as Paid
               </button>

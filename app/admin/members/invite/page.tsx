@@ -117,17 +117,17 @@ export default function AdminInviteMemberPage() {
               />
             </div>
 
-            <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/70 rounded-2xl p-4">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-2xl p-4">
+              <h3 className="font-semibold text-primary dark:text-primary-300 mb-2">
                 What happens next?
               </h3>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800 dark:text-blue-200">
+              <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
                 <li>Member receives an email with a secure onboarding link</li>
                 <li>Member signs in and completes their profile</li>
                 <li>Member pays $85 annual dues via Stripe</li>
                 <li>Member gains full access to the portal</li>
               </ol>
-              <p className="mt-3 text-xs text-blue-700 dark:text-blue-300">
+              <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">
                 Note: Invitation links expire after 7 days
               </p>
             </div>

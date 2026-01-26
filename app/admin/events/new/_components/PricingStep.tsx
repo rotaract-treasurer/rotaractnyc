@@ -418,11 +418,11 @@ export default function PricingStep({ formData, updateFormData }: PricingStepPro
       )}
 
       {/* Info Box */}
-      <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/70 shadow-sm">
-        <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
-        <div className="flex-1 text-sm text-blue-900 dark:text-blue-100">
+      <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20 shadow-sm">
+        <span className="material-symbols-outlined text-primary">info</span>
+        <div className="flex-1 text-sm text-primary">
           <p className="font-semibold mb-1">Pricing Tips</p>
-          <ul className="text-xs space-y-1 text-blue-700 dark:text-blue-300">
+          <ul className="text-xs space-y-1 text-primary/80">
             <li>• Member discounts encourage membership renewals</li>
             <li>• Early bird pricing drives early registrations</li>
             <li>• Consider charging guests more to subsidize member costs</li>

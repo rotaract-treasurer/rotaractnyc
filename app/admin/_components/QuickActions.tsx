@@ -16,7 +16,7 @@ const quickActions: QuickAction[] = [
     description: 'Register new club member',
     icon: 'person_add',
     href: '/admin/members',
-    color: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20',
+    color: 'bg-primary/10 text-primary hover:bg-primary/20',
   },
   {
     title: 'Create Event',

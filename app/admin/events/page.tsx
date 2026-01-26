@@ -449,7 +449,7 @@ export default function AdminEventsPage() {
                             e.stopPropagation();
                             router.push(`/admin/events/${event.id}`);
                           }}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all transform hover:scale-105 bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md"
+                          className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all transform hover:scale-105 bg-primary hover:bg-primary/90 text-white hover:shadow-md"
                         >
                           View
                         </button>
