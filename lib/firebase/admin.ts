@@ -13,8 +13,9 @@ function getAdminApp(): App {
   }
 
   let credential;
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as ServiceAccount;
+  const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (saJson) {
+    const serviceAccount = JSON.parse(saJson) as ServiceAccount;
     credential = cert(serviceAccount);
   } else if (process.env.FIREBASE_PROJECT_ID) {
     credential = cert({
