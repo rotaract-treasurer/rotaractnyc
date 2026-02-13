@@ -1,861 +1,208 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
-import { getFirebaseClientApp } from '@/lib/firebase/client';
-import { Announcement, User } from '@/types/portal';
-import FeedCard from './_components/FeedCard';
-import { PostCard } from './_components/PostCard';
-import MemberSpotlight from './_components/MemberSpotlight';
-import UpcomingDeadlines from './_components/UpcomingDeadlines';
-import QuickLinks from './_components/QuickLinks';
-import DashboardSummary from './_components/DashboardSummary';
-import NewPostModal from './_components/NewPostModal';
-import { canManagePosts } from '@/lib/portal/roles';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Avatar from '@/components/ui/Avatar';
+import Badge from '@/components/ui/Badge';
+import Tabs from '@/components/ui/Tabs';
+import Link from 'next/link';
 
-interface CommunityPost {
-  id: string;
-  author: {
-    name: string;
-    role: string;
-    photoUrl?: string;
-    uid: string;
-  };
-  timestamp: string;
-  createdAt: Date;
-  content: {
-    title?: string;
-    body: string;
-    type: 'text' | 'images' | 'announcement' | 'document' | 'link' | 'event' | 'spotlight';
-    images?: string[];
-    document?: {
-      name: string;
-      size: string;
-      url: string;
-    };
-    link?: {
-      url: string;
-      title?: string;
-      description?: string;
-      image?: string;
-    };
-    event?: {
-      id: string;
-      title: string;
-      date: string;
-      time: string;
-    };
-    spotlight?: {
-      userId: string;
-      name: string;
-      role: string;
-      photoURL?: string;
-      quote: string;
-    };
-  };
-  likes: string[];
-  commentsCount: number;
-}
-
-interface BlogPost {
-  slug: string;
-  title: string;
-  date: string;
-  author: string;
-  category: string;
-  excerpt: string;
-  content: string[];
-  published: boolean;
-  createdAt: Date;
-}
-
-type FeedItem = 
-  | { type: 'announcement'; data: Announcement; author?: User; sortDate: Date; pinned: boolean; likesCount: number }
-  | { type: 'post'; data: CommunityPost; sortDate: Date; pinned: boolean; likesCount: number }
-  | { type: 'blogPost'; data: BlogPost; sortDate: Date; pinned: boolean; likesCount: number };
+// Quick action items for the dashboard
+const quickActions = [
+  { label: 'Log Service Hours', href: '/portal/service-hours', icon: '⏱️' },
+  { label: 'View Events', href: '/portal/events', icon: '📅' },
+  { label: 'Member Directory', href: '/portal/directory', icon: '👥' },
+  { label: 'Pay Dues', href: '/portal/dues', icon: '💳' },
+];
 
 export default function PortalDashboard() {
-  const { loading, user, userData } = useAuth();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-  const [authors, setAuthors] = useState<Record<string, User>>({});
-  const [loadingData, setLoadingData] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'announcements' | 'posts'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hasMorePosts, setHasMorePosts] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastPostDoc, setLastPostDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const observerTarget = useRef(null);
-  const POSTS_PER_PAGE = 10;
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const canCreatePosts = canManagePosts(userData?.role);
-
-  useEffect(() => {
-    if (!loading) {
-      loadFeed();
-    }
-  }, [loading]);
-
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const loadFeed = async () => {
-    const app = getFirebaseClientApp();
-    if (!app) {
-      setError('Firebase not initialized');
-      setLoadingData(false);
-      return;
-    }
-
-    const db = getFirestore(app);
-    
-    try {
-      setError(null);
-      
-      // Load announcements with real-time listener
-      const announcementsRef = collection(db, 'announcements');
-      const announcementsQuery = query(
-        announcementsRef,
-        where('visibility', '==', 'member'),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const unsubscribeAnnouncements = onSnapshot(announcementsQuery, async (snapshot) => {
-        const announcementsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Announcement[];
-        
-        setAnnouncements(announcementsData);
-        
-        // Load author data
-        const uniqueAuthors = Array.from(new Set(announcementsData.map(a => a.createdBy)));
-        const authorsData: Record<string, User> = {};
-        
-        await Promise.all(
-          uniqueAuthors.map(async (uid) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', uid));
-              if (userDoc.exists()) {
-                authorsData[uid] = { uid, ...userDoc.data() } as User;
-              }
-            } catch (error) {
-              console.error(`Error loading author ${uid}:`, error);
-            }
-          })
-        );
-        
-        setAuthors(authorsData);
-      }, (error) => {
-        console.error('Error loading announcements:', error);
-        setError(error.message);
-      });
-
-      // Load initial community posts with real-time listener
-      const postsRef = collection(db, 'communityPosts');
-      const postsQuery = query(postsRef, orderBy('createdAt', 'desc'), limit(POSTS_PER_PAGE));
-
-      const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
-        const loadedPosts = snapshot.docs.map((doc) => {
-          const data = doc.data() as any;
-          const createdAt: Date | null = data.createdAt?.toDate ? data.createdAt.toDate() : null;
-
-          return {
-            id: doc.id,
-            author: {
-              name: String(data.authorName || 'Member'),
-              role: String(data.authorRole || 'Member'),
-              photoUrl: data.authorPhotoURL ? String(data.authorPhotoURL) : undefined,
-              uid: data.authorUid || '',
-            },
-            timestamp: createdAt ? formatTimeAgo(createdAt) : '',
-            createdAt: createdAt || new Date(),
-            content: {
-              title: data.title ? String(data.title) : undefined,
-              body: String(data.body || ''),
-              type: (data.type as CommunityPost['content']['type']) || 'text',
-              images: Array.isArray(data.images) ? (data.images as string[]) : undefined,
-              document: data.document ? (data.document as CommunityPost['content']['document']) : undefined,
-              link: data.link ? (data.link as CommunityPost['content']['link']) : undefined,
-              event: data.event ? (data.event as CommunityPost['content']['event']) : undefined,
-              spotlight: data.spotlight ? (data.spotlight as CommunityPost['content']['spotlight']) : undefined,
-            },
-            likes: Array.isArray(data.likes) ? data.likes : [],
-            commentsCount: Number(data.commentsCount || 0),
-          } as CommunityPost;
-        });
-
-        setCommunityPosts(loadedPosts);
-        setLastPostDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-        setHasMorePosts(snapshot.docs.length === POSTS_PER_PAGE);
-        setLoadingData(false);
-      }, (error) => {
-        console.error('Error loading community posts:', error);
-        setLoadingData(false);
-      });
-
-      // Load blog posts with real-time listener
-      const blogPostsRef = collection(db, 'posts');
-      const blogPostsQuery = query(
-        blogPostsRef,
-        where('published', '==', true)
-      );
-      
-      const unsubscribeBlogPosts = onSnapshot(blogPostsQuery, (snapshot) => {
-        const loadedBlogPosts = snapshot.docs
-          .map((doc) => {
-            const data = doc.data() as any;
-            // Parse date string to Date object
-            let createdAt: Date;
-            if (data.date) {
-              createdAt = new Date(data.date);
-            } else {
-              createdAt = new Date();
-            }
-
-            return {
-              slug: doc.id,
-              title: String(data.title || ''),
-              date: String(data.date || ''),
-              author: String(data.author || 'Rotaract Club of New York'),
-              category: String(data.category || 'News'),
-              excerpt: String(data.excerpt || ''),
-              content: Array.isArray(data.content) ? data.content.map((x: any) => String(x)) : [],
-              published: data.published !== false,
-              createdAt,
-            } as BlogPost;
-          })
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-        setBlogPosts(loadedBlogPosts);
-      }, (error) => {
-        console.error('Error loading blog posts:', error);
-      });
-
-      // Cleanup listeners on unmount
-      return () => {
-        unsubscribeAnnouncements();
-        unsubscribePosts();
-        unsubscribeBlogPosts();
-      };
-    } catch (error: any) {
-      console.error('Error setting up feed listeners:', error);
-      setError(error.message);
-      setLoadingData(false);
-    }
-  };
-
-  const loadMorePosts = useCallback(async () => {
-    if (!lastPostDoc || loadingMore || !hasMorePosts) return;
-
-    setLoadingMore(true);
-    const app = getFirebaseClientApp();
-    if (!app) return;
-
-    const db = getFirestore(app);
-
-    try {
-      const postsRef = collection(db, 'communityPosts');
-      const nextQuery = query(
-        postsRef,
-        orderBy('createdAt', 'desc'),
-        startAfter(lastPostDoc),
-        limit(POSTS_PER_PAGE)
-      );
-
-      const snapshot = await getDocs(nextQuery);
-      
-      const morePosts = snapshot.docs.map((doc) => {
-        const data = doc.data() as any;
-        const createdAt: Date | null = data.createdAt?.toDate ? data.createdAt.toDate() : null;
-
-        return {
-          id: doc.id,
-          author: {
-            name: String(data.authorName || 'Member'),
-            role: String(data.authorRole || 'Member'),
-            photoUrl: data.authorPhotoURL ? String(data.authorPhotoURL) : undefined,
-            uid: data.authorUid || '',
-          },
-          timestamp: createdAt ? formatTimeAgo(createdAt) : '',
-          createdAt: createdAt || new Date(),
-          content: {
-            title: data.title ? String(data.title) : undefined,
-            body: String(data.body || ''),
-            type: (data.type as CommunityPost['content']['type']) || 'text',
-            images: Array.isArray(data.images) ? (data.images as string[]) : undefined,
-            document: data.document ? (data.document as CommunityPost['content']['document']) : undefined,
-            link: data.link ? (data.link as CommunityPost['content']['link']) : undefined,
-            event: data.event ? (data.event as CommunityPost['content']['event']) : undefined,
-            spotlight: data.spotlight ? (data.spotlight as CommunityPost['content']['spotlight']) : undefined,
-          },
-          likes: Array.isArray(data.likes) ? data.likes : [],
-          commentsCount: Number(data.commentsCount || 0),
-        } as CommunityPost;
-      });
-
-      setCommunityPosts(prev => [...prev, ...morePosts]);
-      setLastPostDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-      setHasMorePosts(snapshot.docs.length === POSTS_PER_PAGE);
-    } catch (error) {
-      console.error('Error loading more posts:', error);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [lastPostDoc, loadingMore, hasMorePosts]);
-
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMorePosts && !loadingMore) {
-          loadMorePosts();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
-      }
-    };
-  }, [hasMorePosts, loadingMore, loadMorePosts]);
-
-  if (loading || loadingData) {
-    return (
-      <main className="flex-1 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Dashboard Summary Skeleton */}
-          <div className="mb-8">
-            <div className="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 animate-pulse h-48"></div>
-          </div>
-
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            {/* Main Feed Skeleton */}
-            <div className="flex-1 w-full flex flex-col gap-6">
-              {/* Quick Actions Skeleton */}
-              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-5 animate-pulse">
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section Heading Skeleton */}
-              <div className="space-y-2">
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 animate-pulse"></div>
-              </div>
-
-              {/* Search and Filters Skeleton */}
-              <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4 space-y-4 animate-pulse">
-                <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
-                <div className="h-10 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg"></div>
-              </div>
-
-              {/* Feed Cards Skeleton */}
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-6 animate-pulse">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
-                  </div>
-                  <div className="flex gap-4 mt-4">
-                    <div className="h-8 bg-gray-100 dark:bg-[#2a2a2a] rounded w-20"></div>
-                    <div className="h-8 bg-gray-100 dark:bg-[#2a2a2a] rounded w-20"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Sidebar Skeleton */}
-            <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 space-y-6">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4 animate-pulse">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
-                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
-                    <div className="h-4 bg-gray-100 dark:bg-[#2a2a2a] rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </aside>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <span className="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
-          <p className="text-red-500 text-lg">Error loading announcements</p>
-          <p className="text-gray-500 text-sm mt-2">{error}</p>
-          {error.includes('index') && (
-            <p className="text-gray-500 text-sm mt-2">
-              A Firestore index may need to be created. Check the browser console for the index creation link.
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Merge and sort feed items
-  let feedItems: FeedItem[] = [
-    ...announcements.map(announcement => ({
-      type: 'announcement' as const,
-      data: announcement,
-      author: authors[announcement.createdBy],
-      sortDate: announcement.createdAt?.toDate?.() || new Date(0),
-      pinned: announcement.pinned || false,
-      likesCount: 0, // Announcements don't have likes
-    })),
-    ...communityPosts.map(post => ({
-      type: 'post' as const,
-      data: post,
-      sortDate: post.createdAt,
-      pinned: false,
-      likesCount: post.likes.length,
-    })),
-    ...blogPosts.map(post => ({
-      type: 'blogPost' as const,
-      data: post,
-      sortDate: post.createdAt,
-      pinned: false,
-      likesCount: 0, // Blog posts don't have likes yet
-    }))
-  ];
-
-  // Filter by type
-  if (filterType === 'announcements') {
-    feedItems = feedItems.filter(item => item.type === 'announcement');
-  } else if (filterType === 'posts') {
-    feedItems = feedItems.filter(item => item.type === 'post');
-  }
-
-  // Filter by search query
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    feedItems = feedItems.filter(item => {
-      if (item.type === 'announcement') {
-        return item.data.title?.toLowerCase().includes(query) || 
-               item.data.body?.toLowerCase().includes(query);
-      } else if (item.type === 'post') {
-        return item.data.content.title?.toLowerCase().includes(query) || 
-               item.data.content.body?.toLowerCase().includes(query);
-      } else if (item.type === 'blogPost') {
-        return item.data.title?.toLowerCase().includes(query) || 
-               item.data.excerpt?.toLowerCase().includes(query) ||
-               item.data.content?.join(' ').toLowerCase().includes(query);
-      }
-      return false;
-    });
-  }
-
-  // Sort items
-  feedItems.sort((a, b) => {
-    // Pinned announcements always come first
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    
-    // Then sort by preference
-    if (sortBy === 'newest') {
-      return b.sortDate.getTime() - a.sortDate.getTime();
-    } else {
-      // Sort by popularity (likes + comments)
-      const aPopularity = a.likesCount + (a.type === 'post' ? a.data.commentsCount : 0);
-      const bPopularity = b.likesCount + (b.type === 'post' ? b.data.commentsCount : 0);
-      return bPopularity - aPopularity;
-    }
-  });
+  const { member } = useAuth();
+  const [activeTab, setActiveTab] = useState('all');
+  const [postContent, setPostContent] = useState('');
 
   return (
-    <main className="flex-1 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Dashboard Summary */}
-        <div className="mb-8">
-          <DashboardSummary />
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Welcome */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
+            Welcome back, {member?.firstName || member?.displayName?.split(' ')[0] || 'Member'}! 👋
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Here&apos;s what&apos;s happening in your community.</p>
         </div>
+      </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* LEFT/MAIN COLUMN: The Feed */}
-          <div className="flex-1 w-full flex flex-col gap-6">
-            {/* Section Heading with Mobile Sidebar Toggle */}
-            <div className="flex flex-col gap-1 pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                    Announcements
-                  </h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Stay updated with the latest news and posts from your club
-                  </p>
-                </div>
-                {/* Mobile Sidebar Toggle Button */}
-                <button
-                  onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-                  className="lg:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
-                >
-                  <span className="material-symbols-outlined text-sm">
-                    {showMobileSidebar ? 'close' : 'menu'}
-                  </span>
-                  <span className="text-sm font-medium">Widgets</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Create Post Composer */}
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-4">
-              <div className="flex items-center gap-3">
-                {/* User Avatar */}
-                <div 
-                  className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center overflow-hidden"
-                  style={user?.photoURL ? { backgroundImage: `url(${user.photoURL})`, backgroundSize: 'cover' } : {}}
-                >
-                  {!user?.photoURL && (
-                    <span className="material-symbols-outlined text-gray-400 dark:text-gray-500">person</span>
-                  )}
-                </div>
-                
-                {/* Post Input Button */}
-                <button
-                  onClick={() => setShowNewPostModal(true)}
-                  className="flex-1 text-left px-4 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-gray-700 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
-                >
-                  What's on your mind, {userData?.name?.split(' ')[0] || 'Member'}?
-                </button>
-              </div>
-              
-              {/* Quick Action Buttons */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowNewPostModal(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-green-500 text-lg">image</span>
-                    <span className="hidden sm:inline">Photo</span>
-                  </button>
-                  <button
-                    onClick={() => setShowNewPostModal(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-blue-500 text-lg">event</span>
-                    <span className="hidden sm:inline">Event</span>
-                  </button>
-                  <button
-                    onClick={() => setShowNewPostModal(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-amber-500 text-lg">article</span>
-                    <span className="hidden sm:inline">Article</span>
-                  </button>
-                </div>
-                {canCreatePosts && (
-                  <button
-                    onClick={() => setShowNewPostModal(true)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-lg">add</span>
-                    Post
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-3">
-              {/* Type Filter */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg p-1">
-                <button
-                  onClick={() => setFilterType('all')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    filterType === 'all'
-                      ? 'bg-white dark:bg-[#3a3a3a] text-primary dark:text-white shadow-sm'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterType('announcements')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    filterType === 'announcements'
-                      ? 'bg-white dark:bg-[#3a3a3a] text-primary dark:text-white shadow-sm'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Announcements
-                </button>
-                <button
-                  onClick={() => setFilterType('posts')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    filterType === 'posts'
-                      ? 'bg-white dark:bg-[#3a3a3a] text-primary dark:text-white shadow-sm'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Posts
-                </button>
-              </div>
-
-              {/* Sort Options */}
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  onClick={() => setSortBy('newest')}
-                  className={`p-1.5 rounded-md transition-all ${
-                    sortBy === 'newest'
-                      ? 'text-primary dark:text-white bg-primary/10 dark:bg-white/10'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                  title="Sort by newest"
-                >
-                  <span className="material-symbols-outlined text-lg">schedule</span>
-                </button>
-                <button
-                  onClick={() => setSortBy('popular')}
-                  className={`p-1.5 rounded-md transition-all ${
-                    sortBy === 'popular'
-                      ? 'text-primary dark:text-white bg-primary/10 dark:bg-white/10'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                  title="Sort by popular"
-                >
-                  <span className="material-symbols-outlined text-lg">trending_up</span>
-                </button>
-                
-                {/* Search */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-32 sm:w-40 pl-8 pr-3 py-1.5 bg-gray-100 dark:bg-[#2a2a2a] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
-                  />
-                  <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-lg">search</span>
-                </div>
-                
-                <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline">{feedItems.length} items</span>
-              </div>
-            </div>
-
-          {/* Unified Feed */}
-          {feedItems.length > 0 ? (
-            <>
-              {feedItems.map((item) => {
-                if (item.type === 'announcement') {
-                  return (
-                    <FeedCard
-                      key={`announcement-${item.data.id}`}
-                      announcement={item.data}
-                      author={item.author ? {
-                        name: item.author.name,
-                        role: item.author.role,
-                        photoURL: item.author.photoURL
-                      } : undefined}
-                    />
-                  );
-                } else if (item.type === 'post') {
-                  return (
-                    <PostCard
-                      key={`post-${item.data.id}`}
-                      postId={item.data.id}
-                      author={item.data.author}
-                      timestamp={item.data.timestamp}
-                      content={item.data.content}
-                      likes={item.data.likes}
-                      commentsCount={item.data.commentsCount}
-                    />
-                  );
-                } else if (item.type === 'blogPost') {
-                  return (
-                    <div key={`blogPost-${item.data.slug}`} className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] overflow-hidden hover:shadow-lg transition-all">
-                      <div className="p-6">
-                        {/* Category Badge */}
-                        <div className="mb-3">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-[#003a70]/10 text-[#003a70] dark:bg-blue-500/10 dark:text-blue-400">
-                            {item.data.category}
-                          </span>
-                        </div>
-                        
-                        {/* Title */}
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 leading-tight hover:text-[#003a70] dark:hover:text-blue-400 transition-colors">
-                          <a href={`/portal/posts/${item.data.slug}`}>{item.data.title}</a>
-                        </h3>
-                        
-                        {/* Excerpt */}
-                        <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                          {item.data.excerpt}
-                        </p>
-                        
-                        {/* Meta Info */}
-                        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[16px]">person</span>
-                            {item.data.author}
-                          </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                            {item.data.date}
-                          </span>
-                        </div>
-                        
-                        {/* Read More Link */}
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#2a2a2a]">
-                          <a 
-                            href={`/portal/posts/${item.data.slug}`}
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-[#003a70] dark:text-blue-400 hover:gap-3 transition-all"
-                          >
-                            Read full article
-                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-              
-              {/* Loading More Indicator */}
-              {loadingMore && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rotaract-blue"></div>
-                </div>
-              )}
-
-              {/* Infinite Scroll Trigger */}
-              <div ref={observerTarget} className="h-4"></div>
-              
-              {/* End of Feed Indicator */}
-              {!hasMorePosts && feedItems.length > 0 && (
-                <div className="flex flex-col items-center justify-center py-8 gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
-                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
-                    <span className="w-2 h-2 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Main Feed Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Post Composer */}
+          <Card padding="md">
+            <div className="flex gap-3">
+              <Avatar src={member?.photoURL} alt={member?.displayName || ''} size="md" />
+              <div className="flex-1">
+                <textarea
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  placeholder="Share something with the community..."
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 border border-gray-200 dark:border-gray-700 resize-none"
+                  rows={3}
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex gap-2">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-cranberry hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Add image">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-cranberry hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Add link">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    </button>
                   </div>
-                  <p className="text-sm text-gray-400 dark:text-gray-600">You've reached the end</p>
+                  <Button size="sm" disabled={!postContent.trim()}>Post</Button>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a] p-12 text-center">
-              <div className="max-w-md mx-auto">
-                <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">
-                  {searchQuery ? 'search_off' : 'forum'}
-                </span>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {searchQuery ? 'No results found' : 'No posts yet'}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-                  {searchQuery 
-                    ? `No posts match "${searchQuery}". Try different keywords or clear your search.`
-                    : 'Be the first to share something with the club!'}
-                </p>
-                {searchQuery ? (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-rotaract-blue/90 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">close</span>
-                    Clear Search
-                  </button>
-                ) : (
-                  <a
-                    href="/portal"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rotaract-blue hover:bg-rotaract-blue/90 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Create a Post
-                  </a>
-                )}
               </div>
             </div>
-          )}
+          </Card>
+
+          {/* Feed Tabs */}
+          <Tabs
+            tabs={[
+              { id: 'all', label: 'All' },
+              { id: 'announcements', label: 'Announcements' },
+              { id: 'community', label: 'Community' },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+
+          {/* Sample Feed Items */}
+          <Card padding="md">
+            <div className="flex items-start gap-3">
+              <Avatar alt="Sarah Chen" size="md" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Sarah Chen</p>
+                  <Badge variant="cranberry">President</Badge>
+                  <span className="text-xs text-gray-400">2h ago</span>
+                </div>
+                <p className="mt-2 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                  🎉 Exciting news! Our Spring Service Day is confirmed for March 15th. We&apos;ll be cleaning up Central Park together! Sign up in the Events section. Let&apos;s make it our biggest turnout yet!
+                </p>
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-cranberry transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    12
+                  </button>
+                  <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-cranberry transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    3
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card padding="md">
+            <div className="flex items-start gap-3">
+              <Avatar alt="Michael Torres" size="md" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Michael Torres</p>
+                  <span className="text-xs text-gray-400">5h ago</span>
+                </div>
+                <p className="mt-2 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                  Just submitted my service hours for the food bank volunteering last Saturday. It was such an incredible experience! If you haven&apos;t logged your hours yet, don&apos;t forget to do so. 📝
+                </p>
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-cranberry transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    8
+                  </button>
+                  <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-cranberry transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    1
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {/* RIGHT COLUMN: Sidebar (Widgets) */}
-        {/* Mobile Sidebar Overlay */}
-        {showMobileSidebar && (
-          <div 
-            className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-            onClick={() => setShowMobileSidebar(false)}
-          />
-        )}
-        
         {/* Sidebar */}
-        <aside className={`
-          lg:block w-full lg:w-[320px] shrink-0 lg:sticky lg:top-20 space-y-6
-          fixed top-16 bottom-0 right-0 z-40 bg-gray-50 dark:bg-[#141414] lg:bg-transparent lg:z-auto p-6 lg:p-0
-          transform transition-transform duration-300 ease-in-out
-          ${showMobileSidebar ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-          overflow-y-auto lg:max-h-[calc(100vh-5rem)]
-        `}>
-          {/* Mobile Close Button */}
-          <button
-            onClick={() => setShowMobileSidebar(false)}
-            className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-
-          <MemberSpotlight />
-          <UpcomingDeadlines />
-          <QuickLinks />
-          
-          {/* Footer Links */}
-          <div className="text-xs text-gray-400 dark:text-gray-600 px-2 leading-relaxed">
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2">
-              <a href="/about" className="hover:underline">About</a>
-              <a href="/help" className="hover:underline">Privacy</a>
-              <a href="/help" className="hover:underline">Terms</a>
-              <a href="/help" className="hover:underline">Help Center</a>
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card padding="md">
+            <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-cranberry-50 dark:hover:bg-cranberry-900/10 hover:text-cranberry transition-colors text-center"
+                >
+                  <span className="text-xl">{action.icon}</span>
+                  <span className="text-xs font-medium">{action.label}</span>
+                </Link>
+              ))}
             </div>
-            <p>© 2024 Rotaract Club of NYC. All rights reserved.</p>
-          </div>
-        </aside>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display font-bold text-gray-900 dark:text-white">Upcoming Events</h3>
+              <Link href="/portal/events" className="text-xs text-cranberry hover:text-cranberry-800 font-medium">View all</Link>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-3 items-start">
+                <div className="text-center bg-cranberry-50 dark:bg-cranberry-900/20 rounded-lg px-2.5 py-1.5 shrink-0">
+                  <p className="text-xs text-cranberry font-bold">FEB</p>
+                  <p className="text-lg font-bold text-cranberry-800 dark:text-cranberry-300">26</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Monthly General Meeting</p>
+                  <p className="text-xs text-gray-500">7:00 PM · 216 E 45th St</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <div className="text-center bg-cranberry-50 dark:bg-cranberry-900/20 rounded-lg px-2.5 py-1.5 shrink-0">
+                  <p className="text-xs text-cranberry font-bold">MAR</p>
+                  <p className="text-lg font-bold text-cranberry-800 dark:text-cranberry-300">13</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Rotaract Day of Unity</p>
+                  <p className="text-xs text-gray-500">10:00 AM · Multiple Locations</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Member Spotlight */}
+          <Card padding="md">
+            <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">Member Spotlight ⭐</h3>
+            <div className="text-center">
+              <Avatar alt="Emily Washington" size="lg" className="mx-auto" />
+              <p className="mt-3 font-semibold text-gray-900 dark:text-white">Emily Washington</p>
+              <p className="text-xs text-gray-500">Service Chair</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Led 12 service projects this year with 200+ volunteer hours!
+              </p>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
-    
-    {/* New Post Modal */}
-    <NewPostModal isOpen={showNewPostModal} onClose={() => setShowNewPostModal(false)} />
-    </main>
   );
 }

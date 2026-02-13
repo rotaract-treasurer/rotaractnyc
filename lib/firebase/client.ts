@@ -1,74 +1,51 @@
-import { FirebaseApp, getApps, initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
-const REQUIRED_FIREBASE_CLIENT_ENV_VARS = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID',
-] as const
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
 
-function getClientConfig() {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+let _app: FirebaseApp | null = null;
 
-  if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
-    return null
-  }
-
-  return {
-    apiKey,
-    authDomain,
-    projectId,
-    storageBucket,
-    messagingSenderId,
-    appId,
-  }
+function getFirebaseApp(): FirebaseApp {
+  if (_app) return _app;
+  _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return _app;
 }
 
-export function getMissingFirebaseClientEnvVars(): string[] {
-  return REQUIRED_FIREBASE_CLIENT_ENV_VARS.filter((key) => {
-    const value = process.env[key]
-    return !value || value.trim().length === 0
-  })
+let _auth: Auth | null = null;
+let _db: Firestore | null = null;
+let _storage: FirebaseStorage | null = null;
+
+export function getFirebaseAuth(): Auth {
+  if (!_auth) _auth = getAuth(getFirebaseApp());
+  return _auth;
 }
 
-export function isFirebaseClientConfigured() {
-  return getClientConfig() !== null
+export function getFirebaseDb(): Firestore {
+  if (!_db) _db = getFirestore(getFirebaseApp());
+  return _db;
 }
 
-export function getFirebaseClientApp(): FirebaseApp | null {
-  const config = getClientConfig()
-  if (!config) return null
-
-  const existing = getApps()[0]
-  if (existing) return existing
-
-  return initializeApp(config)
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!_storage) _storage = getStorage(getFirebaseApp());
+  return _storage;
 }
 
-export function getFirebaseAuth() {
-  const app = getFirebaseClientApp()
-  if (!app) return null
-  return getAuth(app)
-}
-
-export function getFirebaseFirestore() {
-  const app = getFirebaseClientApp()
-  if (!app) return null
-  return getFirestore(app)
-}
-
-export function getFirebaseStorage() {
-  const app = getFirebaseClientApp()
-  if (!app) return null
-  return getStorage(app)
-}
+// Backward-compatible lazy exports
+export const auth = new Proxy({} as Auth, {
+  get(_, prop) { return (getFirebaseAuth() as any)[prop]; },
+});
+export const db = new Proxy({} as Firestore, {
+  get(_, prop) { return (getFirebaseDb() as any)[prop]; },
+});
+export const storage = new Proxy({} as FirebaseStorage, {
+  get(_, prop) { return (getFirebaseStorage() as any)[prop]; },
+});

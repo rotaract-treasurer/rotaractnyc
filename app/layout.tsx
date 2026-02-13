@@ -1,45 +1,46 @@
-import type { Metadata } from 'next'
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
-import './globals.css'
-import RouteChrome from '@/components/RouteChrome'
-import Footer from '@/components/Footer'
-import { Analytics } from '@vercel/analytics/react'
-import { defaultMetadata } from '@/lib/metadata'
-import SkipToContent from '@/components/SkipToContent'
-import PWARegister from '@/components/PWARegister'
-import GlobalKeyboardShortcuts from '@/components/GlobalKeyboardShortcuts'
+import type { Metadata } from 'next';
+import { Inter, Manrope } from 'next/font/google';
+import { SITE } from '@/lib/constants';
+import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const plusJakarta = Plus_Jakarta_Sans({ 
-  subsets: ['latin'], 
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-plus-jakarta' 
-})
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
-export const metadata: Metadata = defaultMetadata
+export const metadata: Metadata = {
+  title: {
+    default: `${SITE.shortName} — Service Above Self`,
+    template: `%s | ${SITE.shortName}`,
+  },
+  description: SITE.description,
+  metadataBase: new URL(SITE.url),
+  openGraph: {
+    type: 'website',
+    siteName: SITE.name,
+    title: SITE.shortName,
+    description: SITE.description,
+  },
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable}`}>
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch {}
+            `,
+          }}
         />
       </head>
-      <body className="antialiased">
-        <SkipToContent />
-        <PWARegister />
-        <GlobalKeyboardShortcuts />
-        <RouteChrome footer={<Footer />}>
-          {children}
-        </RouteChrome>
-        <Analytics />
+      <body className="font-sans antialiased">
+        {children}
       </body>
     </html>
-  )
+  );
 }

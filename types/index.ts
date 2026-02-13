@@ -1,0 +1,273 @@
+// =============================================
+// Rotaract NYC — Type Definitions
+// =============================================
+
+// ----- Roles & Statuses -----
+export type MemberRole = 'member' | 'board' | 'president' | 'treasurer';
+export type MemberStatus = 'pending' | 'active' | 'inactive' | 'alumni';
+export type EventType = 'free' | 'paid' | 'service' | 'hybrid';
+export type RSVPStatus = 'going' | 'maybe' | 'not';
+export type DuesPaymentStatus = 'UNPAID' | 'PAID' | 'PAID_OFFLINE' | 'WAIVED';
+export type ServiceHourStatus = 'pending' | 'approved' | 'rejected';
+export type PostType = 'text' | 'image' | 'link' | 'announcement' | 'spotlight';
+export type OnboardingStatus = 'INVITED' | 'PENDING_PROFILE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'INACTIVE';
+
+// ----- Member -----
+export interface Member {
+  id: string;
+  email: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  photoURL?: string;
+  bio?: string;
+  role: MemberRole;
+  status: MemberStatus;
+  memberType?: 'professional' | 'student';
+  committee?: string;
+  phone?: string;
+  birthday?: string;
+  interests?: string[];
+  linkedIn?: string;
+  occupation?: string;
+  employer?: string;
+  joinedAt: string;
+  updatedAt?: string;
+}
+
+// ----- Event -----
+export interface EventPricing {
+  memberPrice: number; // in cents
+  guestPrice: number;
+  earlyBirdPrice?: number;
+  earlyBirdDeadline?: string;
+}
+
+export interface RotaractEvent {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime?: string;
+  location: string;
+  address?: string;
+  type: EventType;
+  pricing?: EventPricing;
+  imageURL?: string;
+  tags?: string[];
+  capacity?: number;
+  attendeeCount?: number;
+  isPublic: boolean;
+  status: 'draft' | 'published' | 'cancelled';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface RSVP {
+  id: string;
+  eventId: string;
+  memberId: string;
+  memberName: string;
+  memberPhoto?: string;
+  status: RSVPStatus;
+  createdAt: string;
+}
+
+// ----- News / Article -----
+export interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage?: string;
+  author: {
+    id: string;
+    name: string;
+    photoURL?: string;
+  };
+  category: string;
+  tags?: string[];
+  isPublished: boolean;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+  viewCount?: number;
+  likeCount?: number;
+}
+
+// ----- Community Post -----
+export interface CommunityPost {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorPhoto?: string;
+  type: PostType;
+  content: string;
+  imageURLs?: string[];
+  linkURL?: string;
+  likeCount: number;
+  commentCount: number;
+  likedBy?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorPhoto?: string;
+  content: string;
+  likeCount: number;
+  createdAt: string;
+}
+
+// ----- Service Hours -----
+export interface ServiceHour {
+  id: string;
+  memberId: string;
+  memberName: string;
+  eventId: string;
+  eventTitle: string;
+  hours: number;
+  notes?: string;
+  status: ServiceHourStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+// ----- Dues -----
+export interface DuesCycle {
+  id: string;
+  name: string; // e.g., "2025-2026"
+  startDate: string;
+  endDate: string;
+  amountProfessional: number; // in cents, 8500 = $85
+  amountStudent: number; // 6500 = $65
+  gracePeriodDays: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface MemberDues {
+  id: string;
+  memberId: string;
+  cycleId: string;
+  memberType: 'professional' | 'student';
+  amount: number;
+  status: DuesPaymentStatus;
+  paidAt?: string;
+  stripePaymentId?: string;
+  createdAt: string;
+}
+
+// ----- Finance -----
+export interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  description: string;
+  date: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface FinanceSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+  monthlyBreakdown: { month: string; income: number; expenses: number }[];
+}
+
+// ----- Document -----
+export interface PortalDocument {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  fileURL?: string;
+  linkURL?: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ----- Gallery -----
+export interface GalleryImage {
+  id: string;
+  url: string;
+  caption?: string;
+  event?: string;
+  date?: string;
+  uploadedBy?: string;
+  createdAt: string;
+}
+
+// ----- Messages -----
+export interface MemberMessage {
+  id: string;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  subject: string;
+  sentAt: string;
+}
+
+// ----- Site Settings -----
+export interface SiteSettings {
+  contactEmail: string;
+  address: string;
+  phone?: string;
+  meetingSchedule: string;
+  socialLinks: {
+    instagram?: string;
+    linkedin?: string;
+    facebook?: string;
+  };
+}
+
+// ----- Onboarding -----
+export interface OnboardingInvite {
+  id: string;
+  email: string;
+  token: string;
+  status: 'SENT' | 'USED' | 'EXPIRED';
+  expiresAt: string;
+  createdAt: string;
+}
+
+// ----- FAQ -----
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  order: number;
+}
+
+// ----- Board Member (for leadership page) -----
+export interface BoardMember {
+  id: string;
+  name: string;
+  title: string;
+  photoURL?: string;
+  bio?: string;
+  linkedIn?: string;
+  order: number;
+}
+
+// ----- Navigation -----
+export interface NavItem {
+  label: string;
+  href: string;
+  children?: NavItem[];
+}

@@ -1,35 +1,21 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server';
 
-const ADMIN_SESSION_COOKIE = 'rotaract_admin_session'
-const PORTAL_SESSION_COOKIE = 'rotaract_portal_session'
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl
-
-  // Protect admin routes
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    const hasSession = Boolean(req.cookies.get(ADMIN_SESSION_COOKIE)?.value)
-    if (!hasSession) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/admin/login'
-      return NextResponse.redirect(url)
+  // Protect portal routes (except login)
+  if (pathname.startsWith('/portal') && !pathname.startsWith('/portal/login')) {
+    const session = request.cookies.get('rotaract_portal_session');
+    if (!session?.value) {
+      const loginUrl = new URL('/portal/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  // Protect portal routes
-  if (pathname.startsWith('/portal') && pathname !== '/portal/login') {
-    const hasSession = Boolean(req.cookies.get(PORTAL_SESSION_COOKIE)?.value)
-    if (!hasSession) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/portal/login'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/portal/:path*'],
-}
+  matcher: ['/portal/:path*'],
+};

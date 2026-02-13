@@ -1,400 +1,104 @@
 'use client';
 
 import { useAuth } from '@/lib/firebase/auth';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import DuesBanner from '@/components/portal/DuesBanner';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { SITE } from '@/lib/constants';
+import { formatCurrency } from '@/lib/utils/format';
 
-interface DuesCycle {
-  id: string;
-  label: string;
-  amount: number;
-  currency: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-}
+export default function DuesPage() {
+  const { member } = useAuth();
 
-interface MemberDues {
-  status: string;
-  paidAt?: any;
-  paidOfflineAt?: any;
-  waivedAt?: any;
-  amount?: number;
-  stripeSessionId?: string;
-  memberType?: 'professional' | 'student';
-}
-
-type MemberType = 'professional' | 'student';
-
-// Dues amounts in cents - central config at lib/config/dues.ts
-const DUES_AMOUNTS = {
-  professional: 8500, // $85.00 in cents
-  student: 6500, // $65.00 in cents
-};
-
-export default function PortalDuesPage() {
-  const { user, userData, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [activeCycle, setActiveCycle] = useState<DuesCycle | null>(null);
-  const [memberDues, setMemberDues] = useState<MemberDues | null>(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [memberType, setMemberType] = useState<MemberType>('professional');
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/portal/login');
-    }
-  }, [authLoading, user, router]);
-
-  useEffect(() => {
-    if (user) {
-      loadDuesStatus();
-    }
-  }, [user]);
-
-  async function loadDuesStatus() {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/portal/dues-status?memberId=${user.uid}`);
-      if (!response.ok) {
-        throw new Error('Failed to load dues status');
-      }
-
-      const data = await response.json();
-      setActiveCycle(data.cycle);
-      setMemberDues(data.memberDues);
-    } catch (err: any) {
-      console.error('Error loading dues status:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handlePayNow() {
-    if (!activeCycle || !user) return;
-
-    try {
-      setPaymentLoading(true);
-      setError(null);
-
-      const token = await user.getIdToken();
-      const baseUrl = window.location.origin;
-
-      const response = await fetch('/api/stripe/checkout/dues', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          memberId: user.uid,
-          cycleId: activeCycle.id,
-          email: user.email,
-          memberType: memberType,
-          successUrl: `${baseUrl}/portal/dues?success=true`,
-          cancelUrl: `${baseUrl}/portal/dues?canceled=true`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Check for specific error messages
-        if (data.error && data.error.includes('Stripe is not configured')) {
-          throw new Error('Online payment is temporarily unavailable. Please contact the board at board@rotaractnewyork.org to arrange payment.');
-        }
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      // Redirect to Stripe checkout
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL returned');
-      }
-    } catch (err: any) {
-      console.error('Error creating checkout session:', err);
-      setError(err.message);
-      setPaymentLoading(false);
-    }
-  }
-
-  if (authLoading || loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const isPaid = memberDues && ['PAID', 'PAID_OFFLINE', 'WAIVED'].includes(memberDues.status);
-
-  // Calculate total with Stripe fees (2.9% + $0.30)
-  const calculateTotalWithFees = (amount: number) => {
-    const stripeFeePercentage = 0.029;
-    const stripeFeeFixed = 0.30;
-    const fee = amount * stripeFeePercentage + stripeFeeFixed;
-    return amount + fee;
+  // Sample dues data
+  const currentCycle = {
+    name: '2025-2026',
+    startDate: '2025-07-01',
+    endDate: '2026-06-30',
   };
 
+  const duesStatus: string = 'UNPAID'; // UNPAID | PAID | WAIVED
+  const memberType = member?.memberType || 'professional';
+  const amount = memberType === 'student' ? SITE.dues.student : SITE.dues.professional;
+
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark">
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-navy dark:text-white mb-2">
-            Annual Membership Dues
-          </h1>
-          <p className="text-navy/60 dark:text-white/60">
-            Your dues support local service projects, professional development, and club operations.
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Annual Dues</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your membership dues for the current Rotary year.</p>
+      </div>
+
+      {/* Status Card */}
+      <Card padding="lg">
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Rotary Year {currentCycle.name}
           </p>
+          <Badge
+            variant={duesStatus === 'PAID' ? 'green' : duesStatus === 'WAIVED' ? 'azure' : 'red'}
+            className="text-sm px-4 py-1"
+          >
+            {duesStatus === 'PAID' ? '✓ Paid' : duesStatus === 'WAIVED' ? 'Waived' : 'Unpaid'}
+          </Badge>
         </div>
 
-        {/* Alert Messages */}
-        {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('success') === 'true' && (
-          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-green-600">check_circle</span>
-              <p className="text-green-800 dark:text-green-200 font-medium">
-                Payment successful! Thank you for your dues payment.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('canceled') === 'true' && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-yellow-600">info</span>
-              <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-                Payment was canceled. You can try again below.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        )}
-
-        {/* Current Status Card */}
-        {!activeCycle && !loading && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-8 mb-6">
-            <div className="flex items-start gap-4">
-              <span className="material-symbols-outlined text-blue-600 text-3xl">info</span>
-              <div>
-                <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
-                  No Active Dues Cycle
-                </h2>
-                <p className="text-blue-800 dark:text-blue-200 mb-4">
-                  There is currently no active dues cycle. The board will notify members when dues payments open.
-                </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Questions? Contact{' '}
-                  <a href="mailto:board@rotaractnewyork.org" className="font-medium underline hover:no-underline">
-                    board@rotaractnewyork.org
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeCycle && (
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-8 mb-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-navy dark:text-white mb-2">
-                  {activeCycle.label}
-                </h2>
-                <p className="text-navy/60 dark:text-white/60">
-                  {new Date(activeCycle.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - {new Date(activeCycle.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-extrabold text-navy dark:text-white">
-                  ${(activeCycle.amount / 100).toFixed(2)}
-                </div>
-                <p className="text-sm text-navy/60 dark:text-white/60">Annual Dues</p>
-              </div>
+        {duesStatus === 'UNPAID' && (
+          <div className="mt-8 space-y-6">
+            {/* Pricing */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button className="p-5 rounded-xl border-2 border-cranberry bg-cranberry-50/50 dark:bg-cranberry-900/10 text-left transition-all">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Professional</p>
+                <p className="text-3xl font-display font-bold text-cranberry mt-1">{formatCurrency(SITE.dues.professional)}</p>
+                <p className="text-xs text-gray-500 mt-1">For working professionals</p>
+              </button>
+              <button className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-cranberry text-left transition-all">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Student</p>
+                <p className="text-3xl font-display font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(SITE.dues.student)}</p>
+                <p className="text-xs text-gray-500 mt-1">Valid student ID required</p>
+              </button>
             </div>
 
-            {/* Status Badge */}
-            <div className="mb-6">
-              {isPaid ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <span className="material-symbols-outlined text-green-600 text-lg">check_circle</span>
-                  <span className="font-bold text-green-800 dark:text-green-200">
-                    {memberDues.status === 'WAIVED' ? 'Waived' : 'Paid'}
-                  </span>
-                  {memberDues.paidAt && (
-                    <span className="text-sm text-green-700 dark:text-green-300">
-                      on {new Date(memberDues.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <span className="material-symbols-outlined text-yellow-600 text-lg">schedule</span>
-                  <span className="font-bold text-yellow-800 dark:text-yellow-200">Payment Pending</span>
-                </div>
-              )}
-            </div>
+            <Button size="lg" className="w-full">
+              Pay {formatCurrency(amount)} via Stripe
+            </Button>
 
-            {/* Member Type Selection & Pay Button */}
-            {!isPaid && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-navy dark:text-white mb-3">
-                    Select Your Membership Type
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setMemberType('professional')}
-                      className={`p-4 border-2 rounded-xl transition-all ${
-                        memberType === 'professional'
-                          ? 'border-primary bg-primary/10 dark:bg-primary/20'
-                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-bold text-navy dark:text-white">Professional</h4>
-                        <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
-                          memberType === 'professional' ? 'border-primary' : 'border-gray-300 dark:border-white/20'
-                        }`}>
-                          {memberType === 'professional' && (
-                            <div className="size-3 rounded-full bg-primary"></div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-2xl font-extrabold text-navy dark:text-white mb-1">
-                        ${(DUES_AMOUNTS.professional / 100).toFixed(2)}
-                      </div>
-                      <p className="text-sm text-navy/60 dark:text-white/60 text-left">
-                        For working professionals
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMemberType('student')}
-                      className={`p-4 border-2 rounded-xl transition-all ${
-                        memberType === 'student'
-                          ? 'border-primary bg-primary/10 dark:bg-primary/20'
-                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-bold text-navy dark:text-white">Student</h4>
-                        <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
-                          memberType === 'student' ? 'border-primary' : 'border-gray-300 dark:border-white/20'
-                        }`}>
-                          {memberType === 'student' && (
-                            <div className="size-3 rounded-full bg-primary"></div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-2xl font-extrabold text-navy dark:text-white mb-1">
-                        ${(DUES_AMOUNTS.student / 100).toFixed(2)}
-                      </div>
-                      <p className="text-sm text-navy/60 dark:text-white/60 text-left">
-                        For current students
-                      </p>
-                    </button>
-                  </div>
-                  <p className="mt-3 text-sm text-navy/60 dark:text-white/60">
-                    <strong>Processing fee:</strong> Stripe charges 2.9% + $0.30 per transaction.<br />
-                    <strong>Total with fees:</strong> ${calculateTotalWithFees(DUES_AMOUNTS[memberType] / 100).toFixed(2)}
-                  </p>
-                </div>
-
-                <button
-                  onClick={handlePayNow}
-                  disabled={paymentLoading}
-                  className="w-full sm:w-auto px-8 py-4 bg-primary text-navy font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                >
-                  {paymentLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-navy"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined">credit_card</span>
-                      Pay ${(DUES_AMOUNTS[memberType] / 100).toFixed(2)} Now
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* What Your Dues Support */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] p-8">
-          <h3 className="text-xl font-bold text-navy dark:text-white mb-6">
-            Where Your Dues Go
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary">volunteer_activism</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-navy dark:text-white mb-1">Local Service Projects</h4>
-                <p className="text-sm text-navy/60 dark:text-white/60">
-                  Feeding New Yorkers, school supply drives, and environmental cleanup across the five boroughs.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary">public</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-navy dark:text-white mb-1">District & Rotary International</h4>
-                <p className="text-sm text-navy/60 dark:text-white/60">
-                  Required insurance, international affiliation, and regional leadership conferences.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary">school</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-navy dark:text-white mb-1">Professional Development</h4>
-                <p className="text-sm text-navy/60 dark:text-white/60">
-                  Workshop materials, venue rentals for guest speakers, and club networking events.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
-            <p className="text-sm text-navy/60 dark:text-white/60">
-              Questions about dues? Contact the board at{' '}
-              <a href="mailto:board@rotaractnewyork.org" className="text-primary font-medium hover:underline">
-                board@rotaractnewyork.org
-              </a>
+            <p className="text-xs text-gray-400 text-center">
+              Secure payment powered by Stripe. Includes Rotary International registration.
             </p>
           </div>
-        </div>
-      </main>
+        )}
+
+        {duesStatus === 'PAID' && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Your dues for {currentCycle.name} have been paid. Thank you! 🎉
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* Info */}
+      <Card padding="md">
+        <h3 className="font-display font-bold text-gray-900 dark:text-white mb-3">About Annual Dues</h3>
+        <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+          <li className="flex items-start gap-2">
+            <span className="text-cranberry mt-0.5">•</span>
+            The Rotary year runs July 1 – June 30
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-cranberry mt-0.5">•</span>
+            Dues include Rotary International membership registration
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-cranberry mt-0.5">•</span>
+            There is a 30-day grace period after the cycle ends
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-cranberry mt-0.5">•</span>
+            Contact your treasurer for payment questions or alternative arrangements
+          </li>
+        </ul>
+      </Card>
     </div>
   );
 }
