@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import HeroSection from '@/components/public/HeroSection';
 import { generateMeta } from '@/lib/seo';
-import { defaultBoard } from '@/lib/defaults/data';
+import { getBoardMembers } from '@/lib/firebase/queries';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = generateMeta({
   title: 'Leadership',
@@ -9,7 +12,9 @@ export const metadata: Metadata = generateMeta({
   path: '/leadership',
 });
 
-export default function LeadershipPage() {
+export default async function LeadershipPage() {
+  const board = await getBoardMembers();
+
   return (
     <>
       <HeroSection title="Our Leadership" subtitle="Meet the dedicated board members guiding Rotaract NYC." size="sm" />
@@ -17,16 +22,28 @@ export default function LeadershipPage() {
       <section className="section-padding bg-white dark:bg-gray-950">
         <div className="container-page">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {defaultBoard.map((member) => (
+            {board.map((member) => (
               <div
                 key={member.id}
                 className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 text-center hover:shadow-lg hover:border-cranberry-200 dark:hover:border-cranberry-800 transition-all duration-200"
               >
-                <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-cranberry-100 to-cranberry-200 dark:from-cranberry-900/30 dark:to-cranberry-800/30 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-display font-bold text-cranberry">
-                    {member.name.split(' ').map((w) => w[0]).join('')}
-                  </span>
-                </div>
+                {member.photoURL ? (
+                  <div className="w-20 h-20 mx-auto rounded-full overflow-hidden mb-4">
+                    <Image
+                      src={member.photoURL}
+                      alt={member.name}
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-cranberry-100 to-cranberry-200 dark:from-cranberry-900/30 dark:to-cranberry-800/30 flex items-center justify-center mb-4">
+                    <span className="text-2xl font-display font-bold text-cranberry">
+                      {member.name.split(' ').map((w) => w[0]).join('')}
+                    </span>
+                  </div>
+                )}
                 <h3 className="font-display font-bold text-gray-900 dark:text-white group-hover:text-cranberry transition-colors">
                   {member.name}
                 </h3>

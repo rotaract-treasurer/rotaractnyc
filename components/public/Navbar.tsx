@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
+import SearchModal from '@/components/SearchModal';
 import { cn } from '@/lib/utils/cn';
 
 const navigation = [
@@ -39,6 +40,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -51,6 +53,18 @@ export default function Navbar() {
     setMobileOpen(false);
     setOpenDropdown(null);
   }, [pathname]);
+
+  // Cmd+K / Ctrl+K to open search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
@@ -140,6 +154,20 @@ export default function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              scrolled
+                ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
+            )}
+            aria-label="Search"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
           <DarkModeToggle />
           <Link
             href="/portal/login"
@@ -225,6 +253,8 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }

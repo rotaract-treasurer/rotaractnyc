@@ -3,8 +3,10 @@ import Link from 'next/link';
 import HeroSection from '@/components/public/HeroSection';
 import Badge from '@/components/ui/Badge';
 import { generateMeta } from '@/lib/seo';
-import { defaultEvents } from '@/lib/defaults/data';
+import { getPublicEvents } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = generateMeta({
   title: 'Events',
@@ -19,8 +21,8 @@ const typeColors: Record<string, 'cranberry' | 'green' | 'azure' | 'gold'> = {
   hybrid: 'cranberry',
 };
 
-export default function EventsPage() {
-  const events = defaultEvents;
+export default async function EventsPage() {
+  const events = await getPublicEvents();
 
   return (
     <>

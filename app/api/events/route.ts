@@ -7,8 +7,9 @@ export async function GET() {
   try {
     const snapshot = await adminDb
       .collection('events')
-      .where('visibility', 'in', ['public', 'both'])
-      .orderBy('date', 'desc')
+      .where('isPublic', '==', true)
+      .where('status', '==', 'published')
+      .orderBy('date', 'asc')
       .limit(20)
       .get();
 

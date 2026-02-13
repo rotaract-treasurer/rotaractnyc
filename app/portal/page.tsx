@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/lib/firebase/auth';
 import { usePosts, usePortalEvents, apiPost } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
@@ -120,7 +121,7 @@ export default function PortalDashboard() {
                     {post.imageURLs && post.imageURLs.length > 0 && (
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         {post.imageURLs.map((url, i) => (
-                          <img key={i} src={url} alt="" className="rounded-xl object-cover w-full h-48" />
+                          <Image key={i} src={url} alt="" className="rounded-xl object-cover w-full h-48" width={400} height={192} />
                         ))}
                       </div>
                     )}

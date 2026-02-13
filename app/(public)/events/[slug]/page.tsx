@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { defaultEvents } from '@/lib/defaults/data';
+import { getEventBySlug } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import Badge from '@/components/ui/Badge';
 
+export const dynamic = 'force-dynamic';
+
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const event = defaultEvents.find((e) => e.slug === slug);
+  const event = await getEventBySlug(slug);
 
   if (!event) notFound();
 

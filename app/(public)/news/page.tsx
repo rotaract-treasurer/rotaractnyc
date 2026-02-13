@@ -3,8 +3,10 @@ import Link from 'next/link';
 import HeroSection from '@/components/public/HeroSection';
 import Badge from '@/components/ui/Badge';
 import { generateMeta } from '@/lib/seo';
-import { defaultArticles } from '@/lib/defaults/data';
+import { getPublishedArticles } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = generateMeta({
   title: 'News',
@@ -19,8 +21,8 @@ const categoryColors: Record<string, 'cranberry' | 'azure' | 'green' | 'gold' | 
   Fellowship: 'gold',
 };
 
-export default function NewsPage() {
-  const articles = defaultArticles;
+export default async function NewsPage() {
+  const articles = await getPublishedArticles();
 
   return (
     <>

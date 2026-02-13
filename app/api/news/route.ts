@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const snapshot = await adminDb
       .collection('articles')
-      .where('status', '==', 'published')
+      .where('isPublished', '==', true)
       .orderBy('publishedAt', 'desc')
       .limit(20)
       .get();

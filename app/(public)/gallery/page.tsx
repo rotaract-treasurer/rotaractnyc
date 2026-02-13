@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import HeroSection from '@/components/public/HeroSection';
 import { generateMeta } from '@/lib/seo';
+import { getGalleryImages } from '@/lib/firebase/queries';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = generateMeta({
   title: 'Gallery',
@@ -8,18 +12,18 @@ export const metadata: Metadata = generateMeta({
   path: '/gallery',
 });
 
-const placeholderImages = [
-  { id: 1, label: 'Spring Service Day', gradient: 'from-cranberry-400 to-cranberry-600' },
-  { id: 2, label: 'Annual Gala', gradient: 'from-gold-400 to-gold-600' },
-  { id: 3, label: 'UN Visit', gradient: 'from-azure-400 to-azure-600' },
-  { id: 4, label: 'Holiday Fundraiser', gradient: 'from-emerald-400 to-emerald-600' },
-  { id: 5, label: 'Networking Mixer', gradient: 'from-purple-400 to-purple-600' },
-  { id: 6, label: 'Community Cleanup', gradient: 'from-cranberry-400 to-cranberry-600' },
-  { id: 7, label: 'Board Meeting', gradient: 'from-azure-400 to-azure-600' },
-  { id: 8, label: 'Fellowship Night', gradient: 'from-gold-400 to-gold-600' },
+// Color gradients used when no real image is available
+const gradients = [
+  'from-cranberry-400 to-cranberry-600',
+  'from-gold-400 to-gold-600',
+  'from-azure-400 to-azure-600',
+  'from-emerald-400 to-emerald-600',
+  'from-purple-400 to-purple-600',
 ];
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
+  const images = await getGalleryImages();
+
   return (
     <>
       <HeroSection title="Gallery" subtitle="Moments from our events, service projects, and fellowship gatherings." size="sm" />
@@ -27,19 +31,32 @@ export default function GalleryPage() {
       <section className="section-padding bg-white dark:bg-gray-950">
         <div className="container-page">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {placeholderImages.map((img) => (
-              <div
-                key={img.id}
-                className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${img.gradient}`} />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-end p-4">
-                  <p className="text-white font-semibold text-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    {img.label}
-                  </p>
+            {images.map((img, i) => {
+              const hasRealImage = img.url && !img.url.includes('placeholder');
+              return (
+                <div
+                  key={img.id}
+                  className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer"
+                >
+                  {hasRealImage ? (
+                    <Image
+                      src={img.url}
+                      alt={img.caption || img.event || 'Gallery photo'}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  ) : (
+                    <div className={`absolute inset-0 bg-gradient-to-br ${gradients[i % gradients.length]}`} />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-end p-4">
+                    <p className="text-white font-semibold text-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                      {img.caption || img.event || 'Photo'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-12 text-center">

@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { defaultArticles } from '@/lib/defaults/data';
+import { getArticleBySlug } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import Badge from '@/components/ui/Badge';
 
+export const dynamic = 'force-dynamic';
+
 export default async function NewsDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const article = defaultArticles.find((a) => a.slug === slug);
+  const article = await getArticleBySlug(slug);
 
   if (!article) notFound();
 
