@@ -72,7 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
           });
-          if (!res.ok) {
+          if (res.ok) {
+            const data = await res.json();
+            // If server auto-approved this user, re-read the member profile
+            if (data.autoApproved) {
+              const freshSnap = await getDoc(memberRef);
+              if (freshSnap.exists()) {
+                setMember({ id: freshSnap.id, ...freshSnap.data() } as Member);
+              }
+            }
+          } else {
             console.warn('Session cookie creation returned', res.status, '— server-side auth may be limited');
           }
         } catch (err) {

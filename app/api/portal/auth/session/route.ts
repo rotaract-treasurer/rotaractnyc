@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
+
+// Emails that are auto-approved with full admin access on first sign-in
+function getAdminAllowlist(): string[] {
+  return (process.env.ADMIN_ALLOWLIST || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 // POST: Create session cookie
 export async function POST(request: Request) {
   try {
     const { idToken } = await request.json();
     const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
+
+    // Verify the token to get user info
+    const decoded = await adminAuth.verifyIdToken(idToken);
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const cookieStore = await cookies();
@@ -20,7 +31,24 @@ export async function POST(request: Request) {
       sameSite: 'lax',
     });
 
-    return NextResponse.json({ success: true });
+    // Auto-approve admin-allowlisted emails
+    let autoApproved = false;
+    const email = decoded.email?.toLowerCase() || '';
+    if (email && getAdminAllowlist().includes(email)) {
+      try {
+        const memberRef = adminDb.collection('members').doc(decoded.uid);
+        const snap = await memberRef.get();
+        if (snap.exists && snap.data()?.status === 'pending') {
+          await memberRef.update({ status: 'active', role: 'president' });
+          autoApproved = true;
+          console.log(`Auto-approved allowlisted admin: ${email}`);
+        }
+      } catch (e) {
+        console.warn('Auto-approve check failed (non-blocking):', e);
+      }
+    }
+
+    return NextResponse.json({ success: true, autoApproved });
   } catch (error: any) {
     const message = error?.message || String(error);
     console.error('Session creation error:', message);
