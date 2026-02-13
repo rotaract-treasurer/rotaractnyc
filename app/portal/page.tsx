@@ -49,13 +49,13 @@ export default function PortalDashboard() {
     }
   };
 
-  const filteredPosts = (posts as CommunityPost[]).filter((p) => {
+  const filteredPosts = ((posts || []) as CommunityPost[]).filter((p) => {
     if (activeTab === 'announcements') return p.type === 'announcement';
     if (activeTab === 'community') return p.type !== 'announcement';
     return true;
   });
 
-  const upcomingEvents = (events as RotaractEvent[])
+  const upcomingEvents = ((events || []) as RotaractEvent[])
     .filter((e) => new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);

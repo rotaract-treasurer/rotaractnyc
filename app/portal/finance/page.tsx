@@ -18,7 +18,7 @@ export default function FinancePage() {
     (async () => {
       try {
         const data = await apiGet('/api/portal/finance');
-        if (data.summary) setSummary(data.summary);
+        if (data.summary) setSummary({ totalIncome: 0, totalExpenses: 0, balance: 0, monthlyBreakdown: [], ...data.summary });
         if (data.transactions) setTransactions(data.transactions);
       } catch {
         // Silently fail — show empty state

@@ -24,7 +24,7 @@ export default function DirectoryPage() {
   const [activeTab, setActiveTab] = useState('active');
   const { data: members, loading } = useMembers(activeTab === 'active');
 
-  const filtered = (members as Member[]).filter(
+  const filtered = ((members || []) as Member[]).filter(
     (m) =>
       m.displayName?.toLowerCase().includes(search.toLowerCase()) ||
       m.committee?.toLowerCase().includes(search.toLowerCase()) ||

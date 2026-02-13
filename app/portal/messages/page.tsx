@@ -27,8 +27,8 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState({ toId: preselectedTo, subject: '', body: '' });
 
-  const memberList = members as Member[];
-  const messageList = messages as MemberMessage[];
+  const memberList = (members || []) as Member[];
+  const messageList = (messages || []) as MemberMessage[];
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
