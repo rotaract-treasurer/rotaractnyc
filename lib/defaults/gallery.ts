@@ -1,0 +1,1 @@
+export { defaultGallery } from './data';

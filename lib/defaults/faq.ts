@@ -1,0 +1,1 @@
+export { defaultFAQ } from './data';

@@ -1,0 +1,1 @@
+export { defaultBoard } from './data';

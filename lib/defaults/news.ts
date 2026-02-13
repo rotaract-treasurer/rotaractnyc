@@ -1,0 +1,1 @@
+export { defaultArticles } from './data';
