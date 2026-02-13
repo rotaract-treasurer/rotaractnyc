@@ -10,24 +10,35 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function role() {
-      return request.auth.token.role;
+    // Look up the member document for the signed-in user.
+    // Uses get() which is cached within a single rule evaluation (1 read).
+    function memberDoc() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid)).data;
     }
 
+    function hasMemberDoc() {
+      return exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    // Active member = authenticated + has a member doc with status 'active'
     function isMember() {
-      return isAuthenticated() && role() in ['member', 'board', 'treasurer', 'president'];
+      return isAuthenticated() && hasMemberDoc() && memberDoc().status == 'active';
+    }
+
+    function memberRole() {
+      return memberDoc().role;
     }
 
     function isBoard() {
-      return isAuthenticated() && role() in ['board', 'treasurer', 'president'];
+      return isMember() && memberRole() in ['board', 'treasurer', 'president'];
     }
 
     function isTreasurer() {
-      return isAuthenticated() && role() in ['treasurer', 'president'];
+      return isMember() && memberRole() in ['treasurer', 'president'];
     }
 
     function isPresident() {
-      return isAuthenticated() && role() == 'president';
+      return isMember() && memberRole() == 'president';
     }
 
     function isOwner(userId) {
@@ -38,7 +49,7 @@ service cloud.firestore {
     // Members
     // ───────────────────────────────────────
     match /members/{memberId} {
-      // Members can read the full directory; pending users can read their own doc
+      // Active members can read the full directory; any signed-in user can read their own doc
       allow read: if isMember() || isOwner(memberId);
 
       // A signed-in user can create their own pending profile (auto-created on first Google Sign-In)
@@ -61,9 +72,8 @@ service cloud.firestore {
     // Events (public + portal)
     // ───────────────────────────────────────
     match /events/{eventId} {
-      // Public events readable by anyone; portal-only events by members
-      allow read: if resource.data.visibility == 'public'
-                  || (isMember() && resource.data.visibility in ['public', 'members', 'both']);
+      // Public events readable by anyone; portal-only events by active members
+      allow read: if resource.data.visibility == 'public' || isMember();
 
       // Board+ can manage events
       allow create, update, delete: if isBoard();
@@ -77,11 +87,11 @@ service cloud.firestore {
       allow read: if isMember();
 
       // Members can write their own RSVP (doc ID must start with their uid)
-      allow create, update: if isAuthenticated()
+      allow create, update: if isMember()
                             && rsvpId.matches(request.auth.uid + '_.*');
 
       // Only owner or board can delete
-      allow delete: if (isAuthenticated() && rsvpId.matches(request.auth.uid + '_.*'))
+      allow delete: if (isMember() && rsvpId.matches(request.auth.uid + '_.*'))
                     || isBoard();
     }
 
@@ -89,7 +99,7 @@ service cloud.firestore {
     // Articles (news / blog)
     // ───────────────────────────────────────
     match /articles/{articleId} {
-      // Published articles readable by anyone (public site); members can read all
+      // Published articles readable by anyone (public site); active members can read all
       allow read: if resource.data.status == 'published' || isMember();
 
       // Board+ can manage articles
@@ -128,7 +138,7 @@ service cloud.firestore {
       allow update, delete: if isBoard();
 
       // Author can delete their own post
-      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow delete: if isMember() && resource.data.authorId == request.auth.uid;
 
       // Comments subcollection
       match /comments/{commentId} {
@@ -156,7 +166,7 @@ service cloud.firestore {
     // ───────────────────────────────────────
     match /serviceHours/{entryId} {
       // Members can read their own entries; board can read all
-      allow read: if (isAuthenticated() && resource.data.memberId == request.auth.uid)
+      allow read: if (isMember() && resource.data.memberId == request.auth.uid)
                   || isBoard();
 
       // Members can create their own entries (must be pending)
@@ -165,7 +175,7 @@ service cloud.firestore {
                     && request.resource.data.status == 'pending';
 
       // Members can update their own pending entries
-      allow update: if isAuthenticated()
+      allow update: if isMember()
                     && resource.data.memberId == request.auth.uid
                     && resource.data.status == 'pending';
 
@@ -189,7 +199,7 @@ service cloud.firestore {
     // ───────────────────────────────────────
     match /memberDues/{duesId} {
       // Members can read their own dues; treasurer+ can read all
-      allow read: if (isAuthenticated() && resource.data.memberId == request.auth.uid)
+      allow read: if (isMember() && resource.data.memberId == request.auth.uid)
                   || isTreasurer();
 
       // Treasurer+ can manage dues records
@@ -210,7 +220,7 @@ service cloud.firestore {
     // ───────────────────────────────────────
     match /messages/{messageId} {
       // Members can read messages sent to them or by them
-      allow read: if isAuthenticated()
+      allow read: if isMember()
                   && (resource.data.recipientId == request.auth.uid
                       || resource.data.senderId == request.auth.uid);
 
@@ -219,12 +229,12 @@ service cloud.firestore {
                     && request.resource.data.senderId == request.auth.uid;
 
       // Recipient can mark as read
-      allow update: if isAuthenticated()
+      allow update: if isMember()
                     && resource.data.recipientId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
 
       // Sender or recipient can delete their copy
-      allow delete: if isAuthenticated()
+      allow delete: if isMember()
                     && (resource.data.senderId == request.auth.uid
                         || resource.data.recipientId == request.auth.uid);
     }
