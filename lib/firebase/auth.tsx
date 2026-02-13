@@ -9,7 +9,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './client';
+import { auth as getAuth, db as getDb } from './client';
 import type { Member } from '@/types';
 
 interface AuthContextType {
@@ -34,11 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(getAuth(), async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
         // Fetch or create member profile
-        const memberRef = doc(db, 'members', firebaseUser.uid);
+        const memberRef = doc(getDb(), 'members', firebaseUser.uid);
         const memberSnap = await getDoc(memberRef);
         if (memberSnap.exists()) {
           setMember({ id: memberSnap.id, ...memberSnap.data() } as Member);
@@ -75,12 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    await signInWithPopup(getAuth(), provider);
   };
 
   const signOut = async () => {
     await fetch('/api/portal/auth/session', { method: 'DELETE' });
-    await firebaseSignOut(auth);
+    await firebaseSignOut(getAuth());
     setMember(null);
   };
 

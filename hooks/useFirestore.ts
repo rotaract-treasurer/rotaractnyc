@@ -18,7 +18,7 @@ import {
   type QueryConstraint,
   type DocumentData,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db as getDb } from '@/lib/firebase/client';
 
 // ─── Generic hooks ───
 
@@ -38,7 +38,7 @@ export function useCollection<T = DocumentData>(
       return;
     }
 
-    const q = query(collection(db, collectionName), ...constraints);
+    const q = query(collection(getDb(), collectionName), ...constraints);
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -76,7 +76,7 @@ export function useDocument<T = DocumentData>(
       return;
     }
 
-    const docRef = doc(db, collectionName, docId);
+    const docRef = doc(getDb(), collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
       (snap) => {

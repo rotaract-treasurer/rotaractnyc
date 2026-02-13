@@ -6,7 +6,7 @@ import { useDocuments } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import { uploadFile, validateFile } from '@/lib/firebase/upload';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db as getDb } from '@/lib/firebase/client';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -48,7 +48,7 @@ export default function DocumentsPage() {
     setUploading(true);
     try {
       const { url, path } = await uploadFile(file, 'documents', undefined, setUploadProgress);
-      await addDoc(collection(db, 'documents'), {
+      await addDoc(collection(getDb(), 'documents'), {
         title: uploadForm.title.trim(),
         category: uploadForm.category,
         fileURL: url,

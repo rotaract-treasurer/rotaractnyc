@@ -1,5 +1,5 @@
 import { ref, uploadBytesResumable, getDownloadURL, type StorageReference } from 'firebase/storage';
-import { storage } from '@/lib/firebase/client';
+import { storage as getStorage } from '@/lib/firebase/client';
 
 export type UploadPath = 'profile-photos' | 'post-attachments' | 'documents' | 'event-images' | 'gallery' | 'article-images';
 
@@ -28,7 +28,7 @@ export async function uploadFile(
     ? `${folder}/${subPath}/${timestamp}_${safeName}`
     : `${folder}/${timestamp}_${safeName}`;
 
-  const storageRef = ref(storage, storagePath);
+  const storageRef = ref(getStorage(), storagePath);
   const task = uploadBytesResumable(storageRef, file, {
     contentType: file.type,
   });

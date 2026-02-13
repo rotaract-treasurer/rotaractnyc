@@ -39,13 +39,13 @@ export function getFirebaseStorage(): FirebaseStorage {
   return _storage;
 }
 
-// Backward-compatible lazy exports
-export const auth = new Proxy({} as Auth, {
-  get(_, prop) { return (getFirebaseAuth() as any)[prop]; },
-});
-export const db = new Proxy({} as Firestore, {
-  get(_, prop) { return (getFirebaseDb() as any)[prop]; },
-});
-export const storage = new Proxy({} as FirebaseStorage, {
-  get(_, prop) { return (getFirebaseStorage() as any)[prop]; },
-});
+// Re-export getters as lazy-evaluated module-level shims.
+// Firebase SDK functions (doc, collection, etc.) do instanceof checks,
+// so we cannot use Proxy – we must pass the real instance.
+// These getters are safe to call at module scope in 'use client' files
+// because they only run in the browser where env vars are available.
+export {
+  getFirebaseAuth as auth,
+  getFirebaseDb as db,
+  getFirebaseStorage as storage,
+};
