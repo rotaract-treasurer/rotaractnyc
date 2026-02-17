@@ -62,19 +62,22 @@ service firebase.storage {
     // ── Event Images ──
     match /event-images/{eventId}/{fileName} {
       allow read: if true;
-      allow write, delete: if isBoard();
+      allow write: if isBoard() && isImage() && isValidSize();
+      allow delete: if isBoard();
     }
 
     // ── Gallery Images ──
     match /gallery/{fileName} {
       allow read: if true;
-      allow write, delete: if isBoard();
+      allow write: if isBoard() && isImage() && isValidSize();
+      allow delete: if isBoard();
     }
 
     // ── Article Images ──
     match /article-images/{fileName} {
       allow read: if true;
-      allow write, delete: if isBoard();
+      allow write: if isBoard() && isImage() && isValidSize();
+      allow delete: if isBoard();
     }
 
     // Deny everything else
