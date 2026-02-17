@@ -5,7 +5,9 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Textarea from '@/components/ui/Textarea';
+import FileUpload from '@/components/ui/FileUpload';
 import { apiPost, apiPatch } from '@/hooks/useFirestore';
+import { uploadFile, validateFile } from '@/lib/firebase/upload';
 import type { RotaractEvent, EventType, EventPricing } from '@/types';
 
 interface CreateEventModalProps {
@@ -86,6 +88,9 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
   // Details
   const [type, setType] = useState<EventType>('free');
   const [imageURL, setImageURL] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [tags, setTags] = useState('');
   const [capacity, setCapacity] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -113,6 +118,9 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
       setAddress(event.address || '');
       setType(event.type || 'free');
       setImageURL(event.imageURL || '');
+      setImagePreview(event.imageURL || null);
+      setImageFile(null);
+      setUploadProgress(null);
       setTags(event.tags?.join(', ') || '');
       setCapacity(event.capacity ? String(event.capacity) : '');
       setIsPublic(event.isPublic ?? true);
@@ -154,6 +162,9 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
     setAddress('');
     setType('free');
     setImageURL('');
+    setImageFile(null);
+    setImagePreview(null);
+    setUploadProgress(null);
     setTags('');
     setCapacity('');
     setIsPublic(true);
@@ -185,6 +196,34 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
     setLoading(true);
 
     try {
+      // Upload image if a new file was selected
+      let finalImageURL = imageURL;
+      if (imageFile) {
+        const validationError = validateFile(imageFile, {
+          maxSizeMB: 10,
+          allowedTypes: ['image/'],
+        });
+        if (validationError) {
+          setError(validationError);
+          setLoading(false);
+          return;
+        }
+        try {
+          const result = await uploadFile(
+            imageFile,
+            'event-images',
+            slug || slugify(title),
+            (pct) => setUploadProgress(pct),
+          );
+          finalImageURL = result.url;
+        } catch (uploadErr: any) {
+          setError(uploadErr.message || 'Image upload failed');
+          setLoading(false);
+          return;
+        }
+        setUploadProgress(null);
+      }
+
       // Build pricing object
       let pricing: EventPricing | undefined;
       if (showPricing) {
@@ -217,7 +256,7 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
         address: address.trim() || undefined,
         type,
         pricing,
-        imageURL: imageURL.trim() || undefined,
+        imageURL: finalImageURL?.trim() || undefined,
         tags: tags
           ? tags
               .split(',')
@@ -451,24 +490,63 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
               Additional Details
             </h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Cover Image URL (optional)"
-                  type="url"
-                  placeholder="https://..."
-                  value={imageURL}
-                  onChange={(e) => setImageURL(e.target.value)}
+              {/* Cover Image Upload */}
+              <div>
+                <FileUpload
+                  label="Cover Image (optional)"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  maxSizeMB={10}
+                  onChange={(files) => {
+                    if (files[0]) {
+                      setImageFile(files[0]);
+                      setImagePreview(URL.createObjectURL(files[0]));
+                    }
+                  }}
+                  helperText="JPG, PNG, WebP, or GIF. Max 10MB."
                 />
-                <Input
-                  label="Capacity (optional)"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 50"
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  helperText="Leave empty for unlimited"
-                />
+                {imagePreview && (
+                  <div className="mt-3 relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagePreview}
+                      alt="Cover preview"
+                      className="w-full h-40 object-cover rounded-xl border border-gray-200 dark:border-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setImageURL('');
+                      }}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                      aria-label="Remove image"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    {uploadProgress !== null && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-b-xl overflow-hidden">
+                        <div
+                          className="h-full bg-cranberry transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
+              <Input
+                label="Capacity (optional)"
+                type="number"
+                min="1"
+                placeholder="e.g. 50"
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                helperText="Leave empty for unlimited"
+              />
 
               <Input
                 label="Tags"
