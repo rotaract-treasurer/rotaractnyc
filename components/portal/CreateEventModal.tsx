@@ -36,16 +36,26 @@ function formatTime12h(time24: string): string {
 
 function parseTo24h(time12: string): string {
   if (!time12) return '';
+  // Handle time ranges like "09:00 - 12:00" or "9:00 AM - 12:00 PM" — take the first time
+  const rangePart = time12.split(/\s*[–-]\s*/)[0].trim();
   // Already in 24h format
-  if (/^\d{2}:\d{2}$/.test(time12)) return time12;
-  const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!match) return time12;
+  if (/^\d{2}:\d{2}$/.test(rangePart)) return rangePart;
+  const match = rangePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return rangePart;
   let h = parseInt(match[1]);
   const m = match[2];
   const period = match[3].toUpperCase();
   if (period === 'PM' && h < 12) h += 12;
   if (period === 'AM' && h === 12) h = 0;
   return `${h.toString().padStart(2, '0')}:${m}`;
+}
+
+function parseEndTimeTo24h(timeStr: string): string {
+  if (!timeStr) return '';
+  // If it's a range like "09:00 - 12:00", take the second time
+  const parts = timeStr.split(/\s*[–-]\s*/);
+  if (parts.length >= 2) return parseTo24h(parts[parts.length - 1].trim());
+  return '';
 }
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
@@ -113,7 +123,8 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
       setDate(event.date ? event.date.split('T')[0] : '');
       setEndDate(event.endDate ? event.endDate.split('T')[0] : '');
       setTime(event.time ? parseTo24h(event.time) : '');
-      setEndTime(event.endTime ? parseTo24h(event.endTime) : '');
+      // If endTime is explicit use it; otherwise try to extract from a time range in event.time
+      setEndTime(event.endTime ? parseTo24h(event.endTime) : parseEndTimeTo24h(event.time || ''));
       setLocation(event.location || '');
       setAddress(event.address || '');
       setType(event.type || 'free');

@@ -29,10 +29,16 @@ export async function GET(request: NextRequest) {
       .limit(50)
       .get();
 
-    const messages = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const messages = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      // Serialise any Firestore Timestamps to ISO strings
+      for (const key of Object.keys(data)) {
+        if (data[key] && typeof data[key].toDate === 'function') {
+          data[key] = data[key].toDate().toISOString();
+        }
+      }
+      return { id: doc.id, ...data };
+    });
 
     return NextResponse.json(messages);
   } catch (error) {
@@ -81,7 +87,9 @@ export async function POST(request: NextRequest) {
 
     const docRef = await adminDb.collection('messages').add(message);
 
-    return NextResponse.json({ id: docRef.id, ...message }, { status: 201 });
+    // Don't include createdAt (FieldValue sentinel) in response — it can't be serialised
+    const { createdAt, ...responseSafe } = message;
+    return NextResponse.json({ id: docRef.id, ...responseSafe }, { status: 201 });
   } catch (error) {
     console.error('Error sending message:', error);
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });

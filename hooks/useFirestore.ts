@@ -19,6 +19,25 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { db as getDb } from '@/lib/firebase/client';
+import { Timestamp } from 'firebase/firestore';
+
+// ─── Helpers ───
+
+/** Recursively convert Firestore Timestamp fields to ISO strings */
+function serialiseTimestamps(obj: any): any {
+  if (obj == null) return obj;
+  if (obj instanceof Timestamp) return obj.toDate().toISOString();
+  if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString();
+  if (Array.isArray(obj)) return obj.map(serialiseTimestamps);
+  if (typeof obj === 'object') {
+    const out: any = {};
+    for (const key of Object.keys(obj)) {
+      out[key] = serialiseTimestamps(obj[key]);
+    }
+    return out;
+  }
+  return obj;
+}
 
 // ─── Generic hooks ───
 
@@ -42,7 +61,7 @@ export function useCollection<T = DocumentData>(
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as T));
+        const items = snapshot.docs.map((d) => serialiseTimestamps({ id: d.id, ...d.data() }) as T);
         setData(items);
         setLoading(false);
         setError(null);
@@ -81,7 +100,7 @@ export function useDocument<T = DocumentData>(
       docRef,
       (snap) => {
         if (snap.exists()) {
-          setData({ id: snap.id, ...snap.data() } as T);
+          setData(serialiseTimestamps({ id: snap.id, ...snap.data() }) as T);
         } else {
           setData(null);
         }
