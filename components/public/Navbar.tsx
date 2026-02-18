@@ -92,10 +92,10 @@ export default function Navbar() {
           <Image
             src="/rotaract-logo.png"
             alt="Rotaract NYC at the United Nations"
-            width={180}
-            height={45}
+            width={240}
+            height={60}
             className={cn(
-              'h-9 w-auto transition-all',
+              'h-12 w-auto transition-all',
               scrolled ? 'brightness-0 dark:brightness-0 dark:invert' : 'brightness-0 invert'
             )}
             priority

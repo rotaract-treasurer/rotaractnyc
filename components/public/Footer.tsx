@@ -44,9 +44,9 @@ export default function Footer() {
               <Image
                 src="/rotaract-logo.png"
                 alt="Rotaract NYC at the United Nations"
-                width={180}
-                height={45}
-                className="h-9 w-auto brightness-0 invert"
+                width={240}
+                height={60}
+                className="h-12 w-auto brightness-0 invert"
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed mb-4">
