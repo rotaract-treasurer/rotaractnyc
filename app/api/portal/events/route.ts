@@ -1,10 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import type { RecurrenceRule, RecurrenceFrequency } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 const ADMIN_ROLES = ['board', 'president', 'treasurer'];
+
+// ─── Recurrence helper ───
+
+function generateRecurrenceDates(
+  startDate: Date,
+  rule: RecurrenceRule,
+): Date[] {
+  const dates: Date[] = [];
+  const maxOccurrences = Math.min(rule.occurrences || 52, 52);
+  const endDate = rule.endDate ? new Date(rule.endDate) : null;
+
+  const freq = rule.frequency;
+  const daysOfWeek = rule.daysOfWeek || [startDate.getDay()];
+
+  // Helper to add days
+  const addDays = (d: Date, n: number) => {
+    const r = new Date(d);
+    r.setDate(r.getDate() + n);
+    return r;
+  };
+
+  if (freq === 'daily') {
+    let current = new Date(startDate);
+    while (dates.length < maxOccurrences) {
+      if (endDate && current > endDate) break;
+      dates.push(new Date(current));
+      current = addDays(current, rule.interval || 1);
+    }
+  } else if (freq === 'weekly' || freq === 'biweekly') {
+    const weekStep = freq === 'biweekly' ? 2 : (rule.interval || 1);
+    // Start from the week of startDate
+    let weekStart = new Date(startDate);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // move to Sunday
+
+    outer:
+    while (dates.length < maxOccurrences) {
+      for (const dow of daysOfWeek.sort((a, b) => a - b)) {
+        const candidate = addDays(weekStart, dow);
+        if (candidate < startDate) continue; // skip days before start
+        if (endDate && candidate > endDate) break outer;
+        if (dates.length >= maxOccurrences) break outer;
+        dates.push(candidate);
+      }
+      weekStart = addDays(weekStart, 7 * weekStep);
+    }
+  } else if (freq === 'monthly') {
+    let current = new Date(startDate);
+    const dayOfMonth = rule.dayOfMonth || startDate.getDate();
+    while (dates.length < maxOccurrences) {
+      // Set to the right day of month (handle months with fewer days)
+      const candidate = new Date(current.getFullYear(), current.getMonth(), Math.min(dayOfMonth, new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate()));
+      if (candidate < startDate) {
+        current.setMonth(current.getMonth() + (rule.interval || 1));
+        continue;
+      }
+      if (endDate && candidate > endDate) break;
+      dates.push(candidate);
+      current.setMonth(current.getMonth() + (rule.interval || 1));
+    }
+  }
+
+  return dates;
+}
 
 /**
  * Verify the session cookie and return the authenticated user's uid and member data.
@@ -92,6 +156,8 @@ export async function POST(request: NextRequest) {
       capacity,
       isPublic,
       status,
+      isRecurring,
+      recurrence,
     } = body;
 
     // Validate required fields
@@ -133,15 +199,60 @@ export async function POST(request: NextRequest) {
       attendeeCount: 0,
       isPublic: isPublic ?? true,
       status: status || 'draft',
+      isRecurring: isRecurring || false,
+      recurrence: isRecurring && recurrence ? recurrence : null,
+      recurrenceParentId: null,
+      occurrenceIndex: isRecurring ? 0 : null,
       createdBy: uid,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     const ref = await adminDb.collection('events').add(eventData);
+    const parentId = ref.id;
+
+    // ── Generate recurring occurrences ──
+    const createdEvents: Array<{ id: string; [k: string]: any }> = [{ id: parentId, ...eventData }];
+
+    if (isRecurring && recurrence) {
+      const startDate = new Date(date);
+      const occurrenceDates = generateRecurrenceDates(startDate, recurrence);
+
+      // Skip the first date (it's the parent event)
+      const childDates = occurrenceDates.slice(1);
+      const batch = adminDb.batch();
+
+      for (let i = 0; i < childDates.length; i++) {
+        const occDate = childDates[i];
+        // Preserve original time
+        const [origHours, origMinutes] = date.includes('T')
+          ? [startDate.getUTCHours(), startDate.getUTCMinutes()]
+          : [0, 0];
+        occDate.setHours(origHours, origMinutes, 0, 0);
+
+        const childSlug = `${eventSlug}-${i + 2}`;
+        const childData = {
+          ...eventData,
+          slug: childSlug,
+          date: occDate.toISOString(),
+          endDate: null, // occurrences are single-day by default
+          recurrenceParentId: parentId,
+          occurrenceIndex: i + 1,
+          attendeeCount: 0,
+        };
+
+        const childRef = adminDb.collection('events').doc();
+        batch.set(childRef, childData);
+        createdEvents.push({ id: childRef.id, ...childData });
+      }
+
+      if (childDates.length > 0) {
+        await batch.commit();
+      }
+    }
 
     return NextResponse.json(
-      { id: ref.id, ...eventData },
+      { id: parentId, ...eventData, totalOccurrences: createdEvents.length },
       { status: 201 },
     );
   } catch (err: any) {
@@ -229,6 +340,25 @@ export async function DELETE(request: NextRequest) {
     const batch = adminDb.batch();
     batch.delete(docRef);
     rsvpSnap.docs.forEach((rsvp) => batch.delete(rsvp.ref));
+
+    // If this is a parent recurring event, delete all child occurrences too
+    const eventData = doc.data();
+    if (eventData?.isRecurring && !eventData?.recurrenceParentId) {
+      const childSnap = await adminDb
+        .collection('events')
+        .where('recurrenceParentId', '==', id)
+        .get();
+      for (const child of childSnap.docs) {
+        batch.delete(child.ref);
+        // Delete child RSVPs
+        const childRsvps = await adminDb
+          .collection('rsvps')
+          .where('eventId', '==', child.id)
+          .get();
+        childRsvps.docs.forEach((rsvp) => batch.delete(rsvp.ref));
+      }
+    }
+
     await batch.commit();
 
     return NextResponse.json({ success: true, message: 'Event deleted.' });

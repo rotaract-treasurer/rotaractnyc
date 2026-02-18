@@ -8,7 +8,7 @@ import Textarea from '@/components/ui/Textarea';
 import FileUpload from '@/components/ui/FileUpload';
 import { apiPost, apiPatch } from '@/hooks/useFirestore';
 import { uploadFile, validateFile } from '@/lib/firebase/upload';
-import type { RotaractEvent, EventType, EventPricing } from '@/types';
+import type { RotaractEvent, EventType, EventPricing, RecurrenceFrequency, RecurrenceRule } from '@/types';
 
 interface CreateEventModalProps {
   open: boolean;
@@ -71,6 +71,24 @@ const EVENT_STATUSES = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+const RECURRENCE_FREQUENCIES: { value: RecurrenceFrequency | 'none'; label: string }[] = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+];
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sun' },
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+];
+
 const selectClass =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm transition-colors duration-150 ' +
   'focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 focus:border-cranberry-500 ' +
@@ -112,7 +130,15 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
   const [earlyBirdPrice, setEarlyBirdPrice] = useState('');
   const [earlyBirdDeadline, setEarlyBirdDeadline] = useState('');
 
+  // Recurrence
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency | 'none'>('none');
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [recurrenceOccurrences, setRecurrenceOccurrences] = useState('10');
+  const [recurrenceEndType, setRecurrenceEndType] = useState<'occurrences' | 'date'>('occurrences');
+
   const showPricing = type === 'paid' || type === 'hybrid';
+  const showRecurrence = !isEdit; // Only allow setting recurrence on new events
 
   // Populate for edit mode
   useEffect(() => {
@@ -151,6 +177,18 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
         setEarlyBirdPrice('');
         setEarlyBirdDeadline('');
       }
+      // Recurrence — display-only in edit mode
+      if (event.recurrence) {
+        setRecurrenceFrequency(event.recurrence.frequency);
+        setRecurrenceDays(event.recurrence.daysOfWeek || []);
+        setRecurrenceEndDate(event.recurrence.endDate ? event.recurrence.endDate.split('T')[0] : '');
+        setRecurrenceOccurrences(event.recurrence.occurrences ? String(event.recurrence.occurrences) : '10');
+      } else {
+        setRecurrenceFrequency('none');
+        setRecurrenceDays([]);
+        setRecurrenceEndDate('');
+        setRecurrenceOccurrences('10');
+      }
     }
   }, [event, open]);
 
@@ -184,6 +222,11 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
     setGuestPrice('');
     setEarlyBirdPrice('');
     setEarlyBirdDeadline('');
+    setRecurrenceFrequency('none');
+    setRecurrenceDays([]);
+    setRecurrenceEndDate('');
+    setRecurrenceOccurrences('10');
+    setRecurrenceEndType('occurrences');
     setError('');
     setSuccess(false);
   }
@@ -255,6 +298,24 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
       const formattedTime = formatTime12h(time);
       const formattedEndTime = endTime ? formatTime12h(endTime) : undefined;
 
+      // Build recurrence rule
+      let recurrence: RecurrenceRule | undefined;
+      let isRecurring = false;
+      if (showRecurrence && recurrenceFrequency !== 'none') {
+        isRecurring = true;
+        recurrence = {
+          frequency: recurrenceFrequency,
+        };
+        if (recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') {
+          recurrence.daysOfWeek = recurrenceDays.length > 0 ? recurrenceDays : [new Date(`${date}T${time || '00:00'}`).getDay()];
+        }
+        if (recurrenceEndType === 'date' && recurrenceEndDate) {
+          recurrence.endDate = new Date(`${recurrenceEndDate}T23:59:59`).toISOString();
+        } else {
+          recurrence.occurrences = parseInt(recurrenceOccurrences) || 10;
+        }
+      }
+
       const eventData = {
         title: title.trim(),
         slug: slug || slugify(title),
@@ -277,6 +338,8 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
         capacity: capacity ? parseInt(capacity) : undefined,
         isPublic,
         status,
+        isRecurring,
+        recurrence,
       };
 
       if (isEdit && event) {
@@ -400,6 +463,135 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
               />
             </div>
           </div>
+
+          {/* ── Section: Recurrence ── */}
+          {showRecurrence && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                Recurrence
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Repeat
+                  </label>
+                  <select
+                    value={recurrenceFrequency}
+                    onChange={(e) => setRecurrenceFrequency(e.target.value as RecurrenceFrequency | 'none')}
+                    className={selectClass}
+                  >
+                    {RECURRENCE_FREQUENCIES.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {recurrenceFrequency !== 'none' && (
+                  <>
+                    {/* Day picker for weekly / biweekly */}
+                    {(recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          On days
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {DAYS_OF_WEEK.map((d) => (
+                            <button
+                              key={d.value}
+                              type="button"
+                              onClick={() => {
+                                setRecurrenceDays((prev) =>
+                                  prev.includes(d.value)
+                                    ? prev.filter((v) => v !== d.value)
+                                    : [...prev, d.value].sort()
+                                );
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                recurrenceDays.includes(d.value)
+                                  ? 'bg-cranberry text-white shadow-sm'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                          Leave empty to use the start date&apos;s day of week.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* End condition */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Ends
+                      </label>
+                      <div className="flex gap-4 mb-3">
+                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="recurrenceEnd"
+                            checked={recurrenceEndType === 'occurrences'}
+                            onChange={() => setRecurrenceEndType('occurrences')}
+                            className="text-cranberry-600 focus:ring-cranberry-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">After # occurrences</span>
+                        </label>
+                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="recurrenceEnd"
+                            checked={recurrenceEndType === 'date'}
+                            onChange={() => setRecurrenceEndType('date')}
+                            className="text-cranberry-600 focus:ring-cranberry-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">On date</span>
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {recurrenceEndType === 'occurrences' ? (
+                          <Input
+                            label="Number of occurrences"
+                            type="number"
+                            min="2"
+                            max="52"
+                            value={recurrenceOccurrences}
+                            onChange={(e) => setRecurrenceOccurrences(e.target.value)}
+                            helperText="Max 52"
+                          />
+                        ) : (
+                          <Input
+                            label="End by date"
+                            type="date"
+                            value={recurrenceEndDate}
+                            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                            helperText="Last occurrence on or before this date"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-700 dark:text-blue-300">
+                      <p className="font-medium">🔁 This will create multiple events:</p>
+                      <p className="text-xs mt-1">
+                        {recurrenceFrequency === 'daily' && 'One event per day'}
+                        {recurrenceFrequency === 'weekly' && `Every week${recurrenceDays.length > 0 ? ` on ${recurrenceDays.map(d => DAYS_OF_WEEK[d].label).join(', ')}` : ''}`}
+                        {recurrenceFrequency === 'biweekly' && `Every 2 weeks${recurrenceDays.length > 0 ? ` on ${recurrenceDays.map(d => DAYS_OF_WEEK[d].label).join(', ')}` : ''}`}
+                        {recurrenceFrequency === 'monthly' && 'Once per month on the same day'}
+                        {recurrenceEndType === 'occurrences'
+                          ? `, ${recurrenceOccurrences} occurrence${parseInt(recurrenceOccurrences) !== 1 ? 's' : ''} total`
+                          : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Section: Location ── */}
           <div>

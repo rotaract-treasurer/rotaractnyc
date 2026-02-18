@@ -39,6 +39,17 @@ export interface Member {
 }
 
 // ----- Event -----
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+
+export interface RecurrenceRule {
+  frequency: RecurrenceFrequency;
+  interval?: number;          // e.g. every 2 weeks — defaults to 1
+  daysOfWeek?: number[];      // 0=Sun … 6=Sat — for weekly/biweekly
+  dayOfMonth?: number;        // 1-31 for monthly
+  endDate?: string;           // stop generating occurrences after this ISO date
+  occurrences?: number;       // OR stop after N occurrences (default 10)
+}
+
 export interface EventPricing {
   memberPrice: number; // in cents
   guestPrice: number;
@@ -65,6 +76,11 @@ export interface RotaractEvent {
   attendeeCount?: number;
   isPublic: boolean;
   status: 'draft' | 'published' | 'cancelled';
+  // Recurrence fields
+  isRecurring?: boolean;
+  recurrence?: RecurrenceRule;
+  recurrenceParentId?: string;   // set on generated child occurrences
+  occurrenceIndex?: number;      // 0-based index within the series
   createdAt: string;
   updatedAt?: string;
 }
