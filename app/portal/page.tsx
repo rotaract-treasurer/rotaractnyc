@@ -13,7 +13,7 @@ import Tabs from '@/components/ui/Tabs';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import ProgressRing from '@/components/ui/ProgressRing';
-import PostComposer from '@/components/portal/PostComposer';
+import PostComposerModal from '@/components/portal/PostComposerModal';
 import FeedCard from '@/components/portal/FeedCard';
 import { formatRelativeTime } from '@/lib/utils/format';
 import type { CommunityPost, RotaractEvent, ServiceHour } from '@/types';
@@ -47,6 +47,7 @@ export default function PortalDashboard() {
   const { data: serviceHours } = useServiceHours(member?.id ?? null);
   const { status: duesStatus } = useDues();
   const [activeTab, setActiveTab] = useState('all');
+  const [showComposer, setShowComposer] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
@@ -54,10 +55,10 @@ export default function PortalDashboard() {
     .filter((h) => h.status === 'approved')
     .reduce((sum, h) => sum + h.hours, 0);
 
-  const handlePost = async (content: string, type: string) => {
+  const handlePost = async (data: { content: string; type: string; imageURLs?: string[]; linkURL?: string; audience: string }) => {
     if (!user) return;
     try {
-      await apiPost('/api/portal/posts', { content, type });
+      await apiPost('/api/portal/posts', data);
       toast('Post shared with the community!');
     } catch (err: any) {
       toast(err.message || 'Failed to create post', 'error');
@@ -79,7 +80,11 @@ export default function PortalDashboard() {
     } catch { toast('Failed to add comment', 'error'); }
   }, [commentInputs, user, toast]);
 
+  const isBoardMember = member?.role === 'board' || member?.role === 'president' || member?.role === 'treasurer';
+
   const filteredPosts = ((posts || []) as CommunityPost[]).filter((p) => {
+    // Hide board-only posts from non-board members
+    if (p.audience === 'board' && !isBoardMember) return false;
     if (activeTab === 'announcements') return p.type === 'announcement';
     if (activeTab === 'community') return p.type !== 'announcement';
     return true;
@@ -188,7 +193,23 @@ export default function PortalDashboard() {
 
         {/* ── LEFT: Feed ── */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-5">
-          <PostComposer onSubmit={handlePost} />
+          {/* Composer trigger card */}
+          <div
+            onClick={() => setShowComposer(true)}
+            className="flex items-center gap-3.5 p-5 sm:p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 hover:border-cranberry-200 dark:hover:border-cranberry-700 cursor-pointer transition-all duration-200 group hover:shadow-md hover:shadow-cranberry-500/5"
+          >
+            <Avatar src={member?.photoURL} alt={member?.displayName || ''} size="md" />
+            <div className="flex-1 bg-gray-50/80 dark:bg-gray-800/40 rounded-xl px-4 py-3 border border-gray-200/80 dark:border-gray-700/60 group-hover:border-cranberry-200 dark:group-hover:border-cranberry-700 transition-colors">
+              <p className="text-sm text-gray-400 dark:text-gray-500">Share an update with the community…</p>
+            </div>
+          </div>
+
+          {/* Composer modal */}
+          <PostComposerModal
+            open={showComposer}
+            onClose={() => setShowComposer(false)}
+            onSubmit={handlePost}
+          />
 
           <div className="flex items-center justify-between">
             <Tabs

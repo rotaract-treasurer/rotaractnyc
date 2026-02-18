@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const memberDoc = await adminDb.collection('members').doc(uid).get();
     const memberData = memberDoc.data();
 
-    const post = {
+    const post: Record<string, unknown> = {
       type: body.type || 'text',
       content: body.content,
       authorId: uid,
@@ -62,6 +62,12 @@ export async function POST(request: NextRequest) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
+
+    // Optional fields
+    if (body.linkURL) post.linkURL = body.linkURL;
+    if (body.audience && ['all', 'board'].includes(body.audience)) {
+      post.audience = body.audience;
+    }
 
     const docRef = await adminDb.collection('posts').add(post);
 

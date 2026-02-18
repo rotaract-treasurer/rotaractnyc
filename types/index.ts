@@ -119,6 +119,8 @@ export interface Article {
 }
 
 // ----- Community Post -----
+export type PostAudience = 'all' | 'board';
+
 export interface CommunityPost {
   id: string;
   authorId: string;
@@ -128,6 +130,7 @@ export interface CommunityPost {
   content: string;
   imageURLs?: string[];
   linkURL?: string;
+  audience?: PostAudience;
   likeCount: number;
   commentCount: number;
   likedBy?: string[];
