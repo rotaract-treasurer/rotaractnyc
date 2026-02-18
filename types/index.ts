@@ -32,6 +32,8 @@ export interface Member {
   occupation?: string;
   employer?: string;
   address?: string;
+  whatsAppPhone?: string;
+  whatsAppSameAsPhone?: boolean;
   onboardingComplete?: boolean;
   invitedAt?: string;
   joinedAt: string;
@@ -306,6 +308,10 @@ export interface SiteSettings {
     instagram?: string;
     linkedin?: string;
     facebook?: string;
+  };
+  profileOptions?: {
+    committees: string[];
+    occupations: string[];
   };
 }
 

@@ -138,6 +138,7 @@ export default function DirectoryPage() {
             <MemberCard
               key={m.id}
               member={m}
+              viewerRole={currentMember?.role}
               onMessage={() => (window.location.href = `/portal/messages?to=${m.id}`)}
             />
           ))}

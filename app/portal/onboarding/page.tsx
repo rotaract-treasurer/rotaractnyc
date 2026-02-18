@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
-import { apiPatch } from '@/hooks/useFirestore';
+import { apiPatch, apiGet } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Avatar from '@/components/ui/Avatar';
+import PhoneInput from '@/components/ui/PhoneInput';
+import SelectWithOther from '@/components/ui/SelectWithOther';
+import { toSelectOptions, DEFAULT_OCCUPATIONS } from '@/lib/profileOptions';
 import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage as getStorage } from '@/lib/firebase/client';
@@ -48,7 +51,11 @@ export default function OnboardingPage() {
     memberType: 'professional' as 'professional' | 'student',
     interests: [] as string[],
     hearAbout: '',
+    whatsAppPhone: '',
+    whatsAppSameAsPhone: false,
   });
+
+  const [occupationOpts, setOccupationOpts] = useState(() => toSelectOptions(DEFAULT_OCCUPATIONS));
 
   // Pre-fill from member data
   useEffect(() => {
@@ -65,12 +72,23 @@ export default function OnboardingPage() {
         linkedIn: member.linkedIn || f.linkedIn,
         birthday: member.birthday || f.birthday,
         interests: member.interests || f.interests,
+        whatsAppPhone: member.whatsAppPhone || f.whatsAppPhone,
+        whatsAppSameAsPhone: member.whatsAppSameAsPhone ?? f.whatsAppSameAsPhone,
       }));
       if (member.photoURL) {
         setPhotoPreview(member.photoURL);
       }
     }
   }, [member]);
+
+  // Fetch admin-configured dropdown options
+  useEffect(() => {
+    apiGet('/api/portal/settings/profile-options')
+      .then((data: { occupations?: string[] }) => {
+        if (data.occupations?.length) setOccupationOpts(toSelectOptions(data.occupations));
+      })
+      .catch(() => {});
+  }, []);
 
   // If already onboarded, redirect
   useEffect(() => {
@@ -140,6 +158,8 @@ export default function OnboardingPage() {
         linkedIn: form.linkedIn.trim() || undefined,
         memberType: form.memberType,
         interests: form.interests,
+        whatsAppPhone: form.whatsAppSameAsPhone ? '' : form.whatsAppPhone.trim(),
+        whatsAppSameAsPhone: form.whatsAppSameAsPhone,
         ...(photoURL && { photoURL }),
         onboardingComplete: true,
       });
@@ -188,6 +208,22 @@ export default function OnboardingPage() {
             <Input label="Phone Number" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
             <Input label="Mailing Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 Main St, New York, NY 10001" />
             <Input label="Birthday" type="date" value={form.birthday} onChange={(e) => setForm({ ...form, birthday: e.target.value })} />
+            {/* WhatsApp */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.75.75 0 00.917.918l4.458-1.495A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.818-6.3-2.187l-.44-.358-3.095 1.037 1.037-3.095-.358-.44A9.95 9.95 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                  WhatsApp Number
+                </p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-gray-500">Same as phone</span>
+                  <input type="checkbox" checked={form.whatsAppSameAsPhone} onChange={(e) => setForm({ ...form, whatsAppSameAsPhone: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-cranberry focus:ring-cranberry" />
+                </label>
+              </div>
+              {!form.whatsAppSameAsPhone && (
+                <Input label="WhatsApp Phone" type="tel" value={form.whatsAppPhone} onChange={(e) => setForm({ ...form, whatsAppPhone: e.target.value })} placeholder="+1 (555) 000-0000" />
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Membership Type</label>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -211,7 +247,7 @@ export default function OnboardingPage() {
           <div className="space-y-5">
             <h2 className="font-display font-bold text-gray-900 dark:text-white">About You</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Help other members get to know you.</p>
-            <Input label="Occupation" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="e.g., Software Engineer, Student" />
+            <SelectWithOther label="Occupation" options={occupationOpts} value={form.occupation} onChange={(v) => setForm({ ...form, occupation: v })} placeholder="Enter your occupation..." />
             <Input label="Employer / School" value={form.employer} onChange={(e) => setForm({ ...form, employer: e.target.value })} placeholder="e.g., Google, NYU" />
             <Input label="LinkedIn URL" type="url" value={form.linkedIn} onChange={(e) => setForm({ ...form, linkedIn: e.target.value })} placeholder="https://linkedin.com/in/yourname" />
             <Textarea label="Short Bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Tell us a bit about yourself..." rows={3} />
