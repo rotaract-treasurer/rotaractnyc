@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { useMembers, apiPost, apiGet, apiPatch } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import Input from '@/components/ui/Input';
@@ -88,7 +87,7 @@ export default function MessagesPage() {
   const unreadCount = inbox.filter((m) => !m.read).length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 page-enter">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Messages</h1>
@@ -110,7 +109,7 @@ export default function MessagesPage() {
 
       {/* Compose */}
       {showCompose && (
-        <Card padding="md">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
           <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">New Message</h3>
           <form onSubmit={handleSend} className="space-y-4">
             <div>
@@ -133,7 +132,7 @@ export default function MessagesPage() {
             <Textarea label="Message" required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Write your message..." rows={5} />
             <Button type="submit" loading={sending}>Send Message</Button>
           </form>
-        </Card>
+        </div>
       )}
 
       {/* Tabs */}
@@ -162,10 +161,9 @@ export default function MessagesPage() {
             const isExpanded = expandedId === msg.id;
             const isUnread = !isFromMe && !msg.read;
             return (
-              <Card
+              <div
                 key={msg.id}
-                padding="md"
-                className={isUnread ? 'border-l-4 border-l-cranberry' : ''}
+                className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-4 sm:p-5 transition-all hover:border-gray-300 dark:hover:border-gray-700 ${isUnread ? 'border-l-4 !border-l-cranberry' : ''}`}
               >
                 <button
                   className="w-full text-left"
@@ -211,7 +209,7 @@ export default function MessagesPage() {
                     )}
                   </div>
                 )}
-              </Card>
+              </div>
             );
           })}
         </div>

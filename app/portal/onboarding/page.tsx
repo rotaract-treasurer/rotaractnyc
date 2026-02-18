@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { apiPatch } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
@@ -154,7 +153,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 py-4">
+    <div className="max-w-2xl mx-auto space-y-8 py-4 page-enter">
       <div className="text-center">
         <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center">
           <svg className="w-6 h-6 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -176,7 +175,7 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      <Card padding="lg">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
         {/* Step 1: Personal Info */}
         {step === 1 && (
           <div className="space-y-5">
@@ -340,7 +339,7 @@ export default function OnboardingPage() {
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }

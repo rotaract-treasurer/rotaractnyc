@@ -1,12 +1,11 @@
 'use client';
 
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';
 
 export default function OnboardingSuccessPage() {
   return (
-    <div className="max-w-lg mx-auto text-center space-y-6 py-12">
+    <div className="max-w-lg mx-auto text-center space-y-6 py-12 page-enter">
       <div className="w-20 h-20 rounded-full bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center mx-auto">
         <svg className="w-10 h-10 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
       </div>
@@ -17,7 +16,7 @@ export default function OnboardingSuccessPage() {
         Your profile has been submitted for approval. A board member will review your application shortly. In the meantime, feel free to explore the portal.
       </p>
 
-      <Card padding="md" className="text-left">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 text-left">
         <h3 className="font-display font-bold text-gray-900 dark:text-white mb-3">Next Steps</h3>
         <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
           <li className="flex items-start gap-3">
@@ -33,7 +32,7 @@ export default function OnboardingSuccessPage() {
             <span>Don&apos;t forget to pay your annual dues to maintain active status</span>
           </li>
         </ul>
-      </Card>
+      </div>
 
       <div className="flex justify-center gap-3">
         <Link href="/portal">

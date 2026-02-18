@@ -54,7 +54,7 @@ export default function PortalArticlesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
@@ -81,7 +81,7 @@ export default function PortalArticlesPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
                 filter === f
                   ? 'bg-cranberry text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'

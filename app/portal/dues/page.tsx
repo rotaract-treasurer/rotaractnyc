@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { apiPost, apiGet } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
@@ -82,14 +81,14 @@ export default function DuesPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8 page-enter">
       <div>
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Annual Dues</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your membership dues for the current Rotary year.</p>
       </div>
 
       {/* Status Card */}
-      <Card padding="lg">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Rotary Year {cycleName}</p>
           <Badge
@@ -152,10 +151,10 @@ export default function DuesPage() {
             </p>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Info */}
-      <Card padding="md">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
         <h3 className="font-display font-bold text-gray-900 dark:text-white mb-3">About Annual Dues</h3>
         <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <li className="flex items-start gap-2"><span className="text-cranberry mt-0.5">•</span>The Rotary year runs July 1 – June 30</li>
@@ -163,7 +162,7 @@ export default function DuesPage() {
           <li className="flex items-start gap-2"><span className="text-cranberry mt-0.5">•</span>There is a 30-day grace period after the cycle ends</li>
           <li className="flex items-start gap-2"><span className="text-cranberry mt-0.5">•</span>Contact your treasurer for payment questions or alternative arrangements</li>
         </ul>
-      </Card>
+      </div>
     </div>
   );
 }

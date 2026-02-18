@@ -7,7 +7,6 @@ import { useToast } from '@/components/ui/Toast';
 import { uploadFile, validateFile } from '@/lib/firebase/upload';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db as getDb } from '@/lib/firebase/client';
-import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -219,7 +218,7 @@ export default function DocumentsPage() {
 
     return (
       <div key={doc.id}>
-        <Card interactive padding="md">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-4 min-w-0">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colors.bg}`}>
@@ -269,7 +268,7 @@ export default function DocumentsPage() {
               )}
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Google Drive inline embed */}
         {embedUrl && expandedDrive === doc.id && (
@@ -307,7 +306,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -346,7 +345,7 @@ export default function DocumentsPage() {
 
       {/* Upload form */}
       {showUpload && (
-        <Card padding="md">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
           <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">Upload Document</h3>
           <div className="space-y-4">
             <Input
@@ -417,7 +416,7 @@ export default function DocumentsPage() {
               {uploadForm.category === 'Google Drive' ? 'Add Drive Link' : 'Upload'}
             </Button>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Content */}

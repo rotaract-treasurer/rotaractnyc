@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiGet } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
@@ -55,9 +54,10 @@ export default function PortalArticleDetailPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-cranberry transition-colors flex items-center gap-1">
-        ← Back to articles
+    <div className="max-w-3xl mx-auto space-y-6 page-enter">
+      <button onClick={() => router.back()} className="group text-sm text-gray-500 hover:text-cranberry transition-colors flex items-center gap-1.5">
+        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        Back to articles
       </button>
 
       {/* Cover */}
@@ -66,7 +66,7 @@ export default function PortalArticleDetailPage() {
         <img src={article.coverImage} alt={article.title} className="rounded-2xl w-full h-64 sm:h-80 object-cover" />
       )}
 
-      <Card padding="lg">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
         {/* Meta */}
         <div className="flex items-center gap-2 mb-4">
           <Badge variant={categoryColors[article.category] || 'gray'}>{article.category}</Badge>
@@ -105,7 +105,7 @@ export default function PortalArticleDetailPage() {
           {article.viewCount != null && <span>{article.viewCount} views</span>}
           {article.likeCount != null && <span>{article.likeCount} likes</span>}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

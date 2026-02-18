@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { useServiceHours, usePortalEvents, apiPost, apiPatch, apiGet } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Tabs from '@/components/ui/Tabs';
-import StatCard from '@/components/ui/StatCard';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import ServiceHourLogger from '@/components/portal/ServiceHourLogger';
@@ -94,7 +92,7 @@ export default function ServiceHoursPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 page-enter">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Service Hours</h1>
@@ -116,21 +114,33 @@ export default function ServiceHoursPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          label="Total Hours"
-          value={totalHours}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-        />
-        <StatCard
-          label="This Year"
-          value={thisYearHours}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-        />
-        <StatCard
-          label="Events Served"
-          value={approvedHours.length}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">{totalHours}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Hours</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-azure-50 dark:bg-azure-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-azure" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">{thisYearHours}</p>
+          <p className="text-xs text-gray-500 mt-0.5">This Year</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">{approvedHours.length}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Events Served</p>
+        </div>
       </div>
 
       {/* Log Form */}
@@ -154,7 +164,7 @@ export default function ServiceHoursPage() {
           ) : (
             <div className="space-y-3">
               {pendingEntries.map((entry) => (
-                <Card key={entry.id} padding="md">
+                <div key={entry.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
@@ -182,7 +192,7 @@ export default function ServiceHoursPage() {
                       </Button>
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}
@@ -198,7 +208,7 @@ export default function ServiceHoursPage() {
           ) : (
             <div className="space-y-3">
               {serviceHours.map((entry) => (
-                <Card key={entry.id} padding="md">
+                <div key={entry.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{entry.eventTitle || 'Service Hours'}</h4>
@@ -213,7 +223,7 @@ export default function ServiceHoursPage() {
                       <p className="text-xs text-gray-400">hours</p>
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}

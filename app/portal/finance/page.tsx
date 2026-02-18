@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { apiGet } from '@/hooks/useFirestore';
-import Card from '@/components/ui/Card';
-import StatCard from '@/components/ui/StatCard';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
@@ -57,28 +55,40 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 page-enter">
       <div>
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Club financial overview and transaction history.</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          label="Total Income"
-          value={`$${summary.totalIncome.toLocaleString()}`}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-        />
-        <StatCard
-          label="Total Expenses"
-          value={`$${summary.totalExpenses.toLocaleString()}`}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
-        />
-        <StatCard
-          label="Balance"
-          value={`$${summary.balance.toLocaleString()}`}
-          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
-        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">${summary.totalIncome.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Income</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">${summary.totalExpenses.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Expenses</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-azure-50 dark:bg-azure-900/20 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-azure" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+          </div>
+          <p className="text-2xl font-display font-bold text-gray-900 dark:text-white">${summary.balance.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Balance</p>
+        </div>
       </div>
 
       {/* Monthly Overview Chart */}
@@ -88,7 +98,7 @@ export default function FinancePage() {
       {transactions.length === 0 ? (
         <EmptyState icon={<svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="No transactions yet" description="Transactions will appear here as dues are paid and expenses are recorded." />
       ) : (
-        <Card padding="none">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 overflow-hidden">
           <div className="p-5 border-b border-gray-200 dark:border-gray-800">
             <h3 className="font-display font-bold text-gray-900 dark:text-white">Recent Transactions</h3>
           </div>
@@ -117,7 +127,7 @@ export default function FinancePage() {
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );

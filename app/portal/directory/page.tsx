@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useMembers } from '@/hooks/useFirestore';
 import { useAuth } from '@/lib/firebase/auth';
-import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -59,7 +58,7 @@ export default function DirectoryPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8 page-enter">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -145,7 +144,7 @@ export default function DirectoryPage() {
         </div>
       ) : (
         /* ── Table view ── */
-        <Card padding="none" className="overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -217,7 +216,7 @@ export default function DirectoryPage() {
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
             Showing {filtered.length} member{filtered.length !== 1 ? 's' : ''}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* ── Add Member Modal ── */}

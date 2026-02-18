@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
-import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
@@ -56,13 +55,14 @@ export default function PortalMemberDetailPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-cranberry transition-colors flex items-center gap-1">
-        ← Back to directory
+    <div className="max-w-3xl mx-auto space-y-6 page-enter">
+      <button onClick={() => router.back()} className="group text-sm text-gray-500 hover:text-cranberry transition-colors flex items-center gap-1.5">
+        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        Back to directory
       </button>
 
       {/* Profile Header */}
-      <Card padding="lg">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           <Avatar src={member.photoURL} alt={member.displayName} size="xl" />
           <div className="flex-1">
@@ -84,11 +84,11 @@ export default function PortalMemberDetailPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Details */}
       <div className="grid sm:grid-cols-2 gap-6">
-        <Card padding="md">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
           <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">Information</h3>
           <dl className="space-y-3 text-sm">
             {member.email && (
@@ -118,17 +118,17 @@ export default function PortalMemberDetailPage() {
               </div>
             )}
           </dl>
-        </Card>
+        </div>
 
         {member.interests && member.interests.length > 0 && (
-          <Card padding="md">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
             <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">Interests</h3>
             <div className="flex flex-wrap gap-2">
               {member.interests.map((i) => (
                 <Badge key={i} variant="azure">{i}</Badge>
               ))}
             </div>
-          </Card>
+          </div>
         )}
       </div>
 
