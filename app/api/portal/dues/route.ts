@@ -29,7 +29,7 @@ export async function GET() {
     // Get current dues cycle
     const cycleSnap = await adminDb
       .collection('duesCycles')
-      .where('active', '==', true)
+      .where('isActive', '==', true)
       .limit(1)
       .get();
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Get active dues cycle
     const cycleSnap = await adminDb
       .collection('duesCycles')
-      .where('active', '==', true)
+      .where('isActive', '==', true)
       .limit(1)
       .get();
 
@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       metadata: {
+        type: 'dues',
         memberId: uid,
         cycleId: cycle.id,
         memberType,

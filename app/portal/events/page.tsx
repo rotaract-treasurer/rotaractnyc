@@ -15,7 +15,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import CreateEventModal from '@/components/portal/CreateEventModal';
 import { defaultEvents } from '@/lib/defaults/data';
 import { formatCurrency } from '@/lib/utils/format';
-import type { RotaractEvent, RSVPStatus } from '@/types';
+import type { RotaractEvent, RSVPStatus, EventType } from '@/types';
 
 export default function PortalEventsPage() {
   const { user, member } = useAuth();
@@ -23,6 +23,7 @@ export default function PortalEventsPage() {
   const { data: firestoreEvents, loading } = usePortalEvents();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all');
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -37,8 +38,9 @@ export default function PortalEventsPage() {
       const desc = (e.description || '').toLowerCase();
       const q = search.toLowerCase();
       const matchSearch = title.includes(q) || desc.includes(q);
+      const matchType = typeFilter === 'all' || e.type === typeFilter;
       const isFuture = new Date(e.date) >= now;
-      return activeTab === 'upcoming' ? matchSearch && isFuture : matchSearch && !isFuture;
+      return activeTab === 'upcoming' ? matchSearch && matchType && isFuture : matchSearch && matchType && !isFuture;
     })
     .sort((a, b) => activeTab === 'upcoming'
       ? new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -89,6 +91,23 @@ export default function PortalEventsPage() {
       <div className="flex flex-col sm:flex-row gap-4">
         <SearchInput value={search} onChange={setSearch} placeholder="Search events..." className="sm:max-w-xs" />
         <Tabs tabs={[{ id: 'upcoming', label: 'Upcoming' }, { id: 'past', label: 'Past' }]} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+
+      {/* Type filter */}
+      <div className="flex flex-wrap gap-2">
+        {([['all', 'All'], ['free', '✓ Free'], ['paid', '🎟️ Ticketed'], ['service', '🤝 Service'], ['hybrid', '⭐ Hybrid']] as const).map(([value, label]) => (
+          <button
+            key={value}
+            onClick={() => setTypeFilter(value as EventType | 'all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              typeFilter === value
+                ? 'bg-cranberry text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading ? (

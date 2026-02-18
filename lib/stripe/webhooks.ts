@@ -7,12 +7,15 @@ import { upsertRSVP } from '@/lib/services/events';
 import { createTransaction } from '@/lib/services/finance';
 
 export async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  const { type, memberId, memberType, cycleName, eventId, ticketType } = session.metadata || {};
+  const { type, memberId, memberType, cycleId, cycleName, eventId, ticketType, duesDocId } = session.metadata || {};
 
   if (type === 'dues' && memberId && memberType) {
+    // cycleId is the canonical field; cycleName is kept for backward compat
+    const resolvedCycleId = cycleId || cycleName || 'unknown';
+
     await recordDuesPayment({
       memberId,
-      cycleId: cycleName || 'unknown',
+      cycleId: resolvedCycleId,
       memberType: memberType as 'professional' | 'student',
       amount: session.amount_total || 0,
       status: 'PAID',
@@ -24,14 +27,14 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       type: 'income',
       category: 'Dues',
       amount: (session.amount_total || 0) / 100,
-      description: `Dues payment — ${memberType} (${cycleName})`,
+      description: `Dues payment — ${memberType} (${resolvedCycleId})`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
       createdAt: new Date().toISOString(),
     });
   }
 
-  if (type === 'event' && eventId && memberId) {
+  if ((type === 'event' || type === 'event_ticket') && eventId && memberId) {
     await upsertRSVP({
       eventId,
       memberId,

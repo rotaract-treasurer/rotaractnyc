@@ -20,6 +20,10 @@ export default function DuesPage() {
   const [selectedType, setSelectedType] = useState<'professional' | 'student'>('professional');
   const [duesStatus, setDuesStatus] = useState<DuesPaymentStatus>('UNPAID');
   const [cycleName, setCycleName] = useState('2025-2026');
+  const [cycleAmounts, setCycleAmounts] = useState<{ professional: number; student: number }>({
+    professional: SITE.dues.professional,
+    student: SITE.dues.student,
+  });
 
   // Fetch dues status
   useEffect(() => {
@@ -32,6 +36,12 @@ export default function DuesPage() {
         const data = await apiGet('/api/portal/dues');
         if (data?.dues?.status) setDuesStatus(data.dues.status);
         if (data?.cycle?.name) setCycleName(data.cycle.name);
+        if (data?.cycle) {
+          setCycleAmounts({
+            professional: data.cycle.amountProfessional ?? SITE.dues.professional,
+            student: data.cycle.amountStudent ?? SITE.dues.student,
+          });
+        }
       } catch {
         // Default to UNPAID — page renders fine with defaults
       } finally {
@@ -45,7 +55,7 @@ export default function DuesPage() {
     if (member?.memberType) setSelectedType(member.memberType);
   }, [member?.memberType]);
 
-  const amount = selectedType === 'student' ? SITE.dues.student : SITE.dues.professional;
+  const amount = selectedType === 'student' ? cycleAmounts.student : cycleAmounts.professional;
 
   const handlePay = async () => {
     setPaying(true);
@@ -98,7 +108,7 @@ export default function DuesPage() {
                 className={`p-5 rounded-xl border-2 text-left transition-all ${selectedType === 'professional' ? 'border-cranberry bg-cranberry-50/50 dark:bg-cranberry-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-cranberry'}`}
               >
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Professional</p>
-                <p className="text-3xl font-display font-bold text-cranberry mt-1">{formatCurrency(SITE.dues.professional)}</p>
+                <p className="text-3xl font-display font-bold text-cranberry mt-1">{formatCurrency(cycleAmounts.professional)}</p>
                 <p className="text-xs text-gray-500 mt-1">For working professionals</p>
               </button>
               <button
@@ -106,7 +116,7 @@ export default function DuesPage() {
                 className={`p-5 rounded-xl border-2 text-left transition-all ${selectedType === 'student' ? 'border-cranberry bg-cranberry-50/50 dark:bg-cranberry-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-cranberry'}`}
               >
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Student</p>
-                <p className="text-3xl font-display font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(SITE.dues.student)}</p>
+                <p className="text-3xl font-display font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(cycleAmounts.student)}</p>
                 <p className="text-xs text-gray-500 mt-1">Valid student ID required</p>
               </button>
             </div>
