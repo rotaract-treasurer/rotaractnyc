@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils/format';
 import Badge from '@/components/ui/Badge';
 import HeroSlideshow from '@/components/public/HeroSlideshow';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300; // ISR: regenerate every 5 minutes
 
 export const metadata: Metadata = generateMeta({
   title: `${SITE.shortName} — Service Above Self`,

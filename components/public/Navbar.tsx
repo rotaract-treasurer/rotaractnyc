@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
-import SearchModal from '@/components/SearchModal';
 import { cn } from '@/lib/utils/cn';
+
+const SearchModal = dynamic(() => import('@/components/SearchModal'), { ssr: false });
 
 const navigation = [
   {

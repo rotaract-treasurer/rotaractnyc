@@ -6,7 +6,7 @@ import { generateMeta } from '@/lib/seo';
 import { getPublishedArticles } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export const metadata: Metadata = generateMeta({
   title: 'News',

@@ -4,7 +4,7 @@ import HeroSection from '@/components/public/HeroSection';
 import { generateMeta } from '@/lib/seo';
 import { getGalleryImages } from '@/lib/firebase/queries';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 export const metadata: Metadata = generateMeta({
   title: 'Gallery',

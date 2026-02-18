@@ -1,6 +1,7 @@
 // Service Worker for PWA offline capabilities
-// Update version on each deployment to force cache refresh
-const CACHE_NAME = 'rotaractnyc-v' + Date.now()
+// Increment version on each deployment to force cache refresh
+const CACHE_VERSION = '3';
+const CACHE_NAME = 'rotaractnyc-v' + CACHE_VERSION;
 const urlsToCache = [
   '/',
   '/events',

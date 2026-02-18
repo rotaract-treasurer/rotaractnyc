@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/utils/format';
 import { SITE } from '@/lib/constants';
 import Badge from '@/components/ui/Badge';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

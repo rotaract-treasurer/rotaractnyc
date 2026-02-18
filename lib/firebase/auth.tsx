@@ -44,11 +44,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(getAuth(), async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Fetch or create member profile
+        // Fetch member profile and ID token in parallel
         const memberRef = doc(getDb(), 'members', firebaseUser.uid);
-        const memberSnap = await getDoc(memberRef);
+        const [memberSnap, idToken] = await Promise.all([
+          getDoc(memberRef),
+          firebaseUser.getIdToken(),
+        ]);
+
+        let resolvedMember: Member | null = null;
+
         if (memberSnap.exists()) {
-          setMember({ id: memberSnap.id, ...memberSnap.data() } as Member);
+          resolvedMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
         } else {
           // Check if there's an invited member doc matching this email
           // (created by board via AddMemberModal — stored with a Firestore auto-ID)
@@ -76,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await setDoc(memberRef, migratedMember);
             // Remove the old auto-ID doc
             await deleteDoc(invitedDoc.ref);
-            setMember({ id: firebaseUser.uid, ...migratedMember } as Member);
+            resolvedMember = { id: firebaseUser.uid, ...migratedMember } as Member;
           } else {
             // Truly new sign-up (walk-in, not invited)
             const newMember: Omit<Member, 'id'> = {
@@ -91,36 +97,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               joinedAt: new Date().toISOString(),
             };
             await setDoc(memberRef, { ...newMember, createdAt: serverTimestamp() });
-            setMember({ id: firebaseUser.uid, ...newMember });
+            resolvedMember = { id: firebaseUser.uid, ...newMember };
           }
         }
-        // Set session cookie (non-blocking — portal still works via client auth)
-        try {
-          const idToken = await firebaseUser.getIdToken();
-          const res = await fetch('/api/portal/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            // If server auto-approved this user, re-read the member profile
-            if (data.autoApproved) {
+
+        setMember(resolvedMember);
+        setLoading(false);
+
+        // Set session cookie non-blocking — don't delay render
+        fetch('/api/portal/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        })
+          .then((res) => res.ok ? res.json() : null)
+          .then(async (data) => {
+            if (data?.autoApproved) {
               const freshSnap = await getDoc(memberRef);
               if (freshSnap.exists()) {
                 setMember({ id: freshSnap.id, ...freshSnap.data() } as Member);
               }
             }
-          } else {
-            console.warn('Session cookie creation returned', res.status, '— server-side auth may be limited');
-          }
-        } catch (err) {
-          console.warn('Session cookie creation failed:', err);
-        }
+          })
+          .catch((err) => console.warn('Session cookie creation failed:', err));
       } else {
         setMember(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

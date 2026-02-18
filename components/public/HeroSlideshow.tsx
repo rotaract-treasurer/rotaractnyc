@@ -22,19 +22,28 @@ export default function HeroSlideshow() {
 
   return (
     <div className="absolute inset-0">
-      {heroImages.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt=""
-          fill
-          className={`object-cover transition-opacity duration-1000 ${
-            i === currentIndex ? 'opacity-100' : 'opacity-0'
-          }`}
-          priority={i === 0}
-          sizes="100vw"
-        />
-      ))}
+      {heroImages.map((src, i) => {
+        // Only render the current, previous, and next slides to avoid loading all 4 images
+        const isActive = i === currentIndex;
+        const isNext = i === (currentIndex + 1) % heroImages.length;
+        const isPrev = i === (currentIndex - 1 + heroImages.length) % heroImages.length;
+        if (!isActive && !isNext && !isPrev) return null;
+
+        return (
+          <Image
+            key={src}
+            src={src}
+            alt=""
+            fill
+            className={`object-cover transition-opacity duration-1000 ${
+              isActive ? 'opacity-100' : 'opacity-0'
+            }`}
+            priority={i === 0}
+            sizes="100vw"
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        );
+      })}
       {/* Dark overlay for text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
     </div>

@@ -43,14 +43,11 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Add security headers to all responses
+  // Portal routes need auth — just pass through for security headers
   const response = NextResponse.next();
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   return response;
 }
 
 export const config = {
-  matcher: ['/portal/:path*', '/((?!_next/static|_next/image|favicon).*)'],
+  matcher: ['/portal/:path*'],
 };

@@ -4,7 +4,7 @@ import HeroSection from '@/components/public/HeroSection';
 import { generateMeta } from '@/lib/seo';
 import { getBoardMembers } from '@/lib/firebase/queries';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600; // 10 min — leadership rarely changes
 
 export const metadata: Metadata = generateMeta({
   title: 'Leadership',

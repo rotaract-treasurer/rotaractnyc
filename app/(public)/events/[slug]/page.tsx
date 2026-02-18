@@ -6,7 +6,7 @@ import { formatDate, formatCurrency } from '@/lib/utils/format';
 import { SITE } from '@/lib/constants';
 import Badge from '@/components/ui/Badge';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 120; // 2 min — event details change more frequently
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

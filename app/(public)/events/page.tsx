@@ -4,7 +4,7 @@ import EventsFilter from '@/components/public/EventsFilter';
 import { generateMeta } from '@/lib/seo';
 import { getPublicEvents } from '@/lib/firebase/queries';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export const metadata: Metadata = generateMeta({
   title: 'Events',
