@@ -31,6 +31,9 @@ export interface Member {
   linkedIn?: string;
   occupation?: string;
   employer?: string;
+  address?: string;
+  onboardingComplete?: boolean;
+  invitedAt?: string;
   joinedAt: string;
   updatedAt?: string;
 }

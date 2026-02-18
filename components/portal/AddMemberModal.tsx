@@ -122,9 +122,9 @@ export default function AddMemberModal({ open, onClose, onCreated }: AddMemberMo
           <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-2xl">
             ✓
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Member Created!</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {firstName} {lastName} has been added to the directory.
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Invitation Sent!</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">
+            {firstName} will receive an email at <strong>{email}</strong> with instructions to sign in and complete their profile.
           </p>
         </div>
       ) : (

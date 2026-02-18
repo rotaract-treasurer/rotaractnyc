@@ -102,6 +102,27 @@ export function welcomeEmail(name: string): { subject: string; html: string } {
   };
 }
 
+export function inviteEmail(name: string): { subject: string; html: string } {
+  return {
+    subject: `You're invited to join ${SITE.shortName}! 🎉`,
+    html: wrapTemplate(`
+      <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px;">You're Invited, ${name}!</h2>
+      <p style="color: #374151; margin: 0 0 12px;">You've been invited to join the ${SITE.name} member portal. Sign in to complete your profile and become an active member.</p>
+      <p style="color: #374151; margin: 0 0 12px;">Here's what to expect:</p>
+      <ol style="color: #374151; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Click the button below to sign in with your Google account</li>
+        <li style="margin-bottom: 8px;">Complete a short profile setup (name, phone, photo, etc.)</li>
+        <li style="margin-bottom: 8px;">Choose your membership type and pay your annual dues</li>
+        <li style="margin-bottom: 8px;">Start exploring events, connecting with members, and more!</li>
+      </ol>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${SITE.url}/portal/login" style="display: inline-block; background-color: #9B1B30; color: #ffffff; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Sign In & Get Started</a>
+      </div>
+      <p style="color: #6b7280; font-size: 13px; margin: 16px 0 0;">Please sign in using the same email address this invitation was sent to (<strong>${name}</strong>'s email on file). This ensures your profile is linked correctly.</p>
+    `),
+  };
+}
+
 export function duesReminderEmail(name: string, amount: string, cycleName: string): { subject: string; html: string } {
   return {
     subject: `Dues Reminder — ${cycleName}`,

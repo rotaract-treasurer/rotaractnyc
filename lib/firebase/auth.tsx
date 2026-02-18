@@ -50,19 +50,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (memberSnap.exists()) {
           setMember({ id: memberSnap.id, ...memberSnap.data() } as Member);
         } else {
-          // Auto-create pending profile
-          const newMember: Omit<Member, 'id'> = {
-            email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || '',
-            firstName: firebaseUser.displayName?.split(' ')[0] || '',
-            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
-            photoURL: firebaseUser.photoURL || '',
-            role: 'member',
-            status: 'pending',
-            joinedAt: new Date().toISOString(),
-          };
-          await setDoc(memberRef, { ...newMember, createdAt: serverTimestamp() });
-          setMember({ id: firebaseUser.uid, ...newMember });
+          // Check if there's an invited member doc matching this email
+          // (created by board via AddMemberModal — stored with a Firestore auto-ID)
+          const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
+          const inviteQuery = query(
+            collection(getDb(), 'members'),
+            where('email', '==', (firebaseUser.email || '').toLowerCase()),
+          );
+          const inviteSnap = await getDocs(inviteQuery);
+          const invitedDoc = inviteSnap.docs.find((d) => d.id !== firebaseUser.uid);
+
+          if (invitedDoc) {
+            // Migrate the invited member doc to the Firebase UID key
+            const inviteData = invitedDoc.data();
+            const migratedMember: Record<string, any> = {
+              ...inviteData,
+              displayName: firebaseUser.displayName || inviteData.displayName || '',
+              photoURL: firebaseUser.photoURL || inviteData.photoURL || '',
+              status: 'active',
+            };
+            // If onboardingComplete wasn't set or is false, ensure it stays false
+            if (!inviteData.onboardingComplete) {
+              migratedMember.onboardingComplete = false;
+            }
+            await setDoc(memberRef, migratedMember);
+            // Remove the old auto-ID doc
+            await deleteDoc(invitedDoc.ref);
+            setMember({ id: firebaseUser.uid, ...migratedMember } as Member);
+          } else {
+            // Truly new sign-up (walk-in, not invited)
+            const newMember: Omit<Member, 'id'> = {
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || '',
+              firstName: firebaseUser.displayName?.split(' ')[0] || '',
+              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+              photoURL: firebaseUser.photoURL || '',
+              role: 'member',
+              status: 'pending',
+              onboardingComplete: false,
+              joinedAt: new Date().toISOString(),
+            };
+            await setDoc(memberRef, { ...newMember, createdAt: serverTimestamp() });
+            setMember({ id: firebaseUser.uid, ...newMember });
+          }
         }
         // Set session cookie (non-blocking — portal still works via client auth)
         try {

@@ -96,10 +96,12 @@ export async function POST(request: NextRequest) {
       displayName,
       email: email.toLowerCase().trim(),
       role: memberRole,
-      status,
+      status: 'pending',
+      onboardingComplete: false,
       joinedAt: now,
       createdAt: now,
       updatedAt: now,
+      invitedAt: now,
     };
 
     // Optional fields — only include if provided
@@ -113,6 +115,20 @@ export async function POST(request: NextRequest) {
     if (bio) memberData.bio = bio.trim();
 
     const docRef = await adminDb.collection('members').add(memberData);
+
+    // Send invitation email
+    try {
+      const { sendEmail } = await import('@/lib/email/send');
+      const { inviteEmail } = await import('@/lib/email/templates');
+      const template = inviteEmail(firstName.trim());
+      await sendEmail({
+        to: email.toLowerCase().trim(),
+        subject: template.subject,
+        html: template.html,
+      });
+    } catch (emailErr) {
+      console.error('Invitation email failed (non-blocking):', emailErr);
+    }
 
     return NextResponse.json(
       { id: docRef.id, ...memberData },

@@ -48,6 +48,25 @@ export async function POST(request: Request) {
       }
     }
 
+    // Auto-approve invited members (they were pre-added by board)
+    if (!autoApproved && email) {
+      try {
+        const memberRef = adminDb.collection('members').doc(decoded.uid);
+        const snap = await memberRef.get();
+        if (snap.exists) {
+          const data = snap.data();
+          if (data?.status === 'pending' && data?.invitedAt) {
+            // This member was invited — auto-activate so they can complete onboarding
+            await memberRef.update({ status: 'active' });
+            autoApproved = true;
+            console.log(`Auto-approved invited member: ${email}`);
+          }
+        }
+      } catch (e) {
+        console.warn('Invited member auto-approve check failed (non-blocking):', e);
+      }
+    }
+
     return NextResponse.json({ success: true, autoApproved });
   } catch (error: any) {
     const message = error?.message || String(error);

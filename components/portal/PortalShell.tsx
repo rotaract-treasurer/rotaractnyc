@@ -129,6 +129,16 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     );
   }
 
+  // Redirect to onboarding if profile setup is incomplete
+  if (member.onboardingComplete === false && pathname !== '/portal/onboarding') {
+    router.push('/portal/onboarding');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-cranberry" />
+      </div>
+    );
+  }
+
   if (member.status === 'pending') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">

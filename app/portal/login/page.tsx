@@ -16,7 +16,12 @@ export default function PortalLoginPage() {
 
   useEffect(() => {
     if (!loading && user && member) {
-      router.push(redirect);
+      // If onboarding isn't complete, redirect to onboarding wizard
+      if (member.onboardingComplete === false) {
+        router.push('/portal/onboarding');
+      } else {
+        router.push(redirect);
+      }
     }
   }, [loading, user, member, redirect, router]);
 
@@ -38,12 +43,6 @@ export default function PortalLoginPage() {
       setSigningIn(false);
     }
   };
-
-  useEffect(() => {
-    if (!loading && user && member) {
-      router.push(redirect);
-    }
-  }, [loading, user, member, redirect, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cranberry-950 via-cranberry-900 to-cranberry-800 px-4">
