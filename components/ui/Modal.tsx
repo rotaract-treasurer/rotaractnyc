@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback, type ReactNode } from 'react';
 import { cn } from '@/lib/utils/cn';
+
+/* SSR-safe layout effect — runs synchronously before paint on the client,
+   falls back to useEffect during SSR to avoid React warnings. */
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 interface ModalProps {
   open: boolean;
@@ -10,6 +14,8 @@ interface ModalProps {
   title?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  /** When true the default p-6 content wrapper is removed so children control their own padding. */
+  noPadding?: boolean;
 }
 
 const modalSizes = {
@@ -19,17 +25,16 @@ const modalSizes = {
   xl: 'max-w-4xl',
 };
 
-export default function Modal({ open, onClose, children, title, size = 'md', className }: ModalProps) {
+export default function Modal({ open, onClose, children, title, size = 'md', className, noPadding }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = title ? 'modal-title' : undefined;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const hasInitialFocusRef = useRef(false);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const focusElement = (el: HTMLElement) => {
     try {
-      // Avoid scrolling the underlying page when focusing.
       el.focus({ preventScroll: true });
     } catch {
       el.focus();
@@ -68,35 +73,56 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
     []
   );
 
-  useEffect(() => {
+  /* Lock body scroll synchronously (before paint) to prevent scroll jumps. */
+  useIsomorphicLayoutEffect(() => {
     if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-
-      // Focus the modal or first focusable element — only on initial open
-      if (!hasInitialFocusRef.current) {
-        hasInitialFocusRef.current = true;
-        requestAnimationFrame(() => {
-          if (modalRef.current) {
-            const autoFocusEl = modalRef.current.querySelector<HTMLElement>('[autofocus]');
-            const firstFocusable = modalRef.current.querySelector<HTMLElement>(
-              'a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
-            );
-
-            if (autoFocusEl) focusElement(autoFocusEl);
-            else if (firstFocusable) focusElement(firstFocusable);
-            else focusElement(modalRef.current);
-          }
-        });
-      }
-
       return () => {
         document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
       };
     }
-    hasInitialFocusRef.current = false;
     document.body.style.overflow = '';
+  }, [open]);
+
+  /* Keyboard listener + auto-focus (runs after paint so DOM is settled). */
+  useEffect(() => {
+    if (!open) return;
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Auto-focus: find [data-autofocus] → first focusable → modal container
+    const raf = requestAnimationFrame(() => {
+      if (!modalRef.current) return;
+
+      // Skip if something inside the modal already has focus (e.g. React autoFocus fired)
+      if (
+        modalRef.current.contains(document.activeElement) &&
+        document.activeElement !== modalRef.current
+      ) {
+        return;
+      }
+
+      const preferred =
+        modalRef.current.querySelector<HTMLElement>('[data-autofocus]') ||
+        modalRef.current.querySelector<HTMLElement>('[autofocus]');
+      const firstFocusable = modalRef.current.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
+      );
+
+      if (preferred) focusElement(preferred);
+      else if (firstFocusable) focusElement(firstFocusable);
+      else focusElement(modalRef.current);
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to the element that opened the modal
+      if (previousFocusRef.current && document.contains(previousFocusRef.current)) {
+        previousFocusRef.current.focus({ preventScroll: true });
+      }
+    };
   }, [open, handleKeyDown]);
 
   if (!open) return null;
@@ -104,13 +130,19 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none p-4"
       onClick={(e) => e.target === overlayRef.current && onClose()}
+      onWheel={(e) => {
+        // Prevent scroll from propagating outside the modal dialog
+        if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+          e.preventDefault();
+        }
+      }}
     >
+      {/* Backdrop — pointer-events-none so clicks fall through to the overlay handler */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in pointer-events-none"
         aria-hidden="true"
-        onClick={onClose}
       />
       <div
         ref={modalRef}
@@ -119,8 +151,8 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl animate-scale-in',
-          'max-h-[90vh] overflow-y-auto',
+          'relative z-10 w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl animate-scale-in',
+          'max-h-[90vh] overflow-y-auto overscroll-contain',
           modalSizes[size],
           className
         )}
@@ -140,7 +172,7 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        {noPadding ? children : <div className="p-6">{children}</div>}
       </div>
     </div>
   );

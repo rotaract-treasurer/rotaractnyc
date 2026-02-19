@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type ChangeEvent, type DragEvent } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/components/ui/Toast';
@@ -121,17 +121,21 @@ export default function PostComposerModal({ open, onClose, onSubmit }: PostCompo
   const linkInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Draft autosave ── */
-  const draftState: DraftState = { content, type: postType, audience, linkURL };
-  const debouncedDraft = useDebounce(draftState, 500);
+  const draftKey = `${content}\0${postType}\0${audience}\0${linkURL}`;
+  const debouncedDraftKey = useDebounce(draftKey, 500);
+  const draftState = useMemo<DraftState>(() => {
+    const [c, t, a, l] = debouncedDraftKey.split('\0');
+    return { content: c || '', type: (t as PostType) || 'text', audience: (a as Audience) || 'all', linkURL: l || '' };
+  }, [debouncedDraftKey]);
 
   // Save draft on debounced changes
   useEffect(() => {
     if (!open) return;
-    if (!debouncedDraft.content && !debouncedDraft.linkURL) return;
+    if (!draftState.content && !draftState.linkURL) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(debouncedDraft));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draftState));
     } catch { /* quota exceeded — ignore */ }
-  }, [debouncedDraft, open]);
+  }, [draftState, open]);
 
   // Restore draft on open
   useEffect(() => {
@@ -171,6 +175,23 @@ export default function PostComposerModal({ open, onClose, onSubmit }: PostCompo
     ta.style.height = 'auto';
     ta.style.height = `${Math.max(ta.scrollHeight, 120)}px`;
   }, [content]);
+
+  /* ── Explicit textarea focus on modal open ── */
+  useEffect(() => {
+    if (!open) return;
+    // Use a short delay to ensure the modal DOM is fully rendered
+    const timer = setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta && document.activeElement !== ta) {
+        try {
+          ta.focus({ preventScroll: true });
+        } catch {
+          ta.focus();
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   /* ── Click-outside for emoji picker ── */
   useEffect(() => {
@@ -380,7 +401,7 @@ export default function PostComposerModal({ open, onClose, onSubmit }: PostCompo
      ═══════════════════════════════════════════════════════ */
 
   return (
-    <Modal open={open} onClose={handleClose} size="lg" className="!p-0 overflow-hidden">
+    <Modal open={open} onClose={handleClose} size="lg" noPadding>
       {/* Cranberry accent bar */}
       <div className="h-1 bg-gradient-to-r from-cranberry-600 via-cranberry to-cranberry-800" />
 
@@ -465,7 +486,7 @@ export default function PostComposerModal({ open, onClose, onSubmit }: PostCompo
 
         <textarea
           ref={textareaRef}
-          autoFocus
+          data-autofocus
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={
