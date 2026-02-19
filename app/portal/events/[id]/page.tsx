@@ -10,9 +10,10 @@ import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import Avatar from '@/components/ui/Avatar';
 import EventRegistration from '@/components/portal/EventRegistration';
+import EventCheckoutModal from '@/components/portal/EventCheckoutModal';
 import CreateEventModal from '@/components/portal/CreateEventModal';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
-import type { RotaractEvent, RSVPStatus } from '@/types';
+import type { RotaractEvent, RSVPStatus, PaymentSettings } from '@/types';
 
 const typeColors: Record<string, 'green' | 'cranberry' | 'azure' | 'gold' | 'gray'> = {
   service: 'green',
@@ -31,6 +32,10 @@ export default function PortalEventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [currentRSVP, setCurrentRSVP] = useState<RSVPStatus | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutTicketType, setCheckoutTicketType] = useState<'member' | 'guest'>('member');
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [checkoutPriceCents, setCheckoutPriceCents] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { data: rsvps } = useRsvps(id);
 
@@ -38,20 +43,23 @@ export default function PortalEventDetailPage() {
 
   const fetchEvent = useCallback(async () => {
     try {
-      const data = await apiGet(`/api/portal/events?id=${id}`);
-      setEvent(data);
-    } catch {
-      try {
-        const data = await apiGet(`/api/events?id=${id}`);
-        if (Array.isArray(data)) {
-          const found = data.find((e: RotaractEvent) => e.id === id);
-          setEvent(found || null);
-        } else {
-          setEvent(data);
-        }
-      } catch {
-        toast('Failed to load event', 'error');
+      const [eventData, settingsData] = await Promise.all([
+        apiGet(`/api/portal/events?id=${id}`).catch(() =>
+          apiGet(`/api/events?id=${id}`).then((data) => {
+            if (Array.isArray(data)) {
+              return data.find((e: RotaractEvent) => e.id === id) || null;
+            }
+            return data;
+          })
+        ),
+        apiGet('/api/settings').catch(() => null),
+      ]);
+      setEvent(eventData);
+      if (settingsData?.paymentSettings) {
+        setPaymentSettings(settingsData.paymentSettings);
       }
+    } catch (error) {
+      toast('Failed to load event', 'error');
     } finally {
       setLoading(false);
     }
@@ -77,16 +85,68 @@ export default function PortalEventDetailPage() {
   };
 
   const handlePurchaseTicket = async (ticketType: 'member' | 'guest') => {
+    if (!event?.pricing) return;
+    
+    const now = new Date();
+    const earlyBirdActive =
+      event.pricing.earlyBirdPrice != null &&
+      event.pricing.earlyBirdDeadline &&
+      new Date(event.pricing.earlyBirdDeadline) > now;
+
+    let priceCents: number;
+    if (earlyBirdActive && event.pricing.earlyBirdPrice != null) {
+      priceCents = event.pricing.earlyBirdPrice;
+    } else if (member && ticketType !== 'guest') {
+      priceCents = event.pricing.memberPrice;
+    } else {
+      priceCents = event.pricing.guestPrice;
+    }
+
+    if (priceCents === 0) {
+      // Free ticket - RSVP directly
+      try {
+        await apiPost('/api/portal/events/checkout', { eventId: id, ticketType });
+        toast("You're in!");
+        setCurrentRSVP('going');
+      } catch (err: any) {
+        toast(err.message || 'Checkout failed', 'error');
+      }
+    } else {
+      // Show payment modal
+      setCheckoutTicketType(ticketType);
+      setCheckoutPriceCents(priceCents);
+      setShowCheckoutModal(true);
+    }
+  };
+
+  const handleStripeCheckout = async () => {
     try {
-      const res = await apiPost('/api/portal/events/checkout', { eventId: id, ticketType });
+      const res = await apiPost('/api/portal/events/checkout', {
+        eventId: id,
+        ticketType: checkoutTicketType,
+        paymentMethod: 'stripe',
+      });
       if (res.url) {
         window.location.href = res.url;
-      } else if (res.free) {
-        toast(res.message || "You're in!");
-        setCurrentRSVP('going');
       }
     } catch (err: any) {
       toast(err.message || 'Checkout failed', 'error');
+    }
+  };
+
+  const handleOfflinePayment = async (method: string, proofUrl?: string) => {
+    try {
+      await apiPost('/api/portal/events/checkout', {
+        eventId: id,
+        ticketType: checkoutTicketType,
+        paymentMethod: method,
+        proofUrl,
+      });
+      toast(`Payment pending for ${method}. Our treasurer will confirm receipt.`);
+      setShowCheckoutModal(false);
+      setCurrentRSVP('going'); // Mark as going pending payment confirmation
+    } catch (err: any) {
+      toast(err.message || 'Payment registration failed', 'error');
     }
   };
 
@@ -233,6 +293,20 @@ export default function PortalEventDetailPage() {
 
       {canManageEvents && (
         <CreateEventModal open={showEditModal} onClose={() => setShowEditModal(false)} event={event} onSaved={() => { fetchEvent(); }} />
+      )}
+
+      {event && paymentSettings && (
+        <EventCheckoutModal
+          open={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          eventId={id}
+          eventTitle={event.title}
+          ticketType={checkoutTicketType}
+          priceCents={checkoutPriceCents}
+          paymentSettings={paymentSettings}
+          onStripeCheckout={handleStripeCheckout}
+          onOfflinePayment={handleOfflinePayment}
+        />
       )}
     </div>
   );

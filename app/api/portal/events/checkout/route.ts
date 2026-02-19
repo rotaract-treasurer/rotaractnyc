@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { eventId, ticketType } = body;
+    const { eventId, ticketType, paymentMethod = 'stripe', proofUrl } = body;
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
@@ -91,6 +91,52 @@ export async function POST(request: NextRequest) {
         );
       }
       return NextResponse.json({ free: true, message: 'Free ticket — you\'re in!' });
+    }
+
+    // Handle offline payment methods
+    if (paymentMethod !== 'stripe') {
+      // Create pending offline payment record
+      const offlinePaymentRef = adminDb.collection('offlinePayments').doc();
+      await offlinePaymentRef.set({
+        type: 'event',
+        relatedId: eventId,
+        relatedName: event.title,
+        memberId: uid || null,
+        memberName: null,
+        memberEmail: null,
+        amount: priceCents,
+        method: paymentMethod,
+        status: 'pending',
+        proofUrl: proofUrl || null,
+        submittedAt: new Date().toISOString(),
+        confirmedAt: null,
+        confirmedBy: null,
+      });
+
+      // If authenticated, also mark RSVP as going (with pending payment status)
+      if (uid) {
+        const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
+        await rsvpRef.set(
+          {
+            memberId: uid,
+            eventId,
+            status: 'going',
+            ticketType: priceLabel.toLowerCase(),
+            paidAmount: 0,
+            paymentStatus: 'pending_offline',
+            paymentMethod: paymentMethod,
+            offlinePaymentId: offlinePaymentRef.id,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Offline payment (${paymentMethod}) pending confirmation.`,
+        offlinePaymentId: offlinePaymentRef.id,
+      });
     }
 
     // Create Stripe checkout session

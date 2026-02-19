@@ -317,9 +317,105 @@ export interface SiteSettings {
 
 // ----- Payment Settings -----
 export interface PaymentSettings {
-  zellePhone: string;
-  venmoHandle: string;
-  instructions: string;
+  zelleIdentifier?: string; // Email or phone number
+  zelleEnabled: boolean;
+  venmoUsername?: string; // Username without @
+  venmoEnabled: boolean;
+}
+
+// ----- Finance / Activities -----
+export type ActivityType = 'gala' | 'social' | 'volunteering' | 'conference' | 'excursion' | 'website' | 'maintenance' | 'other';
+export type ActivityStatus = 'draft' | 'pending_approval' | 'approved' | 'completed' | 'cancelled';
+export type ExpenseCategory = 'venue' | 'catering' | 'decorations' | 'supplies' | 'entertainment' | 'transportation' | 'marketing' | 'insurance' | 'permits' | 'other';
+export type OfflinePaymentMethod = 'zelle' | 'venmo' | 'cash' | 'check';
+export type OfflinePaymentStatus = 'pending' | 'approved' | 'rejected';
+
+export interface BudgetLineItem {
+  name: string;
+  amount: number; // cents
+  notes?: string;
+}
+
+export interface Activity {
+  id: string;
+  name: string;
+  type: ActivityType;
+  customType?: string; // If type is 'other'
+  date: string; // ISO
+  location?: string;
+  address?: string;
+  description?: string;
+  status: ActivityStatus;
+  linkedEventId?: string; // Reference to events collection
+  
+  // Budget (proposed)
+  budget: {
+    totalEstimate: number; // cents
+    lineItems: BudgetLineItem[];
+  };
+  
+  // Actual (post-event)
+  actual?: {
+    totalSpent: number; // cents
+    revenue?: number; // cents (from ticket sales if linked event)
+  };
+  
+  // Approvals
+  approvals: {
+    treasurerSubmitted: boolean;
+    treasurerSubmittedAt?: string;
+    presidentApproved: boolean;
+    presidentApprovedAt?: string;
+    presidentNotes?: string;
+  };
+  
+  // Permissions
+  allowedExpenseSubmitters?: string[]; // memberIds who can submit expenses
+  
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Expense {
+  id: string;
+  activityId: string;
+  activityName?: string; // Denormalized for easy display
+  description?: string;
+  amount: number; // cents
+  category: ExpenseCategory;
+  customCategory?: string; // If category is 'other'
+  date: string; // ISO
+  receiptURL?: string;
+  receiptUrl?: string; // Alternative naming (be flexible)
+  vendor?: string;
+  paymentMethod?: string;
+  submittedBy: string;
+  submittedByName?: string; // Denormalized
+  submittedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  notes?: string;
+}
+
+export interface OfflinePayment {
+  id: string;
+  type: 'dues' | 'event';
+  relatedId: string; // duesId or eventId
+  relatedName?: string; // Denormalized for display
+  memberId: string;
+  memberName?: string; // Denormalized
+  memberEmail?: string; // Denormalized
+  amount: number; // cents
+  method: OfflinePaymentMethod;
+  status: OfflinePaymentStatus;
+  notes?: string;
+  proofURL?: string; // Screenshot/receipt of payment
+  submittedAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 }
 
 // ----- Onboarding -----

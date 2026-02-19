@@ -56,7 +56,7 @@ export default function DuesPage() {
   const [cycleAmounts, setCycleAmounts] = useState({ professional: SITE.dues.professional, student: SITE.dues.student });
 
   // Payment settings
-  const [paymentSettings, setPaymentSettings] = useState({ zellePhone: '', venmoHandle: '', instructions: '' });
+  const [paymentSettings, setPaymentSettings] = useState({ zelleIdentifier: '', zelleEnabled: true, venmoUsername: '', venmoEnabled: true });
 
   // Treasurer manage state
   const [activeTab, setActiveTab] = useState('my-dues');
@@ -84,7 +84,7 @@ export default function DuesPage() {
 
   // Payment settings edit state
   const [editingPayment, setEditingPayment] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ zellePhone: '', venmoHandle: '', instructions: '' });
+  const [paymentForm, setPaymentForm] = useState({ zelleIdentifier: '', zelleEnabled: true, venmoUsername: '', venmoEnabled: true });
   const [savingPayment, setSavingPayment] = useState(false);
 
   // Fetch member's own dues
@@ -94,7 +94,7 @@ export default function DuesPage() {
       try {
         const [duesData, paySettings] = await Promise.all([
           apiGet('/api/portal/dues'),
-          apiGet('/api/portal/settings/payment').catch(() => ({ zellePhone: '', venmoHandle: '', instructions: '' })),
+          apiGet('/api/portal/settings/payment').catch(() => ({ zelleIdentifier: '', zelleEnabled: true, venmoUsername: '', venmoEnabled: true })),
         ]);
         if (duesData?.dues?.status) setDuesStatus(duesData.dues.status);
         if (duesData?.cycle?.name) setCycleName(duesData.cycle.name);
@@ -333,27 +333,24 @@ export default function DuesPage() {
                 </div>
 
                 {/* Alternative Payment Methods */}
-                {(paymentSettings.zellePhone || paymentSettings.venmoHandle) && (
+                {((paymentSettings.zelleEnabled && paymentSettings.zelleIdentifier) || (paymentSettings.venmoEnabled && paymentSettings.venmoUsername)) && (
                   <div className="bg-azure-50 dark:bg-azure-900/10 rounded-xl border border-azure-200 dark:border-azure-800 p-5 space-y-3">
                     <h4 className="font-display font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
                       <svg className="w-4 h-4 text-azure" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
                       Other Payment Methods
                     </h4>
                     <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      {paymentSettings.zellePhone && (
+                      {paymentSettings.zelleEnabled && paymentSettings.zelleIdentifier && (
                         <p className="flex items-center gap-2">
                           <span className="font-semibold text-gray-700 dark:text-gray-300">Zelle:</span>
-                          <span className="font-mono">{paymentSettings.zellePhone}</span>
+                          <span className="font-mono">{paymentSettings.zelleIdentifier}</span>
                         </p>
                       )}
-                      {paymentSettings.venmoHandle && (
+                      {paymentSettings.venmoEnabled && paymentSettings.venmoUsername && (
                         <p className="flex items-center gap-2">
                           <span className="font-semibold text-gray-700 dark:text-gray-300">Venmo:</span>
-                          <span className="font-mono">{paymentSettings.venmoHandle}</span>
+                          <span className="font-mono">@{paymentSettings.venmoUsername}</span>
                         </p>
-                      )}
-                      {paymentSettings.instructions && (
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{paymentSettings.instructions}</p>
                       )}
                     </div>
                     <p className="text-xs text-azure-700 dark:text-azure-400 bg-azure-100 dark:bg-azure-900/20 rounded-lg p-2.5">
@@ -589,17 +586,15 @@ export default function DuesPage() {
                   </div>
                   {editingPayment ? (
                     <div className="space-y-3">
-                      <Input label="Zelle Phone Number" value={paymentForm.zellePhone} onChange={(e) => setPaymentForm((p) => ({ ...p, zellePhone: e.target.value }))} placeholder="(555) 123-4567" />
-                      <Input label="Venmo Handle" value={paymentForm.venmoHandle} onChange={(e) => setPaymentForm((p) => ({ ...p, venmoHandle: e.target.value }))} placeholder="@RotaractNYC" />
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Instructions</label>
-                        <textarea
-                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 focus:border-cranberry-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                          rows={3}
-                          value={paymentForm.instructions}
-                          onChange={(e) => setPaymentForm((p) => ({ ...p, instructions: e.target.value }))}
-                          placeholder="Include your name in the memo when sending payment..."
-                        />
+                      <Input label="Zelle Identifier" value={paymentForm.zelleIdentifier} onChange={(e) => setPaymentForm((p) => ({ ...p, zelleIdentifier: e.target.value }))} placeholder="email@example.com or (555) 123-4567" />
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="zelleEnabled" checked={paymentForm.zelleEnabled} onChange={(e) => setPaymentForm((p) => ({ ...p, zelleEnabled: e.target.checked }))} className="rounded" />
+                        <label htmlFor="zelleEnabled" className="text-sm text-gray-600 dark:text-gray-400">Enable Zelle payments</label>
+                      </div>
+                      <Input label="Venmo Username" value={paymentForm.venmoUsername} onChange={(e) => setPaymentForm((p) => ({ ...p, venmoUsername: e.target.value }))} placeholder="username" />
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="venmoEnabled" checked={paymentForm.venmoEnabled} onChange={(e) => setPaymentForm((p) => ({ ...p, venmoEnabled: e.target.checked }))} className="rounded" />
+                        <label htmlFor="venmoEnabled" className="text-sm text-gray-600 dark:text-gray-400">Enable Venmo payments</label>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleSavePaymentSettings} loading={savingPayment}>Save</Button>
@@ -610,16 +605,13 @@ export default function DuesPage() {
                     <div className="space-y-3 text-sm">
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
                         <span className="font-semibold text-gray-700 dark:text-gray-300 w-16">Zelle</span>
-                        <span className="text-gray-600 dark:text-gray-400 font-mono">{paymentSettings.zellePhone || '—'}</span>
+                        <span className="text-gray-600 dark:text-gray-400 font-mono">{paymentSettings.zelleEnabled ? paymentSettings.zelleIdentifier || '—' : '(disabled)'}</span>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
                         <span className="font-semibold text-gray-700 dark:text-gray-300 w-16">Venmo</span>
-                        <span className="text-gray-600 dark:text-gray-400 font-mono">{paymentSettings.venmoHandle || '—'}</span>
+                      <span className="text-gray-600 dark:text-gray-400 font-mono">{paymentSettings.venmoEnabled ? '@' + (paymentSettings.venmoUsername || '—') : '(disabled)'}</span>
                       </div>
-                      {paymentSettings.instructions && (
-                        <p className="text-xs text-gray-500 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">{paymentSettings.instructions}</p>
-                      )}
-                      {!paymentSettings.zellePhone && !paymentSettings.venmoHandle && (
+                      {!(paymentSettings.zelleEnabled && paymentSettings.zelleIdentifier) && !(paymentSettings.venmoEnabled && paymentSettings.venmoUsername) && (
                         <p className="text-sm text-gray-400 text-center py-2">No payment methods configured. Click Edit to add Zelle or Venmo info.</p>
                       )}
                     </div>
