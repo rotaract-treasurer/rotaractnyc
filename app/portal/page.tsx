@@ -142,16 +142,16 @@ export default function PortalDashboard() {
             </div>
 
             {/* Right: key metrics */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="glass-card rounded-2xl px-5 py-4 text-center min-w-[100px]">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white tabular-nums">{totalHours}</p>
-                <p className="text-cranberry-200 text-[11px] font-medium uppercase tracking-wider mt-0.5">Hours</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="glass-card rounded-2xl px-3 sm:px-5 py-3 sm:py-4 text-center">
+                <p className="text-xl sm:text-3xl font-display font-bold text-white tabular-nums">{totalHours}</p>
+                <p className="text-cranberry-200 text-[10px] sm:text-[11px] font-medium uppercase tracking-wider mt-0.5">Hours</p>
               </div>
-              <div className="glass-card rounded-2xl px-5 py-4 text-center min-w-[100px]">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white tabular-nums">{upcomingEvents.length}</p>
-                <p className="text-cranberry-200 text-[11px] font-medium uppercase tracking-wider mt-0.5">Events</p>
+              <div className="glass-card rounded-2xl px-3 sm:px-5 py-3 sm:py-4 text-center">
+                <p className="text-xl sm:text-3xl font-display font-bold text-white tabular-nums">{upcomingEvents.length}</p>
+                <p className="text-cranberry-200 text-[10px] sm:text-[11px] font-medium uppercase tracking-wider mt-0.5">Events</p>
               </div>
-              <div className="glass-card rounded-2xl px-5 py-4 text-center min-w-[100px]">
+              <div className="glass-card rounded-2xl px-3 sm:px-5 py-3 sm:py-4 text-center">
                 {duesStatus === 'PAID' || duesStatus === 'PAID_OFFLINE' || duesStatus === 'WAIVED' ? (
                   <>
                     <div className="flex justify-center"><Badge variant="green" className="text-xs">Paid</Badge></div>

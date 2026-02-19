@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth';
 import { useArticles } from '@/hooks/useFirestore';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import SearchInput from '@/components/ui/SearchInput';
@@ -18,6 +19,8 @@ export default function PortalArticlesPage() {
   const { data: firestoreArticles, loading } = useArticles(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'published' | 'drafts'>('all');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const canManage = member && ['board', 'president', 'treasurer'].includes(member.role);
 
@@ -40,12 +43,19 @@ export default function PortalArticlesPage() {
 
   const handleDelete = async (articleId: string) => {
     const article = allArticles.find((a) => a.id === articleId);
-    if (!confirm(`Delete "${article?.title}"? This cannot be undone.`)) return;
+    setDeleteTarget({ id: articleId, title: article?.title || 'this article' });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await fetch(`/api/portal/articles?id=${articleId}`, { method: 'DELETE' });
+      await fetch(`/api/portal/articles?id=${deleteTarget.id}`, { method: 'DELETE' });
     } catch {
       // Silently fail — article may already be gone
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -111,6 +121,18 @@ export default function PortalArticlesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Article" size="sm">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+          Are you sure you want to delete <strong className="text-gray-900 dark:text-white">&quot;{deleteTarget?.title}&quot;</strong>?
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500 mb-5">This action cannot be undone.</p>
+        <div className="flex gap-2">
+          <Button variant="danger" className="flex-1" loading={deleting} onClick={confirmDelete}>Delete</Button>
+          <Button variant="ghost" className="flex-1" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

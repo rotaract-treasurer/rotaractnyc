@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -83,12 +83,34 @@ const navSections = [
 
 export default function PortalShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { member, signOut, loading } = useAuth();
   const { status: duesStatus } = useDues();
 
   const isActive = (href: string) => href === '/portal' ? pathname === '/portal' : pathname.startsWith(href);
+
+  /* Close sidebar on Escape key */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showSignOutConfirm) { setShowSignOutConfirm(false); return; }
+        if (sidebarOpen) setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen, showSignOutConfirm]);
+
+  const handleSignOut = useCallback(() => {
+    setShowSignOutConfirm(true);
+  }, []);
+
+  const confirmSignOut = useCallback(() => {
+    setShowSignOutConfirm(false);
+    signOut();
+  }, [signOut]);
 
   if (loading) {
     return (
@@ -177,9 +199,10 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Close navigation menu"
+            className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
@@ -270,8 +293,8 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           </div>
 
           {/* Right */}
-          <div className="flex items-center gap-2">
-            <DarkModeToggle />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className="hidden sm:inline-flex"><DarkModeToggle /></span>
 
             {/* Notification bell placeholder */}
             <button className="relative p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-colors">
@@ -281,7 +304,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
             {/* User menu */}
             <Link
               href="/portal/profile"
-              className="flex items-center gap-2.5 p-1.5 pr-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+              className="flex items-center gap-2 p-1.5 pr-2 sm:pr-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
             >
               <Avatar src={member.photoURL} alt={member.displayName} size="sm" />
               <div className="hidden sm:block">
@@ -292,13 +315,37 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               </div>
             </Link>
 
-            <button
-              onClick={signOut}
-              className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-              title="Sign out"
-            >
-              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
-            </button>
+            <div className="relative">
+              <button
+                onClick={handleSignOut}
+                className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
+              </button>
+
+              {/* Sign-out confirmation popover */}
+              {showSignOutConfirm && (
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-xl dark:bg-gray-900 dark:border-gray-700 p-4 animate-scale-in origin-top-right z-50">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-3">Sign out of the portal?</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={confirmSignOut}
+                      className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                    <button
+                      onClick={() => setShowSignOutConfirm(false)}
+                      className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

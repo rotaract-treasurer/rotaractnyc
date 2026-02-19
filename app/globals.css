@@ -45,6 +45,16 @@
   .dark ::selection {
     @apply bg-cranberry-800 text-cranberry-100;
   }
+
+  /* Consistent native select styling */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-size: 1.25rem;
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    padding-right: 2.5rem;
+  }
 }
 
 @layer components {

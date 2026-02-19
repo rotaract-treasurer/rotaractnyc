@@ -325,7 +325,7 @@ export default function PortalEventsPage() {
                               >
                                 Buy Ticket
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleRSVP(event.id, 'maybe')}>
+                              <Button size="sm" variant="ghost" disabled={!!rsvpLoading} onClick={() => handleRSVP(event.id, 'maybe')}>
                                 Maybe
                               </Button>
                             </>
@@ -340,7 +340,7 @@ export default function PortalEventsPage() {
                               >
                                 Get Free Ticket
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleRSVP(event.id, 'maybe')}>
+                              <Button size="sm" variant="ghost" disabled={!!rsvpLoading} onClick={() => handleRSVP(event.id, 'maybe')}>
                                 Maybe
                               </Button>
                             </>
@@ -355,7 +355,7 @@ export default function PortalEventsPage() {
                               >
                                 I&apos;m Going
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleRSVP(event.id, 'maybe')}>
+                              <Button size="sm" variant="ghost" disabled={!!rsvpLoading} onClick={() => handleRSVP(event.id, 'maybe')}>
                                 Maybe
                               </Button>
                             </>

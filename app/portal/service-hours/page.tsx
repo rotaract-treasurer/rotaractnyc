@@ -113,7 +113,7 @@ export default function ServiceHoursPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 rounded-xl bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center">

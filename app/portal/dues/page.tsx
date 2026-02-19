@@ -679,8 +679,8 @@ export default function DuesPage() {
             <Input label="End Date" type="date" value={cycleForm.endDate} onChange={(e) => setCycleForm((f) => ({ ...f, endDate: e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Professional (cents)" type="number" value={String(cycleForm.amountProfessional)} onChange={(e) => setCycleForm((f) => ({ ...f, amountProfessional: Number(e.target.value) }))} />
-            <Input label="Student (cents)" type="number" value={String(cycleForm.amountStudent)} onChange={(e) => setCycleForm((f) => ({ ...f, amountStudent: Number(e.target.value) }))} />
+            <Input label="Professional ($)" type="number" value={String(cycleForm.amountProfessional)} onChange={(e) => setCycleForm((f) => ({ ...f, amountProfessional: Number(e.target.value) }))} helperText="Amount in cents" />
+            <Input label="Student ($)" type="number" value={String(cycleForm.amountStudent)} onChange={(e) => setCycleForm((f) => ({ ...f, amountStudent: Number(e.target.value) }))} helperText="Amount in cents" />
           </div>
           <Input label="Grace Period (days)" type="number" value={String(cycleForm.gracePeriodDays)} onChange={(e) => setCycleForm((f) => ({ ...f, gracePeriodDays: Number(e.target.value) }))} />
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
