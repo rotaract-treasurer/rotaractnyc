@@ -40,6 +40,7 @@ import {
   MoreVertical,
   FolderInput,
   ArrowUpDown,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -112,6 +113,13 @@ export default function DocumentsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [expandedDrive, setExpandedDrive] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'category'>('newest');
+
+  // Drag & drop
+  const [draggedDocId, setDraggedDocId] = useState<string | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const [isDragOverUpload, setIsDragOverUpload] = useState(false);
+  const [pageDragDepth, setPageDragDepth] = useState(0);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
   // Folder management
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -281,7 +289,7 @@ export default function DocumentsPage() {
     if (!member || !uploadForm.title.trim()) return;
 
     const isLink = uploadForm.category === 'Google Drive' || uploadForm.linkURL.trim();
-    const file = fileRef.current?.files?.[0];
+    const file = droppedFile || fileRef.current?.files?.[0];
 
     if (!isLink && !file) { toast('Please select a file or enter a link.', 'error'); return; }
 
@@ -316,6 +324,7 @@ export default function DocumentsPage() {
       toast('Document uploaded!');
       setShowUpload(false);
       setUploadForm({ title: '', category: 'Other', description: '', linkURL: '', folderId: '' });
+      setDroppedFile(null);
       if (fileRef.current) fileRef.current.value = '';
     } catch (e: any) {
       toast(e.message || 'Upload failed', 'error');
@@ -355,7 +364,13 @@ export default function DocumentsPage() {
     const embedUrl = isGDrive ? toGDriveEmbedUrl(doc.linkURL!) : null;
 
     return (
-      <div key={doc.id}>
+      <div
+        key={doc.id}
+        draggable={isBoardOrAbove}
+        onDragStart={(e) => { if (isBoardOrAbove) { setDraggedDocId(doc.id); e.dataTransfer.effectAllowed = 'move'; } }}
+        onDragEnd={() => { setDraggedDocId(null); setDragOverFolderId(null); }}
+        className={`transition-opacity ${draggedDocId === doc.id ? 'opacity-40' : ''}`}
+      >
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-4 min-w-0">
@@ -428,7 +443,14 @@ export default function DocumentsPage() {
       <div key={folder.id} className="relative group">
         <button
           onClick={() => { setOpenFolderId(folder.id); setSearch(''); }}
-          className={`w-full flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all hover:shadow-md hover:scale-[1.02] ${colors.border} ${colors.bg} cursor-pointer text-left`}
+          onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId(folder.id); } }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverFolderId(null); }}
+          onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, folder.id); setDraggedDocId(null); setDragOverFolderId(null); } }}
+          className={`w-full flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+            dragOverFolderId === folder.id
+              ? `${colors.border} ${colors.bg} shadow-lg scale-105 ring-4 ring-cranberry/30`
+              : `${colors.border} ${colors.bg} hover:shadow-md hover:scale-[1.02]`
+          }`}
         >
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center">
             <Folder className={`w-8 h-8 ${colors.text}`} />
@@ -494,7 +516,44 @@ export default function DocumentsPage() {
   }, [folderMenuOpen]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 page-enter" onClick={handlePageClick}>
+    <div
+      className="max-w-5xl mx-auto space-y-6 page-enter"
+      onClick={handlePageClick}
+      onDragEnter={(e) => { if (isBoardOrAbove && !draggedDocId && e.dataTransfer.types.includes('Files')) setPageDragDepth((d) => d + 1); }}
+      onDragLeave={(e) => { if (isBoardOrAbove && !draggedDocId) setPageDragDepth((d) => Math.max(0, d - 1)); }}
+      onDragOver={(e) => { if (isBoardOrAbove && !draggedDocId && e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+      onDrop={(e) => {
+        if (!isBoardOrAbove || draggedDocId) return;
+        setPageDragDepth(0);
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          e.preventDefault();
+          setDroppedFile(file);
+          setShowUpload(true);
+          setUploadForm({ title: file.name.replace(/\.[^.]+$/, ''), category: 'Other', description: '', linkURL: '', folderId: openFolderId && openFolderId !== '__unfiled__' ? openFolderId : '' });
+        }
+      }}
+    >
+      {/* Global file drop overlay — board only */}
+      {isBoardOrAbove && pageDragDepth > 0 && !draggedDocId && (
+        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 bg-cranberry/5 border-4 border-dashed border-cranberry/50" />
+          <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl px-10 py-8 text-center border-2 border-cranberry-200 dark:border-cranberry-800">
+            <Upload className="w-12 h-12 text-cranberry mx-auto mb-3" />
+            <p className="text-lg font-bold text-gray-900 dark:text-white">Drop to upload</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Release to add a document</p>
+          </div>
+        </div>
+      )}
+
+      {/* Drag-to-folder hint */}
+      {isBoardOrAbove && draggedDocId && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-full shadow-xl pointer-events-none flex items-center gap-2">
+          <FolderInput className="w-4 h-4" />
+          Drop onto a folder to move
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -584,12 +643,50 @@ export default function DocumentsPage() {
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File</label>
-                  <input
-                    type="file"
-                    ref={fileRef}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-cranberry-50 file:text-cranberry-700 hover:file:bg-cranberry-100 dark:file:bg-cranberry-900/20 dark:file:text-cranberry-300"
-                  />
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+                      isDragOverUpload
+                        ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-cranberry-400 dark:hover:border-cranberry-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOverUpload(true); }}
+                    onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOverUpload(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragOverUpload(false);
+                      const f = e.dataTransfer.files[0];
+                      if (f) setDroppedFile(f);
+                    }}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    {droppedFile ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <File className="w-5 h-5 text-cranberry shrink-0" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs">{droppedFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDroppedFile(null); if (fileRef.current) fileRef.current.value = ''; }}
+                          className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1 text-xs font-bold shrink-0"
+                        >✕</button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className={`w-8 h-8 mx-auto transition-colors ${isDragOverUpload ? 'text-cranberry' : 'text-gray-400'}`} />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <span className="font-semibold text-cranberry">Click to browse</span> or drag &amp; drop a file here
+                        </p>
+                        <p className="text-xs text-gray-400">PDF, Word, Excel, PowerPoint, TXT, CSV, Images · Max 25 MB</p>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={fileRef}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) setDroppedFile(f); }}
+                    />
+                  </div>
                 </div>
               </>
             )}
@@ -623,10 +720,15 @@ export default function DocumentsPage() {
                 {/* "All Documents" chip */}
                 <button
                   onClick={() => { setOpenFolderId(null); setSearch(''); }}
+                  onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__all__'); } }}
+                  onDragLeave={() => setDragOverFolderId(null)}
+                  onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, null); setDraggedDocId(null); setDragOverFolderId(null); } }}
                   className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                    !openFolderId
-                      ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    dragOverFolderId === '__all__'
+                      ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300 scale-105 ring-2 ring-cranberry/30'
+                      : !openFolderId
+                        ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
                   <File className="w-4 h-4" />
@@ -642,10 +744,15 @@ export default function DocumentsPage() {
                     <button
                       key={folder.id}
                       onClick={() => { setOpenFolderId(isActive ? null : folder.id); setSearch(''); }}
+                      onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId(folder.id); } }}
+                      onDragLeave={() => setDragOverFolderId(null)}
+                      onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, folder.id); setDraggedDocId(null); setDragOverFolderId(null); } }}
                       className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                        isActive
-                          ? `${colors.border} ${colors.bg} ${colors.text}`
-                          : `border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:${colors.bg}`
+                        dragOverFolderId === folder.id
+                          ? `${colors.border} ${colors.bg} ${colors.text} scale-105 ring-2 ring-cranberry/30`
+                          : isActive
+                            ? `${colors.border} ${colors.bg} ${colors.text}`
+                            : `border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:${colors.bg}`
                       }`}
                     >
                       {folder.pinned && <Pin className="w-3 h-3 text-amber-500" />}
@@ -660,10 +767,15 @@ export default function DocumentsPage() {
                 {unfiledCount > 0 && (
                   <button
                     onClick={() => { setOpenFolderId('__unfiled__'); setSearch(''); }}
+                    onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__unfiled__'); } }}
+                    onDragLeave={() => setDragOverFolderId(null)}
+                    onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, null); setDraggedDocId(null); setDragOverFolderId(null); } }}
                     className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      openFolderId === '__unfiled__'
-                        ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      dragOverFolderId === '__unfiled__'
+                        ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 scale-105 ring-2 ring-cranberry/30'
+                        : openFolderId === '__unfiled__'
+                          ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     <File className="w-4 h-4 text-gray-400" />
