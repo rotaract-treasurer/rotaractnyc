@@ -178,8 +178,10 @@ export function useDocuments() {
   return useCollection('documents', [orderBy('createdAt', 'desc')]);
 }
 
+// No orderBy constraint — documents missing the `order` field are excluded by
+// Firestore ordered queries. Client-side sort in the page handles ordering.
 export function useDocumentFolders() {
-  return useCollection('documentFolders', [orderBy('order', 'asc')]);
+  return useCollection('documentFolders', []);
 }
 
 export function useCommittees() {

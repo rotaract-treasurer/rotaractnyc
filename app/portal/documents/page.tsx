@@ -130,6 +130,13 @@ export default function DocumentsPage() {
 
   // Move document to folder
   const [movingDoc, setMovingDoc] = useState<PortalDocument | null>(null);
+  // Pending drag-drop move — shows confirmation before committing
+  const [pendingMove, setPendingMove] = useState<{
+    docId: string;
+    docTitle: string;
+    folderId: string | null;
+    folderName: string;
+  } | null>(null);
 
   const [uploadForm, setUploadForm] = useState<{
     title: string;
@@ -445,7 +452,15 @@ export default function DocumentsPage() {
           onClick={() => { setOpenFolderId(folder.id); setSearch(''); }}
           onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId(folder.id); } }}
           onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverFolderId(null); }}
-          onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, folder.id); setDraggedDocId(null); setDragOverFolderId(null); } }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (draggedDocId) {
+              const doc = docs.find((d) => d.id === draggedDocId);
+              setPendingMove({ docId: draggedDocId, docTitle: doc?.title || 'Document', folderId: folder.id, folderName: folder.name });
+              setDraggedDocId(null);
+              setDragOverFolderId(null);
+            }
+          }}
           className={`w-full flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all cursor-pointer text-left ${
             dragOverFolderId === folder.id
               ? `${colors.border} ${colors.bg} shadow-lg scale-105 ring-4 ring-cranberry/30`
@@ -583,87 +598,119 @@ export default function DocumentsPage() {
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : (
         <div className="space-y-6">
-          {/* ── Folders strip — always visible at top ─────────── */}
-          {sortedFolders.length > 0 && (
+
+          {/* ── Folder grid — always first at root ───────────── */}
+          {!openFolderId && !search.trim() && sortedFolders.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 px-1 mb-3">
-                <Folder className="w-4 h-4 text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Folders</h2>
-                <span className="text-xs text-gray-400">({sortedFolders.length})</span>
+              <div className="flex items-center justify-between px-1 mb-4">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-gray-400" />
+                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    Folders <span className="font-normal opacity-60">({sortedFolders.length})</span>
+                  </h2>
+                </div>
+                <span className="text-xs text-gray-400">Drag documents onto a folder to move them</span>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
-                {/* "All Documents" chip */}
-                <button
-                  onClick={() => { setOpenFolderId(null); setSearch(''); }}
-                  onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__all__'); } }}
-                  onDragLeave={() => setDragOverFolderId(null)}
-                  onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, null); setDraggedDocId(null); setDragOverFolderId(null); } }}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                    dragOverFolderId === '__all__'
-                      ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300 scale-105 ring-2 ring-cranberry/30'
-                      : !openFolderId
-                        ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <File className="w-4 h-4" />
-                  All
-                  <span className="text-xs opacity-70">({docs.length})</span>
-                </button>
-
-                {sortedFolders.map((folder) => {
-                  const colors = folderColorClasses[folder.color] || folderColorClasses.gray;
-                  const count = folderDocCounts.get(folder.id) || 0;
-                  const isActive = openFolderId === folder.id;
-                  return (
-                    <button
-                      key={folder.id}
-                      onClick={() => { setOpenFolderId(isActive ? null : folder.id); setSearch(''); }}
-                      onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId(folder.id); } }}
-                      onDragLeave={() => setDragOverFolderId(null)}
-                      onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, folder.id); setDraggedDocId(null); setDragOverFolderId(null); } }}
-                      className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                        dragOverFolderId === folder.id
-                          ? `${colors.border} ${colors.bg} ${colors.text} scale-105 ring-2 ring-cranberry/30`
-                          : isActive
-                            ? `${colors.border} ${colors.bg} ${colors.text}`
-                            : `border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:${colors.bg}`
-                      }`}
-                    >
-                      {folder.pinned && <Pin className="w-3 h-3 text-amber-500" />}
-                      <Folder className={`w-4 h-4 ${isActive ? colors.text : 'text-gray-400'}`} />
-                      <span className="whitespace-nowrap">{folder.name}</span>
-                      <span className="text-xs opacity-70">({count})</span>
-                    </button>
-                  );
-                })}
-
-                {/* Unfiled chip */}
-                {unfiledCount > 0 && (
-                  <button
-                    onClick={() => { setOpenFolderId('__unfiled__'); setSearch(''); }}
-                    onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__unfiled__'); } }}
-                    onDragLeave={() => setDragOverFolderId(null)}
-                    onDrop={(e) => { e.preventDefault(); if (draggedDocId) { handleMoveDoc(draggedDocId, null); setDraggedDocId(null); setDragOverFolderId(null); } }}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      dragOverFolderId === '__unfiled__'
-                        ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 scale-105 ring-2 ring-cranberry/30'
-                        : openFolderId === '__unfiled__'
-                          ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <File className="w-4 h-4 text-gray-400" />
-                    Unfiled
-                    <span className="text-xs opacity-70">({unfiledCount})</span>
-                  </button>
-                )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {sortedFolders.map(renderFolderCard)}
               </div>
             </div>
           )}
 
+          {/* ── Compact folder chips — shown when inside a folder or searching ── */}
+          {(openFolderId || search.trim()) && sortedFolders.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
+              {/* "All" chip */}
+              <button
+                onClick={() => { setOpenFolderId(null); setSearch(''); }}
+                onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__all__'); } }}
+                onDragLeave={() => setDragOverFolderId(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedDocId) {
+                    const doc = docs.find((d) => d.id === draggedDocId);
+                    setPendingMove({ docId: draggedDocId, docTitle: doc?.title || 'Document', folderId: null, folderName: 'Unfiled' });
+                    setDraggedDocId(null); setDragOverFolderId(null);
+                  }
+                }}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+                  dragOverFolderId === '__all__'
+                    ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300 scale-105'
+                    : !openFolderId
+                      ? 'border-cranberry bg-cranberry-50 dark:bg-cranberry-900/10 text-cranberry-700 dark:text-cranberry-300'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                <File className="w-3.5 h-3.5" />
+                All
+                <span className="text-xs opacity-60">({docs.length})</span>
+              </button>
+
+              {sortedFolders.map((folder) => {
+                const colors = folderColorClasses[folder.color] || folderColorClasses.gray;
+                const count = folderDocCounts.get(folder.id) || 0;
+                const isActive = openFolderId === folder.id;
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => { setOpenFolderId(isActive ? null : folder.id); setSearch(''); }}
+                    onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId(folder.id); } }}
+                    onDragLeave={() => setDragOverFolderId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedDocId) {
+                        const doc = docs.find((d) => d.id === draggedDocId);
+                        setPendingMove({ docId: draggedDocId, docTitle: doc?.title || 'Document', folderId: folder.id, folderName: folder.name });
+                        setDraggedDocId(null); setDragOverFolderId(null);
+                      }
+                    }}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+                      dragOverFolderId === folder.id
+                        ? `${colors.border} ${colors.bg} ${colors.text} scale-105 ring-2 ring-cranberry/30`
+                        : isActive
+                          ? `${colors.border} ${colors.bg} ${colors.text}`
+                          : `border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400`
+                    }`}
+                  >
+                    {folder.pinned && <Pin className="w-3 h-3 text-amber-500" />}
+                    <Folder className={`w-3.5 h-3.5 ${isActive ? colors.text : 'text-gray-400'}`} />
+                    <span className="whitespace-nowrap">{folder.name}</span>
+                    <span className="text-xs opacity-60">({count})</span>
+                  </button>
+                );
+              })}
+
+              {unfiledCount > 0 && (
+                <button
+                  onClick={() => { setOpenFolderId('__unfiled__'); setSearch(''); }}
+                  onDragOver={(e) => { if (draggedDocId) { e.preventDefault(); setDragOverFolderId('__unfiled__'); } }}
+                  onDragLeave={() => setDragOverFolderId(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedDocId) {
+                      const doc = docs.find((d) => d.id === draggedDocId);
+                      setPendingMove({ docId: draggedDocId, docTitle: doc?.title || 'Document', folderId: null, folderName: 'Unfiled' });
+                      setDraggedDocId(null); setDragOverFolderId(null);
+                    }
+                  }}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+                    dragOverFolderId === '__unfiled__'
+                      ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 scale-105'
+                      : openFolderId === '__unfiled__'
+                        ? 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <File className="w-3.5 h-3.5 text-gray-400" />
+                  Unfiled
+                  <span className="text-xs opacity-60">({unfiledCount})</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ── Search + Sort bar ─────────────────────────────── */}
-          {(docs.length > 0 || folders.length > 0) && (
+          {(docs.length > 0 || folders.length > 0) && (openFolderId || search.trim() || (!openFolderId && docs.length > 0)) && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <SearchInput
                 value={search}
@@ -691,6 +738,13 @@ export default function DocumentsPage() {
           {/* ── Active folder header ──────────────────────────── */}
           {openFolderId && openFolderId !== '__unfiled__' && currentFolder && (
             <div className="flex items-center gap-3 px-1">
+              <button
+                onClick={() => setOpenFolderId(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Back to all folders"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
               <FolderOpen className={`w-5 h-5 ${(folderColorClasses[currentFolder.color] || folderColorClasses.gray).text}`} />
               <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white">{currentFolder.name}</h2>
               {currentFolder.pinned && <Pin className="w-4 h-4 text-amber-500" />}
@@ -700,6 +754,13 @@ export default function DocumentsPage() {
 
           {openFolderId === '__unfiled__' && (
             <div className="flex items-center gap-3 px-1">
+              <button
+                onClick={() => setOpenFolderId(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Back to all folders"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
               <File className="w-5 h-5 text-gray-400" />
               <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white">Unfiled Documents</h2>
               <span className="text-sm text-gray-400">({unfiledCount})</span>
@@ -714,19 +775,6 @@ export default function DocumentsPage() {
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Pinned</h2>
               </div>
               <div className="space-y-2">{pinned.map(renderDocRow)}</div>
-            </div>
-          )}
-
-          {/* ── Folder grid (when not filtering by folder) ────── */}
-          {!openFolderId && !search.trim() && sortedFolders.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 px-1 mb-4">
-                <Folder className="w-4 h-4 text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Browse Folders</h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {sortedFolders.map(renderFolderCard)}
-              </div>
             </div>
           )}
 
@@ -1052,6 +1100,44 @@ export default function DocumentsPage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+      </Modal>
+    )}
+
+    {/* ── Drag-drop Confirm Move Modal ─────────────── */}
+    {pendingMove && (
+      <Modal
+        open
+        title="Move Document?"
+        onClose={() => setPendingMove(null)}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Move{' '}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {pendingMove.docTitle}
+            </span>{' '}
+            to{' '}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {pendingMove.folderName}
+            </span>
+            ?
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setPendingMove(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                const { docId, folderId } = pendingMove;
+                setPendingMove(null);
+                await handleMoveDoc(docId, folderId);
+              }}
+            >
+              Move
+            </Button>
           </div>
         </div>
       </Modal>
