@@ -251,6 +251,26 @@ service cloud.firestore {
     }
 
     // ───────────────────────────────────────
+    // Committees
+    // ───────────────────────────────────────
+    match /committees/{committeeId} {
+      // Any active member can read committee info
+      allow read: if isMember();
+
+      // All writes go through the admin SDK (server-side API routes);
+      // client-side writes are disallowed to enforce capacity + waitlist logic.
+      allow write: if false;
+    }
+
+    // ───────────────────────────────────────
+    // Document Folders
+    // ───────────────────────────────────────
+    match /documentFolders/{folderId} {
+      allow read: if isMember();
+      allow create, update, delete: if isBoard();
+    }
+
+    // ───────────────────────────────────────
     // Deny everything else
     // ───────────────────────────────────────
     match /{document=**} {

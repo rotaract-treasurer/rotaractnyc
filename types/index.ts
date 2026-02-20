@@ -25,6 +25,10 @@ export interface Member {
   status: MemberStatus;
   memberType?: 'professional' | 'student';
   committee?: string;
+  committeeId?: string;          // references committees collection
+  boardTitle?: string;           // one of ROTARACT_BOARD_TITLES
+  boardOrder?: number;           // display order on leadership page
+  lastConfirmedYear?: number;    // year of last annual refresh confirmation
   phone?: string;
   birthday?: string;
   interests?: string[];
@@ -121,7 +125,7 @@ export interface Article {
 }
 
 // ----- Community Post -----
-export type PostAudience = 'all' | 'board';
+export type PostAudience = 'all' | 'board' | 'committee';
 
 export interface CommunityPost {
   id: string;
@@ -134,6 +138,7 @@ export interface CommunityPost {
   imageURLs?: string[];
   linkURL?: string;
   audience?: PostAudience;
+  committeeId?: string;   // set when audience === 'committee'
   likeCount: number;
   commentCount: number;
   likedBy?: string[];
@@ -251,6 +256,7 @@ export interface PortalDocument {
   description?: string;
   category: DocumentCategory;
   folderId?: string;
+  committeeId?: string;   // scopes document to a committee
   fileURL?: string;
   linkURL?: string;
   storagePath?: string;
@@ -436,6 +442,38 @@ export interface FAQItem {
   answer: string;
   category: string;
   order: number;
+}
+
+// ----- Committees -----
+export interface CommitteeTermHistory {
+  year: string;          // e.g. "2024-2025"
+  chairId: string;
+  chairName: string;
+  memberIds: string[];
+  memberNames: string[];
+  memberCount: number;
+  handoffNote?: string;
+  closedAt: string;
+}
+
+export interface Committee {
+  id: string;
+  slug: string;          // URL-safe name, e.g. "community-service"
+  name: string;
+  description?: string;
+  chairId?: string;
+  chairName?: string;
+  coChairId?: string;
+  coChairName?: string;
+  capacity: number;      // max members; 0 = unlimited
+  memberIds: string[];
+  waitlistIds: string[];
+  driveURL?: string;     // Google Workspace Shared Drive link
+  meetingCadence?: string; // e.g. "Every 2nd Monday, 6:30 PM"
+  termHistory: CommitteeTermHistory[];
+  lastRefreshedYear?: number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // ----- Board Member (for leadership page) -----

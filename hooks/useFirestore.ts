@@ -182,6 +182,28 @@ export function useDocumentFolders() {
   return useCollection('documentFolders', [orderBy('order', 'asc')]);
 }
 
+export function useCommittees() {
+  return useCollection('committees', [orderBy('name', 'asc')]);
+}
+
+export function useCommitteeDocuments(committeeId: string | null) {
+  return useCollection(
+    'documents',
+    committeeId ? [where('committeeId', '==', committeeId), orderBy('createdAt', 'desc')] : [],
+    !!committeeId,
+  );
+}
+
+export function useCommitteePosts(committeeId: string | null) {
+  return useCollection(
+    'posts',
+    committeeId
+      ? [where('committeeId', '==', committeeId), orderBy('createdAt', 'desc'), limit(30)]
+      : [],
+    !!committeeId,
+  );
+}
+
 export function useRsvps(eventId: string | null) {
   return useCollection(
     'rsvps',

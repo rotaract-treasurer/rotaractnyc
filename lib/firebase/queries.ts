@@ -115,17 +115,28 @@ export async function getBoardMembers(): Promise<BoardMember[]> {
       .get();
 
     if (!membersSnap.empty) {
-      return membersSnap.docs.map((d, i) => {
-        const m = d.data();
-        return {
-          id: d.id,
-          name: m.displayName || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
-          title: m.role === 'president' ? 'President' : m.role === 'treasurer' ? 'Treasurer' : m.committee || 'Board Member',
-          photoURL: m.photoURL || '',
-          linkedIn: m.linkedIn || '',
-          order: i + 1,
-        } as BoardMember;
-      });
+      return membersSnap.docs
+        .map((d) => {
+          const m = d.data();
+          // boardTitle comes from the Rotaract charter predefined list;
+          // fall back to role-based label if not yet assigned.
+          const title =
+            m.boardTitle ||
+            (m.role === 'president'
+              ? 'President'
+              : m.role === 'treasurer'
+              ? 'Treasurer'
+              : m.committee || 'Board Member');
+          return {
+            id: d.id,
+            name: m.displayName || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
+            title,
+            photoURL: m.photoURL || '',
+            linkedIn: m.linkedIn || '',
+            order: typeof m.boardOrder === 'number' ? m.boardOrder : 999,
+          } as BoardMember;
+        })
+        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
     }
 
     return defaultBoard;

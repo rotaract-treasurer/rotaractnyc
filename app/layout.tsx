@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Manrope } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { SITE } from '@/lib/constants';
@@ -9,6 +9,10 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
+export const viewport: Viewport = {
+  themeColor: '#9B1B30',
+};
+
 export const metadata: Metadata = {
   title: {
     default: `${SITE.shortName} — Service Above Self`,
@@ -17,7 +21,6 @@ export const metadata: Metadata = {
   description: SITE.description,
   metadataBase: new URL(SITE.url),
   manifest: '/manifest.json',
-  themeColor: '#9B1B30',
   openGraph: {
     type: 'website',
     siteName: SITE.name,

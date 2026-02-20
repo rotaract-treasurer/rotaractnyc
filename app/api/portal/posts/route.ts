@@ -80,8 +80,11 @@ export async function POST(request: NextRequest) {
 
     // Optional fields
     if (body.linkURL) post.linkURL = body.linkURL;
-    if (body.audience && ['all', 'board'].includes(body.audience)) {
+    if (body.audience && ['all', 'board', 'committee'].includes(body.audience)) {
       post.audience = body.audience;
+    }
+    if (body.audience === 'committee' && body.committeeId) {
+      post.committeeId = body.committeeId;
     }
 
     const docRef = await adminDb.collection('posts').add(post);

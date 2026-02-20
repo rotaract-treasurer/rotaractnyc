@@ -1,3 +1,28 @@
+// ── Rotaract Charter Board Titles ──────────────────────────────────────────
+// Standard officer positions per the Rotary International Rotaract Club
+// Constitution + NYC club bylaws (Director titles).
+export const ROTARACT_BOARD_TITLES = [
+  'President',
+  'Vice President',
+  'President-Elect',
+  'Immediate Past President',
+  'Secretary',
+  'Treasurer',
+  'Sergeant-at-Arms',
+  'Director of Community Service',
+  'Director of International Service',
+  'Director of Professional Development',
+  'Director of Fellowship',
+  'Director of Membership',
+  'Director of Fundraising',
+  'Director of Public Relations',
+  'Director of Youth Service',
+  'Director of Social Media',
+  'Director of Events',
+] as const;
+
+export type RotaractBoardTitle = (typeof ROTARACT_BOARD_TITLES)[number];
+
 // Site-wide constants
 export const SITE = {
   name: 'Rotaract Club of New York at the United Nations',

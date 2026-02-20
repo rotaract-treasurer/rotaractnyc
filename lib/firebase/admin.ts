@@ -15,7 +15,14 @@ function getAdminApp(): App {
   let credential;
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
   if (saJson) {
-    const serviceAccount = JSON.parse(saJson) as ServiceAccount;
+    let serviceAccount: ServiceAccount;
+    try {
+      serviceAccount = JSON.parse(saJson) as ServiceAccount;
+    } catch {
+      // Env vars sometimes contain literal newline characters inside the private_key
+      // value instead of the JSON-escaped \n sequence. Sanitise and retry.
+      serviceAccount = JSON.parse(saJson.replace(/\n/g, '\\n')) as ServiceAccount;
+    }
     credential = cert(serviceAccount);
   } else if (process.env.FIREBASE_PROJECT_ID) {
     credential = cert({
