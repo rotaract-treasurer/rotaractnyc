@@ -107,7 +107,7 @@ export default function PortalDashboard() {
 
   return (
     <>
-    <div className="max-w-[1400px] mx-auto space-y-6 page-enter">
+    <div className="max-w-[1400px] mx-auto space-y-6 page-enter lg:flex lg:flex-col lg:h-[calc(100vh-8rem)] lg:overflow-hidden">
 
       {/* ═══════ MOBILE VIEW TABS (sm:hidden) ═══════ */}
       <div className="sm:hidden">
@@ -214,11 +214,11 @@ export default function PortalDashboard() {
       </section>
 
       {/* ═══════ MAIN GRID ═══════ */}
-      <div className="grid lg:grid-cols-12 gap-6">
+      <div className="grid lg:grid-cols-12 gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
 
         {/* ── LEFT: Feed ── */}
         {/* On mobile: only show in feed tab. On lg+: always show */}
-        <div className={`lg:col-span-7 xl:col-span-8 space-y-5 ${mobileView !== 'feed' ? 'hidden sm:block' : ''}`}>
+        <div className={`lg:col-span-7 xl:col-span-8 space-y-5 lg:overflow-y-auto lg:pr-1 ${mobileView !== 'feed' ? 'hidden sm:block' : ''}` }>
           {/* Composer trigger card */}
           <div
             onClick={() => setShowComposer(true)}
