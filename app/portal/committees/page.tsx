@@ -11,7 +11,7 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { cn } from '@/lib/utils/cn';
 import type { Committee } from '@/types';
-import { Users, Plus, Lock, Clock, ChevronRight, Pencil } from 'lucide-react';
+import { Users, Plus, Lock, Clock, ChevronRight, Pencil, EyeOff } from 'lucide-react';
 
 // ─── Create Committee Modal ───────────────────────────────────────────────────
 
@@ -118,6 +118,7 @@ function CommitteeCard({
 }) {
   const router = useRouter();
   const { memberIds = [], waitlistIds = [], capacity = 5 } = committee;
+  const isInactive = committee.status === 'inactive';
 
   const isMember = memberIds.includes(currentMemberId);
   const onWaitlist = waitlistIds.includes(currentMemberId);
@@ -140,11 +141,19 @@ function CommitteeCard({
         'relative group flex flex-col rounded-2xl border bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden',
         isMember
           ? 'border-cranberry/30 dark:border-cranberry/30 ring-1 ring-cranberry/10'
+          : isInactive
+          ? 'border-gray-200 dark:border-gray-800 opacity-60'
           : 'border-gray-200/80 dark:border-gray-800/80',
       )}
     >
+      {/* Inactive badge */}
+      {isInactive && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+          <EyeOff className="w-2.5 h-2.5" /> Inactive
+        </div>
+      )}
       {/* Your committee badge */}
-      {isMember && (
+      {!isInactive && isMember && (
         <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cranberry text-white">
           Your Committee
         </div>
@@ -224,7 +233,7 @@ function CommitteeCard({
         {isMember ? (
           <button
             onClick={() => onLeave(committee.id)}
-            disabled={isLoading}
+            disabled={isLoading || isInactive}
             className="flex-1 flex items-center justify-center px-3 py-2 rounded-xl text-sm font-medium text-cranberry border border-cranberry/30 hover:bg-cranberry-50 dark:hover:bg-cranberry-900/20 transition-colors disabled:opacity-50"
           >
             {isLoading ? <Spinner className="w-4 h-4" /> : 'Leave'}
@@ -237,6 +246,10 @@ function CommitteeCard({
           >
             {isLoading ? <Spinner className="w-4 h-4" /> : 'Leave Waitlist'}
           </button>
+        ) : isInactive ? (
+          <span className="flex-1 flex items-center justify-center px-3 py-2 rounded-xl text-sm font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed">
+            Not accepting members
+          </span>
         ) : (
           <button
             onClick={() => onJoin(committee.id)}
@@ -274,6 +287,7 @@ export default function CommitteesPage() {
   const { data: committees, loading } = useCommittees();
   const [showCreate, setShowCreate] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -316,9 +330,16 @@ export default function CommitteesPage() {
 
   if (!member) return null;
 
-  const myCommittee = (committees as Committee[]).find(
+  const allCommittees = committees as Committee[];
+  const visibleCommittees = isBoard
+    ? showInactive ? allCommittees : allCommittees.filter((c) => c.status !== 'inactive')
+    : allCommittees.filter((c) => c.status !== 'inactive');
+
+  const myCommittee = allCommittees.find(
     (c) => c.memberIds?.includes(member.id) || c.waitlistIds?.includes(member.id),
   );
+
+  const inactiveCount = allCommittees.filter((c) => c.status === 'inactive').length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -335,12 +356,28 @@ export default function CommitteesPage() {
           </p>
         </div>
         {isBoard && (
-          <Button
-            variant="primary"
-            onClick={() => setShowCreate(true)}
-          >
-            <Plus className="w-4 h-4" /> New Committee
-          </Button>
+          <div className="flex items-center gap-2">
+            {inactiveCount > 0 && (
+              <button
+                onClick={() => setShowInactive((v) => !v)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors',
+                  showInactive
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800',
+                )}
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+                {showInactive ? 'Hide inactive' : `Show inactive (${inactiveCount})`}
+              </button>
+            )}
+            <Button
+              variant="primary"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="w-4 h-4" /> New Committee
+            </Button>
+          </div>
         )}
       </div>
 
@@ -349,7 +386,7 @@ export default function CommitteesPage() {
         <div className="flex justify-center py-16">
           <Spinner className="w-8 h-8 text-cranberry" />
         </div>
-      ) : (committees as Committee[]).length === 0 ? (
+      ) : visibleCommittees.length === 0 ? (
         <div className="text-center py-20">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             <Users className="w-8 h-8 text-gray-400" />
@@ -365,7 +402,7 @@ export default function CommitteesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(committees as Committee[]).map((c) => (
+          {visibleCommittees.map((c) => (
             <CommitteeCard
               key={c.id}
               committee={c}

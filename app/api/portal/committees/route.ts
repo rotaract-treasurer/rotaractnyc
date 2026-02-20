@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       slug,
       name: name.trim(),
       description: description?.trim() || '',
+      status: 'active',
       capacity: typeof capacity === 'number' ? capacity : 5,
       memberIds: [],
       waitlistIds: [],

@@ -40,6 +40,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const memberName = memberDoc.data()!.displayName || '';
     const committeeName = committee.name || '';
 
+    // Block joining inactive committees
+    if (committee.status === 'inactive') {
+      return NextResponse.json({ error: 'This committee is not currently accepting members' }, { status: 403 });
+    }
+
     // Already a member
     if (memberIds.includes(uid)) {
       return NextResponse.json({ status: 'already_member' });

@@ -64,9 +64,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       'name', 'description', 'capacity', 'driveURL', 'meetingCadence',
       'chairId', 'chairName', 'coChairId', 'coChairName',
     ];
+    const boardOnly = ['capacity', 'status'];
     const updates: Record<string, any> = { updatedAt: FieldValue.serverTimestamp() };
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
+    }
+    // status is board-only too
+    if ('status' in body && ['active', 'inactive'].includes(body.status)) {
+      if (isBoard) updates.status = body.status;
     }
 
     // Board-only: capacity changes

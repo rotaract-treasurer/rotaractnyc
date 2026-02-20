@@ -18,7 +18,7 @@ import type { Committee, Member, CommunityPost, PortalDocument } from '@/types';
 import {
   Users, FileText, MessageSquare, History, Settings,
   ExternalLink, Lock, Clock, Trash2, Crown, UserMinus,
-  ChevronLeft, Plus, FolderOpen, Download, BookOpen,
+  ChevronLeft, Plus, FolderOpen, Download, BookOpen, EyeOff, Eye,
 } from 'lucide-react';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
@@ -47,6 +47,7 @@ function OverviewTab({
   const [driveURL, setDriveURL] = useState(committee.driveURL || '');
   const [capacity, setCapacity] = useState(committee.capacity ?? 5);
   const [loading, setLoading] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,6 +73,30 @@ function OverviewTab({
       toast('Failed to save changes.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    const newStatus = committee.status === 'inactive' ? 'active' : 'inactive';
+    setToggling(true);
+    try {
+      const res = await fetch(`/api/portal/committees/${committee.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      toast(
+        newStatus === 'inactive'
+          ? 'Committee deactivated. Members can no longer join.'
+          : 'Committee reactivated.',
+        'success',
+      );
+      onSaved();
+    } catch {
+      toast('Failed to update committee status.', 'error');
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -177,7 +202,7 @@ function OverviewTab({
 
         {/* Edit actions */}
         {canEdit && (
-          <div className="flex gap-2 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1">
             {!editing ? (
               <Button variant="ghost" onClick={() => setEditing(true)}>Edit Details</Button>
             ) : (
@@ -185,6 +210,19 @@ function OverviewTab({
                 <Button variant="primary" onClick={handleSave} loading={loading}>Save</Button>
                 <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
               </>
+            )}
+            {/* Deactivate / Reactivate */}
+            {!editing && (
+              <Button
+                variant="ghost"
+                loading={toggling}
+                onClick={handleToggleStatus}
+                className={committee.status === 'inactive' ? 'text-emerald-600 hover:text-emerald-700' : 'text-gray-400 hover:text-amber-600'}
+              >
+                {committee.status === 'inactive'
+                  ? <><Eye className="w-4 h-4" /> Reactivate</>  
+                  : <><EyeOff className="w-4 h-4" /> Deactivate</>}
+              </Button>
             )}
           </div>
         )}
@@ -760,6 +798,14 @@ export default function CommitteeWorkspacePage({
         >
           <ChevronLeft className="w-4 h-4" /> All Committees
         </button>
+
+        {/* Inactive banner */}
+        {committee.status === 'inactive' && (
+          <div className="flex items-center gap-2 mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 text-sm text-amber-700 dark:text-amber-400">
+            <EyeOff className="w-4 h-4 shrink-0" />
+            <span>This committee is <strong>inactive</strong> — members cannot join until it is reactivated.</span>
+          </div>
+        )}
 
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">

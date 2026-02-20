@@ -461,6 +461,7 @@ export interface Committee {
   slug: string;          // URL-safe name, e.g. "community-service"
   name: string;
   description?: string;
+  status: 'active' | 'inactive'; // inactive = hidden from join, archived
   chairId?: string;
   chairName?: string;
   coChairId?: string;
