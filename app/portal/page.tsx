@@ -107,7 +107,7 @@ export default function PortalDashboard() {
 
   return (
     <>
-    <div className="max-w-[1400px] mx-auto space-y-6 page-enter lg:flex lg:flex-col lg:h-[calc(100vh-8rem)] lg:overflow-hidden">
+    <div className="max-w-[1400px] mx-auto space-y-6 page-enter">
 
       {/* ═══════ MOBILE VIEW TABS (sm:hidden) ═══════ */}
       <div className="sm:hidden">
@@ -214,11 +214,11 @@ export default function PortalDashboard() {
       </section>
 
       {/* ═══════ MAIN GRID ═══════ */}
-      <div className="grid lg:grid-cols-12 gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
+      <div className="grid lg:grid-cols-12 gap-6 lg:items-start">
 
         {/* ── LEFT: Feed ── */}
         {/* On mobile: only show in feed tab. On lg+: always show */}
-        <div className={`lg:col-span-7 xl:col-span-8 space-y-5 lg:overflow-y-auto lg:pr-1 ${mobileView !== 'feed' ? 'hidden sm:block' : ''}` }>
+        <div className={`lg:col-span-7 xl:col-span-8 space-y-5 ${mobileView !== 'feed' ? 'hidden sm:block' : ''}`}>
           {/* Composer trigger card */}
           <div
             onClick={() => setShowComposer(true)}
@@ -283,7 +283,7 @@ export default function PortalDashboard() {
 
         {/* ── RIGHT: Sidebar Widgets ── */}
         {/* On mobile: only show in widgets tab. On lg+: always show */}
-        <aside className={`lg:col-span-5 xl:col-span-4 space-y-5 ${mobileView !== 'widgets' ? 'hidden sm:block' : ''}`}>
+        <aside className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24 lg:self-start ${mobileView !== 'widgets' ? 'hidden sm:block' : ''}`}>
 
           {/* Service Hours Progress */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 hover:shadow-md transition-shadow duration-300">
