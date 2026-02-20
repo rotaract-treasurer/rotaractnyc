@@ -106,6 +106,7 @@ export default function PortalDashboard() {
   const firstName = member?.firstName || member?.displayName?.split(' ')[0] || 'Member';
 
   return (
+    <>
     <div className="max-w-[1400px] mx-auto space-y-6 page-enter">
 
       {/* ═══════ MOBILE VIEW TABS (sm:hidden) ═══════ */}
@@ -228,13 +229,6 @@ export default function PortalDashboard() {
               <p className="text-sm text-gray-400 dark:text-gray-500">Share an update with the community…</p>
             </div>
           </div>
-
-          {/* Composer modal */}
-          <PostComposerModal
-            open={showComposer}
-            onClose={() => setShowComposer(false)}
-            onSubmit={handlePost}
-          />
 
           <div className="flex items-center justify-between">
             <Tabs
@@ -401,5 +395,15 @@ export default function PortalDashboard() {
         </aside>
       </div>
     </div>
+
+    {/* PostComposerModal must live outside page-enter (which uses transform via
+        its animation) so that the Modal's position:fixed overlay is relative
+        to the viewport rather than the transformed ancestor. */}
+    <PostComposerModal
+      open={showComposer}
+      onClose={() => setShowComposer(false)}
+      onSubmit={handlePost}
+    />
+    </>
   );
 }
