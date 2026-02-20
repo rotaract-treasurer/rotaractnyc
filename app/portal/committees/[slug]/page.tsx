@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth';
 import { useCommittees, useMembers, useCommitteePosts, useCommitteeDocuments } from '@/hooks/useFirestore';
@@ -729,11 +729,11 @@ export default function CommitteeWorkspacePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ tab?: Tab }>;
+  params: { slug: string };
+  searchParams: { tab?: Tab };
 }) {
-  const { slug } = use(params);
-  const { tab: initialTab } = use(searchParams);
+  const { slug } = params;
+  const { tab: initialTab } = searchParams;
   const { member } = useAuth();
   const { data: committeesRaw, loading: committeesLoading } = useCommittees();
   const { data: allMembers } = useMembers();
