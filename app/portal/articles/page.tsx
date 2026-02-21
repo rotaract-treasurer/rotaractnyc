@@ -64,6 +64,7 @@ export default function PortalArticlesPage() {
   }
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-8 page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -122,6 +123,8 @@ export default function PortalArticlesPage() {
         </div>
       )}
 
+    </div>{/* end page-enter */}
+
       {/* Delete confirmation modal */}
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Article" size="sm">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -133,6 +136,6 @@ export default function PortalArticlesPage() {
           <Button variant="ghost" className="flex-1" onClick={() => setDeleteTarget(null)}>Cancel</Button>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

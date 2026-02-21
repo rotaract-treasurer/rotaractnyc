@@ -186,6 +186,7 @@ export default function FinancePage() {
   ];
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-6 page-enter">
       <div>
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
@@ -425,6 +426,8 @@ export default function FinancePage() {
         </div>
       )}
 
+    </div>{/* end page-enter */}
+
       {/* ───── Record Transaction Modal ───── */}
       <Modal open={showRecordModal} onClose={() => setShowRecordModal(false)} title={`Record ${recordType === 'income' ? 'Income' : 'Expense'}`} size="sm">
         <div className="space-y-4">
@@ -520,6 +523,6 @@ export default function FinancePage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

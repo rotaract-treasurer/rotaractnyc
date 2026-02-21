@@ -282,6 +282,7 @@ export default function DuesPage() {
     : [];
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-6 page-enter">
       <div>
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Annual Dues</h1>
@@ -703,6 +704,8 @@ export default function DuesPage() {
         </div>
       )}
 
+    </div>{/* end page-enter */}
+
       {/* ───── Approve Offline Payment Modal ───── */}
       <Modal open={approveModal} onClose={() => setApproveModal(false)} title="Approve Offline Payment" size="sm">
         {approveTarget && (
@@ -758,6 +761,6 @@ export default function DuesPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
