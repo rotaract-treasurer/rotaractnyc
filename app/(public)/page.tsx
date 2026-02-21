@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SITE } from '@/lib/constants';
 import { generateMeta } from '@/lib/seo';
-import { getPublicEvents, getPublishedArticles } from '@/lib/firebase/queries';
+import { getPublicEvents, getPublishedArticles, getHeroSlides } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import Badge from '@/components/ui/Badge';
 import HeroSlideshow from '@/components/public/HeroSlideshow';
@@ -62,9 +62,10 @@ const typeColors: Record<string, 'cranberry' | 'green' | 'azure' | 'gold'> = {
 };
 
 export default async function HomePage() {
-  const [events, articles] = await Promise.all([
+  const [events, articles, heroSlides] = await Promise.all([
     getPublicEvents(),
     getPublishedArticles(),
+    getHeroSlides(),
   ]);
 
   // Take only the next 3 upcoming events
@@ -110,7 +111,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Hero background slideshow */}
-        <HeroSlideshow />
+        <HeroSlideshow slides={heroSlides} />
 
         <div className="container-page relative z-10 text-center py-32">
           {/* Logo */}

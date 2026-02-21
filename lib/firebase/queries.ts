@@ -163,3 +163,29 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
     return defaultGallery;
   }
 }
+
+// ---- Hero Slides ----
+
+export interface HeroSlide {
+  id: string;
+  url: string;
+  storagePath: string;
+  order: number;
+  createdAt: string;
+}
+
+export async function getHeroSlides(): Promise<HeroSlide[]> {
+  try {
+    const snap = await adminDb
+      .collection('site_media')
+      .where('section', '==', 'hero')
+      .orderBy('order', 'asc')
+      .get();
+
+    if (snap.empty) return [];
+    return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as HeroSlide);
+  } catch (e) {
+    console.error('getHeroSlides error:', e);
+    return [];
+  }
+}

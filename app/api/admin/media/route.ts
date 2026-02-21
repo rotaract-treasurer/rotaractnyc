@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 
 export const dynamic = 'force-dynamic';
+
+const COLLECTION = 'site_media';
 
 async function getBoardMember() {
   const cookieStore = await cookies();
@@ -19,47 +21,44 @@ async function getBoardMember() {
   }
 }
 
-export async function GET() {
+/** GET — list slides for a section (public, no auth needed) */
+export async function GET(req: NextRequest) {
+  const section = new URL(req.url).searchParams.get('section') || 'hero';
   try {
-    const snapshot = await adminDb
-      .collection('gallery')
-      .orderBy('createdAt', 'desc')
-      .limit(50)
+    const snap = await adminDb
+      .collection(COLLECTION)
+      .where('section', '==', section)
+      .orderBy('order', 'asc')
       .get();
-
-    const images = snapshot.docs.map((doc) => serializeDoc({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return NextResponse.json(images);
-  } catch (error) {
-    console.error('Error fetching gallery:', error);
-    const { defaultGallery } = await import('@/lib/defaults/data');
-    return NextResponse.json(defaultGallery);
+    const slides = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return NextResponse.json(slides);
+  } catch {
+    return NextResponse.json([]);
   }
 }
 
-/** POST — add a gallery image { url, storagePath, caption?, event? } */
+/** POST — add a new slide { section, url, storagePath, order? } */
 export async function POST(req: NextRequest) {
   const board = await getBoardMember();
   if (!board) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { url, storagePath = '', caption = '', event = '' } = await req.json();
+  const body = await req.json();
+  const { section = 'hero', url, storagePath = '', order = 0 } = body;
+
   if (!url) return NextResponse.json({ error: 'url is required' }, { status: 400 });
 
-  const ref = await adminDb.collection('gallery').add({
+  const ref = await adminDb.collection(COLLECTION).add({
+    section,
     url,
     storagePath,
-    caption,
-    event,
+    order,
     createdAt: new Date().toISOString(),
   });
 
   return NextResponse.json({ id: ref.id });
 }
 
-/** DELETE — remove a gallery image by id */
+/** DELETE — remove a slide by id */
 export async function DELETE(req: NextRequest) {
   const board = await getBoardMember();
   if (!board) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,6 +66,6 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-  await adminDb.collection('gallery').doc(id).delete();
+  await adminDb.collection(COLLECTION).doc(id).delete();
   return NextResponse.json({ success: true });
 }
