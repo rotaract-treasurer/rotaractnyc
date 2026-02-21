@@ -36,6 +36,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const committee = committeeDoc.data()!;
     const memberIds: string[] = committee.memberIds || [];
     const waitlistIds: string[] = committee.waitlistIds || [];
+    const pendingMemberIds: string[] = committee.pendingMemberIds || [];
     const capacity: number = committee.capacity ?? 5;
     const memberName = memberDoc.data()!.displayName || '';
     const committeeName = committee.name || '';
@@ -52,6 +53,30 @@ export async function POST(_req: NextRequest, { params }: Params) {
     // Already on waitlist
     if (waitlistIds.includes(uid)) {
       return NextResponse.json({ status: 'already_waitlisted' });
+    }
+    // Already has a pending application for this committee
+    if (pendingMemberIds.includes(uid)) {
+      return NextResponse.json({ status: 'already_pending' });
+    }
+
+    // Count how many active committees this member is already in
+    const myCommitteesSnap = await adminDb
+      .collection('committees')
+      .where('memberIds', 'array-contains', uid)
+      .where('status', '==', 'active')
+      .get();
+    const currentCommitteeCount = myCommitteesSnap.size;
+
+    // 2-committee limit: 3rd requires board approval
+    if (currentCommitteeCount >= 2) {
+      await adminDb.collection('committees').doc(id).update({
+        pendingMemberIds: FieldValue.arrayUnion(uid),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return NextResponse.json({
+        status: 'pending_approval',
+        message: `Application submitted. You've already joined 2 committees — a board member must approve your request to join ${committeeName}.`,
+      });
     }
 
     // Check capacity (0 = unlimited)

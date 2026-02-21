@@ -105,6 +105,7 @@ function CommitteeCard({
   committee,
   currentMemberId,
   isBoard,
+  myCommitteeCount,
   onJoin,
   onLeave,
   loadingId,
@@ -112,16 +113,19 @@ function CommitteeCard({
   committee: Committee;
   currentMemberId: string;
   isBoard: boolean;
+  myCommitteeCount: number;
   onJoin: (id: string) => Promise<void>;
   onLeave: (id: string) => Promise<void>;
   loadingId: string | null;
 }) {
   const router = useRouter();
-  const { memberIds = [], waitlistIds = [], capacity = 5 } = committee;
+  const { memberIds = [], waitlistIds = [], pendingMemberIds = [], capacity = 5 } = committee;
   const isInactive = committee.status === 'inactive';
 
   const isMember = memberIds.includes(currentMemberId);
   const onWaitlist = waitlistIds.includes(currentMemberId);
+  const isPending = pendingMemberIds.includes(currentMemberId);
+  const wouldNeedApproval = !isMember && !onWaitlist && !isPending && myCommitteeCount >= 2;
   const atCapacity = capacity > 0 && memberIds.length >= capacity;
   const isLoading = loadingId === committee.id;
 
@@ -162,6 +166,12 @@ function CommitteeCard({
         <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
           <Clock className="w-2.5 h-2.5" />
           Waitlisted
+        </div>
+      )}
+      {isPending && !isMember && !onWaitlist && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+          <Clock className="w-2.5 h-2.5" />
+          Pending Approval
         </div>
       )}
 
@@ -246,6 +256,14 @@ function CommitteeCard({
           >
             {isLoading ? <Spinner className="w-4 h-4" /> : 'Leave Waitlist'}
           </button>
+        ) : isPending ? (
+          <button
+            onClick={() => onLeave(committee.id)}
+            disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-purple-600 border border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? <Spinner className="w-4 h-4" /> : 'Withdraw'}
+          </button>
         ) : isInactive ? (
           <span className="flex-1 flex items-center justify-center px-3 py-2 rounded-xl text-sm font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed">
             Not accepting members
@@ -258,6 +276,8 @@ function CommitteeCard({
           >
             {isLoading ? (
               <Spinner className="w-4 h-4 text-white" />
+            ) : wouldNeedApproval ? (
+              'Apply'
             ) : atCapacity && capacity > 0 ? (
               'Join Waitlist'
             ) : (
@@ -303,7 +323,11 @@ export default function CommitteesPage() {
       const res = await fetch(`/api/portal/committees/${id}/join`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to join');
-      toast(data.message || 'Joined!', 'success');
+      if (data.status === 'pending_approval') {
+        toast(data.message, 'info');
+      } else {
+        toast(data.message || 'Joined!', 'success');
+      }
       router.refresh();
     } catch (err: any) {
       toast(err.message, 'error');
@@ -335,9 +359,12 @@ export default function CommitteesPage() {
     ? showInactive ? allCommittees : allCommittees.filter((c) => c.status !== 'inactive')
     : allCommittees.filter((c) => c.status !== 'inactive');
 
-  const myCommittee = allCommittees.find(
+  const myCommittees = allCommittees.filter(
     (c) => c.memberIds?.includes(member.id) || c.waitlistIds?.includes(member.id),
   );
+  const myCommitteeCount = allCommittees.filter(
+    (c) => c.memberIds?.includes(member.id) && c.status !== 'inactive',
+  ).length;
 
   const inactiveCount = allCommittees.filter((c) => c.status === 'inactive').length;
 
@@ -350,9 +377,16 @@ export default function CommitteesPage() {
             Committees
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {myCommittee
-              ? `You're on the ${myCommittee.name} committee.`
-              : 'Join a committee to get involved and help lead the club.'}
+            {myCommittees.length === 0
+              ? 'Join a committee to get involved and help lead the club.'
+              : myCommittees.length === 1
+              ? `You're on the ${myCommittees[0].name} committee.`
+              : `You're on ${myCommittees.length} committees.`}
+            {myCommitteeCount >= 2 && (
+              <span className="ml-1.5 inline-flex items-center gap-1 text-amber-500 dark:text-amber-400">
+                · A 3rd committee requires board approval.
+              </span>
+            )}
           </p>
         </div>
         {isBoard && (
@@ -408,6 +442,7 @@ export default function CommitteesPage() {
               committee={c}
               currentMemberId={member.id}
               isBoard={isBoard}
+              myCommitteeCount={myCommitteeCount}
               onJoin={handleJoin}
               onLeave={handleLeave}
               loadingId={loadingId}

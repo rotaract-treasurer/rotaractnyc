@@ -30,14 +30,25 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const committee = committeeDoc.data()!;
     const memberIds: string[] = committee.memberIds || [];
     const waitlistIds: string[] = committee.waitlistIds || [];
+    const pendingMemberIds: string[] = committee.pendingMemberIds || [];
     const committeeName: string = committee.name || 'the committee';
     const capacity: number = committee.capacity ?? 5;
 
     const inCommittee = memberIds.includes(uid);
     const onWaitlist = waitlistIds.includes(uid);
+    const isPending = pendingMemberIds.includes(uid);
 
-    if (!inCommittee && !onWaitlist) {
+    if (!inCommittee && !onWaitlist && !isPending) {
       return NextResponse.json({ error: 'You are not a member of this committee' }, { status: 400 });
+    }
+
+    // Withdraw pending application
+    if (isPending && !inCommittee && !onWaitlist) {
+      await adminDb.collection('committees').doc(id).update({
+        pendingMemberIds: FieldValue.arrayRemove(uid),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return NextResponse.json({ status: 'withdrew_application', message: `Application for ${committeeName} withdrawn.` });
     }
 
     const batch = adminDb.batch();
@@ -54,9 +65,10 @@ export async function POST(_req: NextRequest, { params }: Params) {
       return NextResponse.json({ status: 'left_waitlist', message: `Removed from ${committeeName} waitlist.` });
     }
 
-    // Remove from committee members
+    // Remove from committee members (and any stale pending entry)
     batch.update(committeeRef, {
       memberIds: FieldValue.arrayRemove(uid),
+      pendingMemberIds: FieldValue.arrayRemove(uid),
       updatedAt: FieldValue.serverTimestamp(),
     });
     batch.update(memberRef, {

@@ -469,6 +469,7 @@ export interface Committee {
   capacity: number;      // max members; 0 = unlimited
   memberIds: string[];
   waitlistIds: string[];
+  pendingMemberIds?: string[];  // awaiting board approval for 3rd+ committee
   driveURL?: string;     // Google Workspace Shared Drive link
   meetingCadence?: string; // e.g. "Every 2nd Monday, 6:30 PM"
   termHistory: CommitteeTermHistory[];
