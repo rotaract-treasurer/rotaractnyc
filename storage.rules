@@ -87,6 +87,13 @@ service firebase.storage {
       allow delete: if isBoard();
     }
 
+    // ── Expense Receipts ──
+    match /receipts/{fileName} {
+      allow read: if isBoard();
+      allow write: if isBoard() && isValidSize();
+      allow delete: if isBoard();
+    }
+
     // Deny everything else
     match /{allPaths=**} {
       allow read, write: if false;
