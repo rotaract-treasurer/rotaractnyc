@@ -120,9 +120,14 @@ export default function EventsFilter({ events }: EventsFilterProps) {
                 <p className="text-xs font-medium text-cranberry-200">{formatDate(event.date, { weekday: 'long' })}</p>
                 <p className="text-sm font-bold">{formatDate(event.date, { month: 'short', day: 'numeric' })}</p>
               </div>
-              <Badge variant={typeColors[event.type] || 'gray'}>
-                {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <Badge variant={typeColors[event.type] || 'gray'}>
+                  {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
+                </Badge>
+                {event.type !== 'free' && (!event.pricing || event.pricing.guestPrice === 0) && (
+                  <Badge variant="green">✓ Free</Badge>
+                )}
+              </div>
             </div>
 
             <div className="p-6">

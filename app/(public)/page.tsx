@@ -204,9 +204,14 @@ export default async function HomePage() {
                       <p className="text-xs font-medium text-cranberry-200">{formatDate(event.date, { weekday: 'short' })}</p>
                       <p className="text-sm font-bold">{formatDate(event.date, { month: 'short', day: 'numeric' })}</p>
                     </div>
-                    <Badge variant={typeColors[event.type] || 'green'}>
-                      {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant={typeColors[event.type] || 'green'}>
+                        {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
+                      </Badge>
+                      {event.type !== 'free' && (!event.pricing || event.pricing.guestPrice === 0) && (
+                        <Badge variant="green">✓ Free</Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="p-5">
                     <h3 className="font-display font-bold text-gray-900 dark:text-white group-hover:text-cranberry transition-colors line-clamp-2">{event.title}</h3>
