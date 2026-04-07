@@ -127,32 +127,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        setMember(resolvedMember);
-        setLoading(false);
-
-        // Step 4: Set session cookie non-blocking — don't delay render
+        // Step 4: Set session cookie BEFORE updating state — the middleware
+        // checks this cookie on every /portal/* navigation, so it must exist
+        // before the login-page redirect fires.
         if (idToken) {
-          fetch('/api/portal/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          })
-            .then((res) => res.ok ? res.json() : null)
-            .then(async (data) => {
+          try {
+            const res = await fetch('/api/portal/auth/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            });
+            if (res.ok) {
+              const data = await res.json().catch(() => null);
               if (data?.autoApproved) {
                 try {
                   const memberRef = doc(getDb(), 'members', firebaseUser.uid);
                   const freshSnap = await getDoc(memberRef);
                   if (freshSnap.exists()) {
-                    setMember({ id: freshSnap.id, ...freshSnap.data() } as Member);
+                    resolvedMember = { id: freshSnap.id, ...freshSnap.data() } as Member;
                   }
                 } catch (err) {
                   console.warn('Auth: Failed to refresh member after auto-approval:', err);
                 }
               }
-            })
-            .catch((err) => console.warn('Session cookie creation failed:', err));
+            }
+          } catch (err) {
+            console.warn('Session cookie creation failed:', err);
+          }
         }
+
+        setMember(resolvedMember);
+        setLoading(false);
       } else {
         setMember(null);
         setLoading(false);

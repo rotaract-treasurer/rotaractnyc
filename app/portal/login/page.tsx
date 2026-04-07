@@ -17,12 +17,11 @@ export default function PortalLoginPage() {
 
   useEffect(() => {
     if (!loading && user && member) {
-      // If onboarding isn't complete, redirect to onboarding wizard
-      if (member.onboardingComplete === false) {
-        router.push('/portal/onboarding');
-      } else {
-        router.push(redirect);
-      }
+      // Use replace so the login page isn't in the back-button history,
+      // and refresh to ensure the middleware re-evaluates the new session cookie.
+      const dest = member.onboardingComplete === false ? '/portal/onboarding' : redirect;
+      router.replace(dest);
+      router.refresh();
     }
   }, [loading, user, member, redirect, router]);
 
