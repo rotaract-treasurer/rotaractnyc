@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
@@ -7,6 +8,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 // Update member profile
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-profile'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('rotaract_portal_session')?.value;

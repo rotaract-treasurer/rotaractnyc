@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getArticleBySlug } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import SafeHtml from '@/components/ui/SafeHtml';
@@ -74,22 +75,20 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
       <section className="relative py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800 text-white overflow-hidden">
         {article.coverImage && (
           <div className="absolute inset-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={article.coverImage} alt="" className="w-full h-full object-cover opacity-20" />
+            <Image src={article.coverImage} alt="" fill className="object-cover opacity-20" sizes="100vw" priority />
             <div className="absolute inset-0 bg-gradient-to-t from-cranberry-900/90 via-cranberry-900/60 to-cranberry-900/80" />
           </div>
         )}
         <div className="container-page relative z-10">
           <Link href="/news" className="inline-flex items-center gap-1 text-cranberry-200 hover:text-white text-sm mb-6 transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             Back to News
           </Link>
           <Badge variant={categoryColors[article.category] || 'gold'} className="mb-4">{article.category}</Badge>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold max-w-3xl">{article.title}</h1>
           <div className="mt-4 flex items-center gap-4 text-cranberry-200 text-sm">
             {article.author.photoURL && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={article.author.photoURL} alt={article.author.name} className="w-8 h-8 rounded-full border-2 border-cranberry-300" />
+              <Image src={article.author.photoURL} alt={article.author.name} width={32} height={32} className="rounded-full border-2 border-cranberry-300" />
             )}
             <span>By {article.author.name}</span>
             {article.publishedAt && <span>{formatDate(article.publishedAt)}</span>}

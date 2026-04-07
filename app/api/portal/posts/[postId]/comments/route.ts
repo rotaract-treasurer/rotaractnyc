@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { addComment, getComments } from '@/lib/services/posts';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
@@ -37,6 +38,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ postId: string }> },
 ) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-posts'), { max: 5, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('rotaract_portal_session')?.value;

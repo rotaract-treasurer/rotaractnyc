@@ -11,7 +11,7 @@ const TO_EMAIL = process.env.RESEND_TO_EMAIL || 'rotaractnewyorkcity@gmail.com';
 export async function POST(request: Request) {
   // Rate limit: 5 submissions per 60 s per IP
   const rlKey = getRateLimitKey(request, 'contact');
-  const rl = rateLimit(rlKey, { max: 5, windowSec: 60 });
+  const rl = await rateLimit(rlKey, { max: 5, windowSec: 60 });
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {

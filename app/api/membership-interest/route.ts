@@ -11,7 +11,7 @@ const TO_EMAIL = process.env.RESEND_TO_EMAIL || 'rotaractnewyorkcity@gmail.com';
 export async function POST(request: Request) {
   // Rate limit: 3 submissions per 60 s per IP
   const rlKey = getRateLimitKey(request, 'membership-interest');
-  const rl = rateLimit(rlKey, { max: 3, windowSec: 60 });
+  const rl = await rateLimit(rlKey, { max: 3, windowSec: 60 });
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     });
 
     if (!result.success) {
-      console.log('Membership interest (email not sent):', fullName, email);
+      console.info('Membership interest (email not sent):', fullName, email);
     }
 
     return NextResponse.json({ success: true, message: 'Interest submitted successfully.' });

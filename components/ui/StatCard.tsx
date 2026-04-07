@@ -17,7 +17,7 @@ export default function StatCard({ label, value, icon, trend, className }: StatC
           <p className="mt-1.5 text-2xl sm:text-3xl font-display font-bold text-gray-900 dark:text-white tabular-nums">{value}</p>
           {trend && (
             <div className={cn('mt-2 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full', trend.value >= 0 ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/20' : 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/20')}>
-              <svg className={cn('w-3 h-3', trend.value < 0 && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+              <svg aria-hidden="true" className={cn('w-3 h-3', trend.value < 0 && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
               {Math.abs(trend.value)}% {trend.label}
             </div>
           )}

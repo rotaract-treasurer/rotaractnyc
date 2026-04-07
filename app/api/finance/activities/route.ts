@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 // GET — List all activities (treasurer/president only)
 export async function GET(request: NextRequest) {
@@ -44,6 +45,9 @@ export async function GET(request: NextRequest) {
 
 // POST — Create new activity (treasurer/president only)
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'finance-activities'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('rotaract_portal_session')?.value;

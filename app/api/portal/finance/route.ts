@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { getFinanceSummary, getTransactions, createTransaction, deleteTransaction } from '@/lib/services/finance';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
@@ -41,6 +42,9 @@ export async function GET() {
 
 // POST — record a new transaction (expense or income)
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-finance'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const user = await getAuthenticatedTreasurer();
     if (!user) {
@@ -79,6 +83,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE — remove a transaction by ID
 export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-finance'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const user = await getAuthenticatedTreasurer();
     if (!user) {

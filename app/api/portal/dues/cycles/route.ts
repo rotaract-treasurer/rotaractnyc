@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,9 @@ export async function GET() {
 
 // POST — create a new dues cycle
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-dues'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const user = await getAuthenticatedTreasurer();
     if (!user) {
@@ -87,6 +91,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH — update an existing cycle
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-dues'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const user = await getAuthenticatedTreasurer();
     if (!user) {

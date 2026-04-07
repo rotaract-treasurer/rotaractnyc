@@ -39,7 +39,7 @@ export default function ProgressRing({
   return (
     <div className={cn('flex flex-col items-center', className)}>
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
+        <svg aria-hidden="true" width={size} height={size} className="-rotate-90">
           <circle
             cx={size / 2}
             cy={size / 2}

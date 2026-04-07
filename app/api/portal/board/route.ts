@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,9 @@ export async function GET() {
 // Board/president only.
 
 export async function PUT(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-board'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   const session = await getSession();
   if (!session || !isBoard(session.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

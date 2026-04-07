@@ -18,6 +18,7 @@ const navigation = [
       { label: 'Our Mission', href: '/about' },
       { label: 'Leadership', href: '/leadership' },
       { label: 'Membership', href: '/membership' },
+      { label: 'Partners', href: '/partners' },
       { label: 'FAQ', href: '/faq' },
     ],
   },

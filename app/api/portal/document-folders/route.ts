@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,9 @@ export async function GET() {
 // ── POST — create a folder ──
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-documents'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const member = await getAuthenticatedMember();
     if (!member || !isBoardOrAbove(member.role)) {
@@ -103,6 +107,9 @@ export async function POST(request: NextRequest) {
 // ── PATCH — update folder (rename, pin, reorder, change color) ──
 
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-documents'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const member = await getAuthenticatedMember();
     if (!member || !isBoardOrAbove(member.role)) {
@@ -139,6 +146,9 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE — delete a folder (moves docs to unfiled) ──
 
 export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-documents'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const member = await getAuthenticatedMember();
     if (!member || !isBoardOrAbove(member.role)) {

@@ -55,10 +55,10 @@ export default function PostComposer({ onSubmit }: PostComposerProps) {
               <div className="flex items-center gap-1">
                 {/* Toolbar icons */}
                 <button type="button" className="p-2 rounded-lg text-gray-400 hover:text-cranberry hover:bg-cranberry-50 dark:hover:bg-cranberry-900/10 transition-colors" title="Add image">
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
+                  <svg aria-hidden="true" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
                 </button>
                 <button type="button" className="p-2 rounded-lg text-gray-400 hover:text-cranberry hover:bg-cranberry-50 dark:hover:bg-cranberry-900/10 transition-colors" title="Add link">
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.313a4.5 4.5 0 00-6.364 0L4.5 14.25m11.19-5.562l4.5-4.5a4.5 4.5 0 00-6.364-6.364l-4.5 4.5" /></svg>
+                  <svg aria-hidden="true" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.313a4.5 4.5 0 00-6.364 0L4.5 14.25m11.19-5.562l4.5-4.5a4.5 4.5 0 00-6.364-6.364l-4.5 4.5" /></svg>
                 </button>
                 <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
                 <p className={`text-xs tabular-nums font-medium ${isOverLimit ? 'text-red-500' : charsLeft < 100 ? 'text-gold-600' : 'text-gray-400'}`}>

@@ -743,7 +743,7 @@ export default function DocumentsPage() {
                 className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 title="Back to all folders"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
               <FolderOpen className={`w-5 h-5 ${(folderColorClasses[currentFolder.color] || folderColorClasses.gray).text}`} />
               <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white">{currentFolder.name}</h2>
@@ -759,7 +759,7 @@ export default function DocumentsPage() {
                 className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 title="Back to all folders"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
               <File className="w-5 h-5 text-gray-400" />
               <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white">Unfiled Documents</h2>

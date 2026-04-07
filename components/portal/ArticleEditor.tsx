@@ -236,7 +236,7 @@ const suggestionItems = createSuggestionItems([
     title: 'Image',
     description: 'Upload an image from your device.',
     searchTerms: ['photo', 'picture', 'media', 'img'],
-    icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+    icon: <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).run();
       const input = document.createElement('input');
@@ -340,7 +340,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleBold().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                 <path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" />
                 <path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
               </svg>
@@ -349,7 +349,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <line x1="19" y1="4" x2="10" y2="4" />
                 <line x1="14" y1="20" x2="5" y2="20" />
                 <line x1="15" y1="4" x2="9" y2="20" />
@@ -359,7 +359,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3" />
                 <line x1="4" y1="21" x2="20" y2="21" />
               </svg>
@@ -368,7 +368,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleStrike().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M16 4H9a3 3 0 00-3 3v0a3 3 0 003 3h6" />
                 <line x1="4" y1="12" x2="20" y2="12" />
                 <path d="M8 20h7a3 3 0 003-3v0a3 3 0 00-3-3h-6" />
@@ -379,7 +379,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleCode().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <polyline points="16 18 22 12 16 6" />
                 <polyline points="8 6 2 12 8 18" />
               </svg>
@@ -388,7 +388,7 @@ export default function ArticleEditor({ initialContent, onUpdate }: ArticleEdito
               onSelect={(editor) => editor.chain().focus().toggleHighlight().run()}
               className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
               </svg>

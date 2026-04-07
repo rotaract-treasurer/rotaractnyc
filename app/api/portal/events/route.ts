@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import type { RecurrenceRule, RecurrenceFrequency } from '@/types';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,6 +136,9 @@ export async function GET(request: NextRequest) {
 // ─── POST: Create a new event ───
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-events'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { uid } = await getAuthenticatedMember(true);
     const body = await request.json();
@@ -268,6 +272,9 @@ export async function POST(request: NextRequest) {
 // ─── PATCH: Update an existing event ───
 
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-events'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     await getAuthenticatedMember(true);
     const body = await request.json();
@@ -315,6 +322,9 @@ export async function PATCH(request: NextRequest) {
 // ─── DELETE: Remove an event ───
 
 export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-events'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     await getAuthenticatedMember(true);
 

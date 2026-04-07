@@ -160,14 +160,14 @@ export default function FeedCard({ post, onLike, onComment }: FeedCardProps) {
             className="mt-4 flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group/link"
           >
             <div className="w-9 h-9 rounded-lg bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center shrink-0">
-              <svg className="w-4 h-4 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg aria-hidden="true" className="w-4 h-4 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
             <span className="text-sm text-cranberry group-hover/link:text-cranberry-800 dark:group-hover/link:text-cranberry-300 font-medium truncate transition-colors">
               {post.linkURL}
             </span>
-            <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
@@ -184,7 +184,7 @@ export default function FeedCard({ post, onLike, onComment }: FeedCardProps) {
                 : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50/70 dark:hover:bg-rose-900/10 dark:text-gray-500'
             }`}
           >
-            <svg className="w-3.5 h-3.5 shrink-0" fill={liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-3.5 h-3.5 shrink-0" fill={liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={liked ? 0 : 1.75} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
             <span>Like</span>
@@ -196,7 +196,7 @@ export default function FeedCard({ post, onLike, onComment }: FeedCardProps) {
             onClick={() => onComment?.(post.id)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-cranberry hover:bg-cranberry-50/70 dark:hover:bg-cranberry-900/10 transition-all duration-200"
           >
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" />
             </svg>
             <span>Comment</span>
@@ -207,7 +207,7 @@ export default function FeedCard({ post, onLike, onComment }: FeedCardProps) {
             type="button"
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-azure hover:bg-azure-50/70 dark:hover:bg-azure-900/10 transition-all duration-200"
           >
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0-12.814a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0 12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
             </svg>
             <span>Share</span>

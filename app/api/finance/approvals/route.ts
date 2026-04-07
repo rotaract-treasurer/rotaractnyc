@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 // GET — List pending approvals (budgets + offline payments)
 export async function GET(request: NextRequest) {
@@ -69,6 +70,9 @@ export async function GET(request: NextRequest) {
 
 // PATCH — Approve/reject budget, payment, or expense
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'finance-approvals'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('rotaract_portal_session')?.value;

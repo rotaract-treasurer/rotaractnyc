@@ -18,7 +18,7 @@ const PRESET_AMOUNTS: Record<string, { cents: number; label: string }> = {
 export async function POST(request: NextRequest) {
   // Rate limit: 10 checkout attempts per 60 s per IP
   const rlKey = getRateLimitKey(request, 'donate');
-  const rl = rateLimit(rlKey, { max: 10, windowSec: 60 });
+  const rl = await rateLimit(rlKey, { max: 10, windowSec: 60 });
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { createTransaction } from '@/lib/services/finance';
 import Stripe from 'stripe';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
@@ -135,6 +136,9 @@ export async function GET(request: NextRequest) {
 
 // Create Stripe checkout session for dues payment
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-dues'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('rotaract_portal_session')?.value;
@@ -252,6 +256,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH — treasurer actions: approve-offline, waive, mark-unpaid
 export async function PATCH(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-dues'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const user = await getAuthenticatedUser();
     if (!user) {

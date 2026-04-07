@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 // GET — Get single activity
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +37,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 // PATCH — Update activity
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'finance-activities'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { id } = await params;
     const cookieStore = await cookies();
@@ -92,6 +96,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 // DELETE — Delete activity
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'finance-activities'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { id } = await params;
     const cookieStore = await cookies();

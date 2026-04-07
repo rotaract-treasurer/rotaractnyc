@@ -1,5 +1,8 @@
 /**
  * Tests for lib/rateLimit.ts
+ *
+ * The rateLimit function is now async (supports Upstash Redis in production).
+ * Without Upstash env vars, it falls back to in-memory storage for local dev.
  */
 
 // Prevent the cleanup setInterval from leaking into tests
@@ -17,77 +20,77 @@ describe('rateLimit', () => {
     jest.advanceTimersByTime(120_000);
   });
 
-  it('allows the first request', () => {
-    const result = rateLimit('test-first');
+  it('allows the first request', async () => {
+    const result = await rateLimit('test-first');
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBeGreaterThanOrEqual(0);
   });
 
-  it('returns remaining count that decreases with each call', () => {
+  it('returns remaining count that decreases with each call', async () => {
     const key = 'test-remaining';
-    const r1 = rateLimit(key, { max: 5 });
+    const r1 = await rateLimit(key, { max: 5 });
     expect(r1.remaining).toBe(4);
 
-    const r2 = rateLimit(key, { max: 5 });
+    const r2 = await rateLimit(key, { max: 5 });
     expect(r2.remaining).toBe(3);
 
-    const r3 = rateLimit(key, { max: 5 });
+    const r3 = await rateLimit(key, { max: 5 });
     expect(r3.remaining).toBe(2);
   });
 
-  it('blocks requests once the max is reached', () => {
+  it('blocks requests once the max is reached', async () => {
     const key = 'test-block';
     const max = 3;
 
-    rateLimit(key, { max });
-    rateLimit(key, { max });
-    rateLimit(key, { max });
+    await rateLimit(key, { max });
+    await rateLimit(key, { max });
+    await rateLimit(key, { max });
 
-    const blocked = rateLimit(key, { max });
+    const blocked = await rateLimit(key, { max });
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
   });
 
-  it('tracks different keys independently', () => {
+  it('tracks different keys independently', async () => {
     const keyA = 'test-indep-a';
     const keyB = 'test-indep-b';
 
     // Exhaust keyA
-    rateLimit(keyA, { max: 1 });
-    const blockedA = rateLimit(keyA, { max: 1 });
+    await rateLimit(keyA, { max: 1 });
+    const blockedA = await rateLimit(keyA, { max: 1 });
     expect(blockedA.allowed).toBe(false);
 
     // keyB should still be allowed
-    const resultB = rateLimit(keyB, { max: 1 });
+    const resultB = await rateLimit(keyB, { max: 1 });
     expect(resultB.allowed).toBe(true);
   });
 
-  it('resets after the window expires', () => {
+  it('resets after the window expires', async () => {
     const key = 'test-reset';
     const windowSec = 10;
 
-    rateLimit(key, { max: 1, windowSec });
-    const blocked = rateLimit(key, { max: 1, windowSec });
+    await rateLimit(key, { max: 1, windowSec });
+    const blocked = await rateLimit(key, { max: 1, windowSec });
     expect(blocked.allowed).toBe(false);
 
     // Advance past the window
     jest.advanceTimersByTime(11_000);
 
-    const afterReset = rateLimit(key, { max: 1, windowSec });
+    const afterReset = await rateLimit(key, { max: 1, windowSec });
     expect(afterReset.allowed).toBe(true);
   });
 
-  it('uses default max of 10 when not specified', () => {
+  it('uses default max of 10 when not specified', async () => {
     const key = 'test-default-max';
     for (let i = 0; i < 10; i++) {
-      expect(rateLimit(key).allowed).toBe(true);
+      expect((await rateLimit(key)).allowed).toBe(true);
     }
-    expect(rateLimit(key).allowed).toBe(false);
+    expect((await rateLimit(key)).allowed).toBe(false);
   });
 
-  it('returns a resetAt timestamp in the future', () => {
+  it('returns a resetAt timestamp in the future', async () => {
     const now = Date.now();
-    const result = rateLimit('test-resetAt', { windowSec: 30 });
+    const result = await rateLimit('test-resetAt', { windowSec: 30 });
     expect(result.resetAt).toBeGreaterThan(now);
   });
 });

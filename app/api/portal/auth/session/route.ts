@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,9 @@ function getAdminAllowlist(): string[] {
 
 // POST: Create session cookie
 export async function POST(request: Request) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-auth'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { idToken } = await request.json();
     const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
@@ -41,7 +45,7 @@ export async function POST(request: Request) {
         if (snap.exists && snap.data()?.status === 'pending') {
           await memberRef.update({ status: 'active', role: 'president' });
           autoApproved = true;
-          console.log(`Auto-approved allowlisted admin: ${email}`);
+          console.info(`Auto-approved allowlisted admin: ${email}`);
         }
       } catch (e) {
         console.warn('Auto-approve check failed (non-blocking):', e);
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
             // This member was invited — auto-activate so they can complete onboarding
             await memberRef.update({ status: 'active' });
             autoApproved = true;
-            console.log(`Auto-approved invited member: ${email}`);
+            console.info(`Auto-approved invited member: ${email}`);
           }
         }
       } catch (e) {

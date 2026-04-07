@@ -315,7 +315,7 @@ export default function DuesPage() {
               <div className="mt-8 space-y-6">
                 <div className="relative p-6 rounded-2xl border-2 border-cranberry bg-cranberry-50/50 dark:bg-cranberry-900/10 shadow-sm text-center">
                   <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-cranberry flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    <svg aria-hidden="true" className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                   </div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 capitalize">{selectedType} Membership</p>
                   <p className="text-4xl font-display font-bold text-cranberry mt-2">{formatCurrency(amount)}</p>
@@ -329,7 +329,7 @@ export default function DuesPage() {
                 </Button>
 
                 <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                   Secure payment powered by Stripe
                 </div>
 
@@ -337,7 +337,7 @@ export default function DuesPage() {
                 {((paymentSettings.zelleEnabled && paymentSettings.zelleIdentifier) || (paymentSettings.venmoEnabled && paymentSettings.venmoUsername) || (paymentSettings.cashappEnabled && paymentSettings.cashappUsername)) && (
                   <div className="bg-azure-50 dark:bg-azure-900/10 rounded-xl border border-azure-200 dark:border-azure-800 p-5 space-y-3">
                     <h4 className="font-display font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                      <svg className="w-4 h-4 text-azure" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                      <svg aria-hidden="true" className="w-4 h-4 text-azure" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
                       Other Payment Methods
                     </h4>
                     <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -371,7 +371,7 @@ export default function DuesPage() {
             {(duesStatus === 'PAID' || duesStatus === 'PAID_OFFLINE') && (
               <div className="mt-8 text-center">
                 <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center">
-                  <svg className="w-7 h-7 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <svg aria-hidden="true" className="w-7 h-7 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Your dues for {cycleName} have been paid. Thank you for your support.
@@ -382,7 +382,7 @@ export default function DuesPage() {
             {duesStatus === 'WAIVED' && (
               <div className="mt-8 text-center">
                 <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-azure-100 dark:bg-azure-900/20 flex items-center justify-center">
-                  <svg className="w-7 h-7 text-azure dark:text-azure-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg aria-hidden="true" className="w-7 h-7 text-azure dark:text-azure-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Your dues for {cycleName} have been waived.

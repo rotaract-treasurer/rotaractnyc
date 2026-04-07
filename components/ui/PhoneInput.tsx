@@ -366,7 +366,7 @@ export default function PhoneInput({
         >
           <span className="text-base leading-none">{selectedCountry.flag}</span>
           <span className="text-gray-600 dark:text-gray-300">{dialCode}</span>
-          <svg className={cn('w-3.5 h-3.5 text-gray-400 transition-transform', dropdownOpen && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" /></svg>
+          <svg aria-hidden="true" className={cn('w-3.5 h-3.5 text-gray-400 transition-transform', dropdownOpen && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" /></svg>
         </button>
 
         {/* Phone number input */}

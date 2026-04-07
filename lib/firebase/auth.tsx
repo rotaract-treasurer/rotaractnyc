@@ -44,47 +44,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(getAuth(), async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Fetch member profile and ID token in parallel
-        const memberRef = doc(getDb(), 'members', firebaseUser.uid);
-        const [memberSnap, idToken] = await Promise.all([
-          getDoc(memberRef),
-          firebaseUser.getIdToken(),
-        ]);
-
         let resolvedMember: Member | null = null;
+        let idToken: string | null = null;
 
-        if (memberSnap.exists()) {
-          resolvedMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
-        } else {
-          // Check if there's an invited member doc matching this email
-          // (created by board via AddMemberModal — stored with a Firestore auto-ID)
-          const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
-          const inviteQuery = query(
-            collection(getDb(), 'members'),
-            where('email', '==', (firebaseUser.email || '').toLowerCase()),
-          );
-          const inviteSnap = await getDocs(inviteQuery);
-          const invitedDoc = inviteSnap.docs.find((d) => d.id !== firebaseUser.uid);
+        // Step 1: Fetch member profile and ID token
+        try {
+          const memberRef = doc(getDb(), 'members', firebaseUser.uid);
+          const [memberSnap, token] = await Promise.all([
+            getDoc(memberRef),
+            firebaseUser.getIdToken(),
+          ]);
+          idToken = token;
 
-          if (invitedDoc) {
-            // Migrate the invited member doc to the Firebase UID key
-            const inviteData = invitedDoc.data();
-            const migratedMember: Record<string, any> = {
-              ...inviteData,
-              displayName: firebaseUser.displayName || inviteData.displayName || '',
-              photoURL: firebaseUser.photoURL || inviteData.photoURL || '',
-              status: 'active',
-            };
-            // If onboardingComplete wasn't set or is false, ensure it stays false
-            if (!inviteData.onboardingComplete) {
-              migratedMember.onboardingComplete = false;
+          if (memberSnap.exists()) {
+            resolvedMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+          }
+        } catch (err) {
+          console.error('Auth: Failed to fetch member profile or ID token:', err);
+          setMember(null);
+          setLoading(false);
+          return;
+        }
+
+        // Step 2: Handle invite migration or new member creation
+        if (!resolvedMember) {
+          try {
+            const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
+            const memberRef = doc(getDb(), 'members', firebaseUser.uid);
+            const inviteQuery = query(
+              collection(getDb(), 'members'),
+              where('email', '==', (firebaseUser.email || '').toLowerCase()),
+            );
+            const inviteSnap = await getDocs(inviteQuery);
+            const invitedDoc = inviteSnap.docs.find((d) => d.id !== firebaseUser.uid);
+
+            if (invitedDoc) {
+              // Migrate the invited member doc to the Firebase UID key
+              try {
+                const inviteData = invitedDoc.data();
+                const migratedMember: Record<string, any> = {
+                  ...inviteData,
+                  displayName: firebaseUser.displayName || inviteData.displayName || '',
+                  photoURL: firebaseUser.photoURL || inviteData.photoURL || '',
+                  status: 'active',
+                };
+                if (!inviteData.onboardingComplete) {
+                  migratedMember.onboardingComplete = false;
+                }
+                await setDoc(memberRef, migratedMember);
+                await deleteDoc(invitedDoc.ref);
+                resolvedMember = { id: firebaseUser.uid, ...migratedMember } as Member;
+              } catch (migrateErr) {
+                console.error('Auth: Invite migration failed, creating new member instead:', migrateErr);
+                // Fall through to new member creation below
+              }
             }
-            await setDoc(memberRef, migratedMember);
-            // Remove the old auto-ID doc
-            await deleteDoc(invitedDoc.ref);
-            resolvedMember = { id: firebaseUser.uid, ...migratedMember } as Member;
-          } else {
-            // Truly new sign-up (walk-in, not invited)
+          } catch (err) {
+            console.error('Auth: Failed to check for invited member:', err);
+            // Fall through to new member creation below
+          }
+        }
+
+        // Step 3: Create new member if still unresolved
+        if (!resolvedMember) {
+          try {
+            const memberRef = doc(getDb(), 'members', firebaseUser.uid);
             const newMember: Omit<Member, 'id'> = {
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || '',
@@ -98,28 +122,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             await setDoc(memberRef, { ...newMember, createdAt: serverTimestamp() });
             resolvedMember = { id: firebaseUser.uid, ...newMember };
+          } catch (err) {
+            console.error('Auth: Failed to create new member record:', err);
           }
         }
 
         setMember(resolvedMember);
         setLoading(false);
 
-        // Set session cookie non-blocking — don't delay render
-        fetch('/api/portal/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        })
-          .then((res) => res.ok ? res.json() : null)
-          .then(async (data) => {
-            if (data?.autoApproved) {
-              const freshSnap = await getDoc(memberRef);
-              if (freshSnap.exists()) {
-                setMember({ id: freshSnap.id, ...freshSnap.data() } as Member);
-              }
-            }
+        // Step 4: Set session cookie non-blocking — don't delay render
+        if (idToken) {
+          fetch('/api/portal/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
           })
-          .catch((err) => console.warn('Session cookie creation failed:', err));
+            .then((res) => res.ok ? res.json() : null)
+            .then(async (data) => {
+              if (data?.autoApproved) {
+                try {
+                  const memberRef = doc(getDb(), 'members', firebaseUser.uid);
+                  const freshSnap = await getDoc(memberRef);
+                  if (freshSnap.exists()) {
+                    setMember({ id: freshSnap.id, ...freshSnap.data() } as Member);
+                  }
+                } catch (err) {
+                  console.warn('Auth: Failed to refresh member after auto-approval:', err);
+                }
+              }
+            })
+            .catch((err) => console.warn('Session cookie creation failed:', err));
+        }
       } else {
         setMember(null);
         setLoading(false);

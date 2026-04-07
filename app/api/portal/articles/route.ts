@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,9 @@ export async function GET() {
 // ─── POST: Create article ───
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-articles'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { error, status, uid, member } = await authenticateBoardMember();
     if (error || !uid || !member) {
@@ -134,6 +138,9 @@ export async function POST(request: NextRequest) {
 // ─── PUT: Update article ───
 
 export async function PUT(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-articles'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { error, status, uid } = await authenticateBoardMember();
     if (error || !uid) {
@@ -206,6 +213,9 @@ export async function PUT(request: NextRequest) {
 // ─── DELETE: Delete article ───
 
 export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-articles'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const { error, status, uid } = await authenticateBoardMember();
     if (error || !uid) {

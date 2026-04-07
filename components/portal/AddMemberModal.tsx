@@ -87,7 +87,7 @@ export default function AddMemberModal({ open, onClose, onCreated }: AddMemberMo
       {success ? (
         <div className="flex flex-col items-center py-12 gap-3 px-6">
           <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-            <svg className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            <svg aria-hidden="true" className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Invitation Sent!</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">

@@ -51,7 +51,7 @@ export default function MembershipPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="/contact" className="btn-lg btn-gold">
             Get Started
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
           </Link>
@@ -114,13 +114,13 @@ export default function MembershipPage() {
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Professional</p>
               <p className="text-4xl font-display font-bold text-cranberry">$85</p>
               <p className="text-sm text-gray-500 mt-1">per Rotary year</p>
-              <p className="text-xs text-gray-400 mt-4">Includes Rotary International registration</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Includes Rotary International registration</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Student</p>
               <p className="text-4xl font-display font-bold text-gray-900 dark:text-white">$65</p>
               <p className="text-sm text-gray-500 mt-1">per Rotary year</p>
-              <p className="text-xs text-gray-400 mt-4">Valid student ID required</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Valid student ID required</p>
             </div>
           </div>
 

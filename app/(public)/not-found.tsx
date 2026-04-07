@@ -8,11 +8,11 @@ export default function PublicNotFound() {
         {/* Illustration / Icon */}
         <div className="mx-auto mb-8 w-32 h-32 rounded-full bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center">
           <svg
+            aria-hidden="true"
             className="w-16 h-16 text-cranberry"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            aria-hidden="true"
           >
             <path
               strokeLinecap="round"

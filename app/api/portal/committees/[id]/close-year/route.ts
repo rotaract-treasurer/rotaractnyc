@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,9 @@ type Params = { params: Promise<{ id: string }> };
  * Requires: board, chair, or co-chair.
  */
 export async function POST(request: NextRequest, { params }: Params) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-committees'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const decoded = await verifySession();
     const { id } = await params;

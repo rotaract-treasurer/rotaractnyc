@@ -37,6 +37,7 @@ export default function Accordion({ items, className }: AccordionProps) {
                   {item.title}
                 </span>
                 <svg
+                  aria-hidden="true"
                   className={cn(
                     'w-5 h-5 text-gray-400 transition-transform duration-200',
                     isOpen && 'rotate-180'
@@ -44,7 +45,6 @@ export default function Accordion({ items, className }: AccordionProps) {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
-                  aria-hidden="true"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>

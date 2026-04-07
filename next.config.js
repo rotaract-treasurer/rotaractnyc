@@ -73,6 +73,21 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
+            // ⚠️ SECURITY NOTE (V1): 'unsafe-inline' remains in script-src and
+            // style-src because several dependencies (styled-jsx, react-quill,
+            // novel editor, Google Identity Services, Stripe.js) inject inline
+            // scripts and styles at runtime that cannot currently use nonces.
+            //
+            // RISK: An attacker who can inject HTML into the page (e.g. via
+            // stored XSS) could execute arbitrary inline scripts or styles.
+            // This is partially mitigated by DOMPurify sanitising all
+            // user-generated HTML, and by the strict connect-src / frame-src
+            // allowlists limiting where exfiltrated data could be sent.
+            //
+            // POST-V1 PLAN: Migrate to nonce-based CSP once Next.js middleware
+            // supports per-request nonce injection without a custom server, or
+            // once inline-script-dependent libraries are replaced.
+            // Tracking issue: https://github.com/vercel/next.js/issues/55638
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://js.stripe.com https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://va.vercel-scripts.com",

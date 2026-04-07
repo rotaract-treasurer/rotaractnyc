@@ -63,7 +63,7 @@ export default function PWARegister() {
         onClick={handleUpdate}
         className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/30"
       >
-        <svg
+        <svg aria-hidden="true"
           className="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"

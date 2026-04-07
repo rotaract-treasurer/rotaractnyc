@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   collection,
   query,
@@ -51,6 +51,14 @@ export function useCollection<T = DocumentData>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Serialize constraints to a stable string key so the effect re-runs
+  // when filters change, without causing infinite loops from object identity.
+  const constraintKey = useMemo(
+    () => JSON.stringify(constraints.map((c) => `${(c as any).type}:${(c as any)._field ?? ''}:${JSON.stringify((c as any)._value ?? (c as any)._direction ?? (c as any)._limit ?? '')}`)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(constraints.map(String))],
+  );
+
   useEffect(() => {
     if (!enabled) {
       setLoading(false);
@@ -75,7 +83,7 @@ export function useCollection<T = DocumentData>(
 
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionName, enabled]);
+  }, [collectionName, enabled, constraintKey]);
 
   return { data, loading, error };
 }

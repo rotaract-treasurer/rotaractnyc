@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 // ─── PATCH /api/portal/committees/[id] — edit (board, chair, or co-chair) ───
 export async function PATCH(request: NextRequest, { params }: Params) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-committees'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const decoded = await verifySession();
     const { id } = await params;
@@ -90,6 +94,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 // ─── DELETE /api/portal/committees/[id] — president only ───
 export async function DELETE(_req: NextRequest, { params }: Params) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(_req, 'portal-committees'), { max: 10, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
   try {
     const decoded = await verifySession();
     const { id } = await params;
