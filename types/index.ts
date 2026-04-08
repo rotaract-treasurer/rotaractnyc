@@ -576,6 +576,119 @@ export interface BoardMember {
   order: number;
 }
 
+// ----- Forms & Surveys -----
+export type FormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'email'
+  | 'phone'
+  | 'number'
+  | 'select'
+  | 'multiselect'
+  | 'radio'
+  | 'checkbox'
+  | 'date'
+  | 'rating'
+  | 'scale';
+
+export type FormStatus = 'draft' | 'active' | 'closed';
+
+export interface FormField {
+  id: string;
+  type: FormFieldType;
+  label: string;
+  placeholder?: string;
+  description?: string;
+  required: boolean;
+  options?: string[];         // for select, multiselect, radio, checkbox
+  min?: number;               // for scale/rating/number
+  max?: number;               // for scale/rating/number
+  order: number;
+}
+
+export interface FormSettings {
+  allowAnonymous: boolean;    // allow non-logged-in submissions
+  requireLogin: boolean;      // require portal login to submit
+  limitOneResponse: boolean;  // one response per person (by email or uid)
+  showProgressBar: boolean;   // show field progress
+  confirmationMessage: string;
+  redirectUrl?: string;       // optional redirect after submit
+}
+
+export interface CustomForm {
+  id: string;
+  title: string;
+  description?: string;
+  slug: string;               // clean URL: /f/post-event-survey-2026
+  fields: FormField[];
+  settings: FormSettings;
+  status: FormStatus;
+  linkedEventId?: string;     // optionally tie to an event
+  createdBy: string;
+  createdByName?: string;
+  responseCount: number;
+  createdAt: string;
+  updatedAt: string;
+  closesAt?: string;          // auto-close date
+}
+
+export interface FormResponse {
+  id: string;
+  formId: string;
+  respondentId?: string;      // uid if authenticated
+  respondentEmail?: string;
+  respondentName?: string;
+  answers: Record<string, any>;  // fieldId → answer value
+  submittedAt: string;
+}
+
+// ----- Google Workspace -----
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  location?: string;
+  start: string;
+  end: string;
+  htmlLink?: string;
+  status?: string;
+  portalEventId?: string;      // linked RotaractEvent.id
+}
+
+export interface GoogleSheetExport {
+  id: string;
+  spreadsheetId: string;
+  url: string;
+  exportType: 'members' | 'dues' | 'events' | 'attendance' | 'all';
+  exportedBy: string;
+  exportedAt: string;
+  rowCount?: number;
+}
+
+export interface GoogleDriveItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  iconLink?: string;
+  size?: string;
+  createdTime?: string;
+  modifiedTime?: string;
+  thumbnailLink?: string;
+  isFolder: boolean;
+}
+
+export interface GoogleWorkspaceStatus {
+  configured: boolean;
+  calendarConnected: boolean;
+  sheetsConnected: boolean;
+  driveConnected: boolean;
+  lastSyncAt?: string;
+  calendarId?: string;
+  sheetId?: string;
+  driveFolderId?: string;
+}
+
 // ----- Navigation -----
 export interface NavItem {
   label: string;

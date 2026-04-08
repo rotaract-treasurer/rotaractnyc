@@ -1,0 +1,43 @@
+/**
+ * Google Workspace — barrel export.
+ */
+
+export {
+  getGoogleSettings,
+  updateGoogleSettings,
+  isServiceAccountConfigured,
+  isOAuth2Configured,
+  getConsentUrl,
+  exchangeCodeForTokens,
+  getAuthedOAuth2Client,
+  type GoogleWorkspaceSettings,
+} from './client';
+
+export {
+  syncEventToCalendar,
+  deleteCalendarEvent,
+  syncAllEvents,
+  listCalendarEvents,
+} from './calendar';
+
+export {
+  ensureSpreadsheet,
+  exportMembers,
+  exportDues,
+  exportEvents,
+  exportAttendance,
+  exportAllToSheets,
+} from './sheets';
+
+export {
+  listFiles,
+  listFolders,
+  createFolder,
+  uploadFile,
+  deleteFile,
+  getFile,
+  shareWithUser,
+  shareWithLink,
+  type DriveFile,
+  type DriveFolder,
+} from './drive';

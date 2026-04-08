@@ -316,6 +316,27 @@ service cloud.firestore {
     }
 
     // ───────────────────────────────────────
+    // Forms & Surveys
+    // ───────────────────────────────────────
+    match /forms/{formId} {
+      // Board+ can manage forms; active forms are public-readable for the submission page
+      allow read: if isBoard()
+                  || (resource.data.status == 'active');
+      allow create, update, delete: if isBoard();
+    }
+
+    match /formResponses/{responseId} {
+      // Board+ can read and delete responses
+      allow read, delete: if isBoard();
+
+      // Anyone can create a response (rate-limited by API layer)
+      allow create: if true;
+
+      // No client-side updates
+      allow update: if false;
+    }
+
+    // ───────────────────────────────────────
     // Testimonials
     // ───────────────────────────────────────
     match /testimonials/{testimonialId} {

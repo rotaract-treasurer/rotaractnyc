@@ -594,13 +594,65 @@ This combination gives the club a real operational upgrade without making the fi
 
 ---
 
-## 17) Future Vision
+## 17) Forms & Surveys (Custom Data Collection)
+
+### Overview
+
+Admins can create custom forms and surveys directly in the portal — replacing the need for external tools like Google Forms. Each form gets a clean, shareable link (`/f/post-event-survey-2026`) and all responses are collected, viewable, and exportable from within the portal.
+
+### Capabilities
+
+* **Form Builder** — visual field-by-field builder with 12 field types:
+  * Short text, Long text, Email, Phone, Number, Date
+  * Dropdown, Multi-select, Single choice (radio), Checkboxes
+  * Star rating, Numeric scale (1–10)
+* **Field configuration** — labels, placeholders, helper text, required toggle, custom options
+* **Reorder fields** — move fields up/down in the builder
+* **Form settings:**
+  * Allow anonymous or require name/email
+  * **Require login** — gate form behind member authentication (Google sign-in); respondent identity is auto-filled from their member profile and duplicate responses are tracked by UID
+  * Limit one response per person (by email or UID when login required)
+  * Progress bar toggle
+  * Custom confirmation message
+  * Optional redirect URL after submission
+  * Auto-close date
+* **Status lifecycle** — Draft → Active (live, accepting responses) → Closed
+* **Shareable links** — clean `/f/{slug}` URLs, auto-generated from title
+* **Link to events** — optionally tie a form to a specific event
+* **Response dashboard** — table view of all responses with respondent info
+* **CSV export** — one-click export of all responses to CSV
+* **Delete responses** — remove individual responses from the admin view
+
+### Use Cases
+
+* Post-event feedback surveys
+* New member onboarding questionnaires
+* Volunteer signup forms
+* Committee interest forms
+* RSVP extensions with extra questions
+* Partner/sponsor inquiry collection
+* Anonymous suggestion boxes
+
+### Data Model
+
+* **`forms`** collection — stores form definition, fields, settings, slug, status
+* **`formResponses`** collection — stores individual submissions linked by `formId`
+
+### Access Control
+
+* **Create / Edit / Delete forms** — Board, President, Treasurer roles only
+* **View responses / Export** — Board, President, Treasurer roles only
+* **Submit responses** — anyone with the link (public), or restricted to authenticated members when "Require login" is enabled
+
+---
+
+## 18) Future Vision
 
 Over time, the platform can become the club’s full operating system: a place where members join, pay dues, engage with events, access documents, stay informed, and feel connected to the club community. It can also strengthen the club’s external brand and make leadership transitions smoother year after year.
 
 ---
 
-## 18) Appendix: Suggested Role Types
+## 19) Appendix: Suggested Role Types
 
 * Visitor
 * Prospective member
@@ -611,7 +663,7 @@ Over time, the platform can become the club’s full operating system: a place w
 * Secretary
 * Admin / Super admin
 
-## 19) Appendix: Suggested Data Entities
+## 20) Appendix: Suggested Data Entities
 
 * Users / Members
 * Roles
@@ -624,7 +676,10 @@ Over time, the platform can become the club’s full operating system: a place w
 * Documents / Files
 * Committees
 * Applications / inquiries
+* Forms / Surveys
+* Form responses
 
-## 20) One-Sentence Product Vision
+## 21) One-Sentence Product Vision
 
 Build a polished digital home for the Rotaract Club at the United Nations that strengthens the club’s brand, simplifies operations, and gives members a modern, useful portal they actually want to use.
+ 
