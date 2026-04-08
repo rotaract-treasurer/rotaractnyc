@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast';
@@ -806,11 +807,22 @@ export default function MediaManagerPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-16">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Media Manager</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-          Upload and manage photos for the public website. All images are stored in Firebase — nothing goes to GitHub.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Media Manager</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
+            Upload and manage photos for the public website. All images are stored in Firebase — nothing goes to GitHub.
+          </p>
+        </div>
+        <Link
+          href="/portal/media/import"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-cranberry border border-cranberry/30 rounded-xl hover:bg-cranberry/5 transition-colors"
+        >
+          <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V3m0 0L8 7m4-4l4 4" />
+          </svg>
+          Import from Google Photos
+        </Link>
       </div>
 
       {SECTIONS.map((section) => (
