@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/firebase/auth';
 import Spinner from '@/components/ui/Spinner';
+
+// Dynamically import PDF downloader — uses canvas/node APIs
+const PDFDownloader = dynamic(() => import('@/app/(public)/guide/PDFDownloader'), { ssr: false });
 
 const ADMIN_ROLES = ['board', 'president', 'treasurer'];
 
@@ -367,6 +371,7 @@ const sections: GuideSection[] = [
 export default function AdminGuidePage() {
   const { member, loading } = useAuth();
   const [activeSection, setActiveSection] = useState<string>(sections[0].id);
+  const [showPDF, setShowPDF] = useState(false);
   const hasAccess = member && ADMIN_ROLES.includes(member.role);
 
   if (loading) {
@@ -398,15 +403,21 @@ export default function AdminGuidePage() {
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Everything board members need to know about managing the Rotaract NYC portal.
         </p>
-        <button
-          onClick={() => window.print()}
-          className="mt-3 btn-sm btn-secondary flex items-center gap-2 print:hidden"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Save as PDF
-        </button>
+        <div className="mt-3 print:hidden">
+          {!showPDF ? (
+            <button
+              onClick={() => setShowPDF(true)}
+              className="btn-sm btn-secondary flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download PDF
+            </button>
+          ) : (
+            <PDFDownloader guide="admin" />
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">

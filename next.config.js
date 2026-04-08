@@ -39,6 +39,12 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  webpack: (config) => {
+    // @react-pdf/renderer has an optional canvas dependency that breaks webpack
+    config.resolve.alias.canvas = false;
+    config.resolve.alias.encoding = false;
+    return config;
+  },
   async headers() {
     return [
       {
