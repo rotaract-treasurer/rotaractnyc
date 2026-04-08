@@ -20,6 +20,7 @@ const navigation = [
       { label: 'Membership', href: '/membership' },
       { label: 'Partners', href: '/partners' },
       { label: 'FAQ', href: '/faq' },
+      { label: 'Member Guide', href: '/guide' },
     ],
   },
   {
