@@ -312,6 +312,14 @@ export interface GalleryImage {
   date?: string;
   uploadedBy?: string;
   createdAt: string;
+  // Engagement
+  likes?: number;              // running like count
+  likedBy?: string[];          // member UIDs who liked this photo
+  // Classification
+  tags?: string[];             // curated tags: placement + descriptive
+  visionLabels?: string[];     // raw labels from Cloud Vision API
+  isPreview?: boolean;         // visible to public without sign-in
+  isFeatured?: boolean;        // shown in homepage mosaic
 }
 
 export interface PhotoAlbum {
@@ -325,6 +333,9 @@ export interface PhotoAlbum {
   photoCount: number;
   publicPreviewCount: number;      // how many photos public visitors can see (default 6)
   isPublic: boolean;               // whether album appears on public site
+  isFeatured?: boolean;            // whether album appears in homepage mosaic
+  googlePhotosUrl?: string;        // original Google Photos shared link
+  tags?: string[];                 // album-level context tags
   createdBy?: string;
   createdAt: string;
   updatedAt?: string;

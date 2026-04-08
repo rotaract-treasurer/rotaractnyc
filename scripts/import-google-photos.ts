@@ -41,6 +41,59 @@ const DRY_RUN = args.includes('--dry-run');
 const ONLY_ALBUM = args.includes('--album') ? args[args.indexOf('--album') + 1] : null;
 const LIMIT = args.includes('--limit') ? parseInt(args[args.indexOf('--limit') + 1], 10) : Infinity;
 const SKIP_EXISTING = !args.includes('--no-skip-existing');
+const VISION_API_KEY = process.env.GOOGLE_CLOUD_VISION_API_KEY || null;
+
+// ─── Album context tags ───────────────────────────────────────────────────────
+// Deterministic tags inferred from album slug — zero cost, always applied
+
+const ALBUM_CONTEXT_TAGS: Record<string, string[]> = {
+  'pickleball-2025':        ['sport', 'fellowship', 'outdoor', 'social'],
+  'gala-2025':              ['gala', 'formal', 'fellowship', 'fundraiser'],
+  'penta-fundraiser-2024':  ['gala', 'formal', 'fellowship', 'fundraiser'],
+  'rotaract-reception-2022':['fellowship', 'formal', 'reception'],
+  'rotary-day-of-service':  ['service', 'community', 'volunteer'],
+  'henry-street-settlement':['service', 'community', 'volunteer'],
+  'the-door-visit':         ['service', 'community', 'youth'],
+};
+
+// Map Vision API label descriptions → our curated tag vocabulary
+const VISION_TAG_MAP: Record<string, string[]> = {
+  'event':          ['fellowship'],
+  'party':          ['fellowship'],
+  'celebration':    ['fellowship'],
+  'fun':            ['fellowship'],
+  'social':         ['fellowship'],
+  'sports':         ['sport'],
+  'sport':          ['sport'],
+  'racket':         ['sport'],
+  'ball':           ['sport'],
+  'court':          ['sport'],
+  'formal wear':    ['formal'],
+  'suit':           ['formal'],
+  'gown':           ['formal'],
+  'dress':          ['formal'],
+  'tuxedo':         ['formal'],
+  'crowd':          ['group'],
+  'audience':       ['group'],
+  'community':      ['service'],
+  'volunteer':      ['service'],
+  'charity':        ['service'],
+  'outdoor':        ['outdoor'],
+  'nature':         ['outdoor'],
+  'sky':            ['outdoor'],
+  'park':           ['outdoor'],
+  'tree':           ['outdoor'],
+  'building':       ['indoor'],
+  'room':           ['indoor'],
+  'interior design':['indoor'],
+  'smile':          ['portrait'],
+  'happy':          ['portrait'],
+  'portrait':       ['portrait'],
+  'face':           ['portrait'],
+  'youth':          ['youth'],
+  'child':          ['youth'],
+  'student':        ['youth'],
+};
 
 // ─── Album definitions ───────────────────────────────────────────────────────
 
@@ -355,6 +408,50 @@ async function uploadToStorage(
   return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 }
 
+// ─── Cloud Vision API tagging ─────────────────────────────────────────────────
+
+/**
+ * Calls Google Cloud Vision LABEL_DETECTION on a public image URL.
+ * Returns raw label descriptions (lowercased) with score > 0.7.
+ * Returns [] if GOOGLE_CLOUD_VISION_API_KEY is not set or request fails.
+ */
+async function getVisionLabels(imageUrl: string): Promise<string[]> {
+  if (!VISION_API_KEY) return [];
+  try {
+    const res = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            image: { source: { imageUri: imageUrl } },
+            features: [{ type: 'LABEL_DETECTION', maxResults: 15 }],
+          }],
+        }),
+      },
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const annotations = data.responses?.[0]?.labelAnnotations || [];
+    return annotations
+      .filter((a: any) => a.score >= 0.70)
+      .map((a: any) => (a.description as string).toLowerCase());
+  } catch {
+    return [];
+  }
+}
+
+/** Map raw Vision labels + album context slug → curated tag set */
+function buildTags(albumSlug: string, visionLabels: string[]): string[] {
+  const tagSet = new Set<string>(ALBUM_CONTEXT_TAGS[albumSlug] || []);
+  for (const label of visionLabels) {
+    const mapped = VISION_TAG_MAP[label];
+    if (mapped) mapped.forEach((t) => tagSet.add(t));
+  }
+  return Array.from(tagSet);
+}
+
 // ─── Main import logic ───────────────────────────────────────────────────────
 
 async function importAlbum(
@@ -415,6 +512,10 @@ async function importAlbum(
         // Upload to Firebase Storage
         const publicUrl = await uploadToStorage(localPath, storagePath, 'image/jpeg');
 
+        // Auto-tag: album context tags + Vision API labels
+        const visionLabels = await getVisionLabels(publicUrl);
+        const tags = buildTags(album.slug, visionLabels);
+
         // Create gallery doc
         const galleryRef = db.collection('gallery').doc();
         const isFeatured = album.isFeatured === true && i < (album.featuredCount || 2);
@@ -428,6 +529,10 @@ async function importAlbum(
           order: i,
           isPreview,
           isFeatured,
+          likes: 0,
+          likedBy: [],
+          tags,
+          visionLabels,
           createdAt: new Date().toISOString(),
         });
 
@@ -461,6 +566,7 @@ async function importAlbum(
       publicPreviewCount: album.publicPreviewCount,
       googlePhotosUrl: album.googlePhotosUrl,
       isFeatured: album.isFeatured || false,
+      tags: ALBUM_CONTEXT_TAGS[album.slug] || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -486,7 +592,13 @@ async function main() {
   if (!DRY_RUN) {
     try {
       initFirebase();
-      console.log('✅ Firebase Admin initialized\n');
+      console.log('✅ Firebase Admin initialized');
+      if (VISION_API_KEY) {
+        console.log('✅ Cloud Vision API enabled — photos will be auto-tagged');
+      } else {
+        console.log('ℹ️  No GOOGLE_CLOUD_VISION_API_KEY — using album context tags only');
+      }
+      console.log('');
     } catch (err: any) {
       console.error('❌ Firebase init failed:', err.message);
       console.error('   Make sure .env.local has FIREBASE_SERVICE_ACCOUNT_KEY');

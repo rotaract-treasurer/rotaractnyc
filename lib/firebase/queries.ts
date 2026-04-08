@@ -241,3 +241,25 @@ export async function getAlbumPhotos(albumId: string, limit?: number): Promise<G
     return [];
   }
 }
+
+/**
+ * Returns the top N most-liked photos across all public albums.
+ * Used for the "Community Favourites" carousel on the public homepage.
+ * Only returns photos that have at least one like.
+ */
+export async function getMostLikedPhotos(limit = 10): Promise<GalleryImage[]> {
+  try {
+    const snap = await adminDb
+      .collection('gallery')
+      .where('likes', '>=', 1)
+      .orderBy('likes', 'desc')
+      .limit(limit)
+      .get();
+
+    if (snap.empty) return [];
+    return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+  } catch (e) {
+    console.error('getMostLikedPhotos error:', e);
+    return [];
+  }
+}
