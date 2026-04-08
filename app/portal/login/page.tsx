@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import { SITE } from '@/lib/constants';
 
 export default function PortalLoginPage() {
-  const { user, member, loading, signInWithGoogle } = useAuth();
+  const { user, member, loading, sessionReady, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/portal';
@@ -16,14 +16,14 @@ export default function PortalLoginPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!loading && user && member) {
+    if (!loading && user && member && sessionReady) {
       // Use replace so the login page isn't in the back-button history,
       // and refresh to ensure the middleware re-evaluates the new session cookie.
       const dest = member.onboardingComplete === false ? '/portal/onboarding' : redirect;
       router.replace(dest);
       router.refresh();
     }
-  }, [loading, user, member, redirect, router]);
+  }, [loading, user, member, sessionReady, redirect, router]);
 
   const handleSignIn = async () => {
     setError('');

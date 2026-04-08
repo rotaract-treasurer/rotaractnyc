@@ -34,7 +34,7 @@ export function middleware(request: NextRequest) {
         Buffer.from(parts[0], 'base64').toString('utf-8'),
       );
 
-      // Firebase ID tokens must use RS256
+      // Firebase ID tokens and session cookies must use RS256
       if (header.alg !== 'RS256') {
         throw new Error('unexpected alg');
       }
@@ -51,14 +51,19 @@ export function middleware(request: NextRequest) {
         throw new Error('token expired');
       }
 
-      // Issuer must match the Firebase project
+      // Issuer must match the Firebase project.
+      // Firebase ID tokens use securetoken.google.com, while Firebase
+      // session cookies (created via adminAuth.createSessionCookie)
+      // use session.firebase.google.com — we must accept both.
       const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-      if (
-        projectId &&
-        payload.iss &&
-        payload.iss !== `https://securetoken.google.com/${projectId}`
-      ) {
-        throw new Error('issuer mismatch');
+      if (projectId && payload.iss) {
+        const validIssuers = [
+          `https://securetoken.google.com/${projectId}`,
+          `https://session.firebase.google.com/${projectId}`,
+        ];
+        if (!validIssuers.includes(payload.iss)) {
+          throw new Error('issuer mismatch');
+        }
       }
 
       // Token should not be older than 14 days (max-age guard)

@@ -160,7 +160,7 @@ describe('Middleware JWT validation', () => {
     expectCookieDeleted(res);
   });
 
-  it('rejects JWT with wrong issuer', () => {
+  it('rejects JWT with wrong issuer (non-Firebase)', () => {
     const token = buildJwt({}, { iss: 'https://evil.example.com/wrong-project' });
     const req = makeRequest(PORTAL_PATH, token);
     const res = middleware(req);
@@ -178,6 +178,28 @@ describe('Middleware JWT validation', () => {
 
     expectRedirectToLogin(res);
     expectCookieDeleted(res);
+  });
+
+  it('rejects JWT with session cookie issuer for a different Firebase project', () => {
+    const token = buildJwt({}, {
+      iss: 'https://session.firebase.google.com/some-other-project',
+    });
+    const req = makeRequest(PORTAL_PATH, token);
+    const res = middleware(req);
+
+    expectRedirectToLogin(res);
+    expectCookieDeleted(res);
+  });
+
+  it('allows JWT with Firebase session cookie issuer (session.firebase.google.com)', () => {
+    const token = buildJwt({}, {
+      iss: `https://session.firebase.google.com/${PROJECT_ID}`,
+    });
+    const req = makeRequest(PORTAL_PATH, token);
+    const res = middleware(req);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-next')).toBe('1');
   });
 
   it('rejects expired JWT', () => {
@@ -270,6 +292,15 @@ describe('Middleware JWT validation', () => {
       const res = middleware(req);
 
       expect(res.status).toBe(200);
+
+      // Session cookie issuer should also pass
+      const token2 = buildJwt({}, {
+        iss: 'https://session.firebase.google.com/any-project',
+      });
+      const req2 = makeRequest(PORTAL_PATH, token2);
+      const res2 = middleware(req2);
+
+      expect(res2.status).toBe(200);
     } finally {
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = savedProjectId;
     }

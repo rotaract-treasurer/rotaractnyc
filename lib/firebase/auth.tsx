@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   member: Member | null;
   loading: boolean;
+  sessionReady: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   member: null,
   loading: true,
+  sessionReady: false,
   signInWithGoogle: async () => {},
   signOut: async () => {},
 });
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Handle redirect result (from signInWithRedirect fallback)
   useEffect(() => {
@@ -138,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               body: JSON.stringify({ idToken }),
             });
             if (res.ok) {
+              setSessionReady(true);
               const data = await res.json().catch(() => null);
               if (data?.autoApproved) {
                 try {
@@ -150,9 +154,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   console.warn('Auth: Failed to refresh member after auto-approval:', err);
                 }
               }
+            } else {
+              console.error('Auth: Session cookie creation returned', res.status);
+              setSessionReady(false);
             }
           } catch (err) {
-            console.warn('Session cookie creation failed:', err);
+            console.error('Auth: Session cookie creation failed:', err);
+            setSessionReady(false);
           }
         }
 
@@ -160,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       } else {
         setMember(null);
+        setSessionReady(false);
         setLoading(false);
       }
     });
@@ -192,10 +201,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetch('/api/portal/auth/session', { method: 'DELETE' });
     await firebaseSignOut(getAuth());
     setMember(null);
+    setSessionReady(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, member, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, member, loading, sessionReady, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
