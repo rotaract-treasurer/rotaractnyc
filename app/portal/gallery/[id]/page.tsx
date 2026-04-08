@@ -15,6 +15,7 @@ export default function PortalAlbumPage() {
   const [photos, setPhotos] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [likeLoading, setLikeLoading] = useState<string | null>(null);
 
   const fetchAlbumData = useCallback(async () => {
     try {
@@ -42,6 +43,40 @@ export default function PortalAlbumPage() {
   useEffect(() => {
     if (!authLoading && member) fetchAlbumData();
   }, [authLoading, member, fetchAlbumData]);
+
+  const handleLike = useCallback(async (e: React.MouseEvent, photoId: string) => {
+    e.stopPropagation();
+    if (!member || likeLoading) return;
+
+    setLikeLoading(photoId);
+    try {
+      const token = await (await import('firebase/auth')).getAuth().currentUser?.getIdToken();
+      const res = await fetch(`/api/portal/gallery/${photoId}/like`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPhotos((prev) =>
+          prev.map((p) =>
+            p.id === photoId
+              ? {
+                  ...p,
+                  likes: data.likes,
+                  likedBy: data.liked
+                    ? [...(p.likedBy ?? []), member.id]
+                    : (p.likedBy ?? []).filter((uid: string) => uid !== member.id),
+                }
+              : p
+          )
+        );
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLikeLoading(null);
+    }
+  }, [member, likeLoading]);
 
   if (authLoading || loading) {
     return (
@@ -90,7 +125,7 @@ export default function PortalAlbumPage() {
           {album.title}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-          {photos.length} photo{photos.length !== 1 ? 's' : ''}
+          {photos.length} photo{photos.length !== 1 ? 's' : ''} · Tap a photo to view full size, or tap ❤️ to like
         </p>
         {album.description && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">{album.description}</p>
@@ -105,27 +140,54 @@ export default function PortalAlbumPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-          {photos.map((photo, i) => (
-            <button
-              key={photo.id}
-              onClick={() => setLightboxIndex(i)}
-              className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-cranberry focus:ring-offset-2"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.thumbnailUrl || photo.url}
-                alt={photo.caption || 'Photo'}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              {photo.caption && (
-                <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p className="text-sm font-medium text-white line-clamp-1">{photo.caption}</p>
-                </div>
-              )}
-            </button>
-          ))}
+          {photos.map((photo, i) => {
+            const isLiked = member ? (photo.likedBy ?? []).includes(member.id) : false;
+            const likeCount = photo.likes ?? 0;
+
+            return (
+              <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                {/* Photo thumbnail — click opens lightbox */}
+                <button
+                  onClick={() => setLightboxIndex(i)}
+                  className="w-full h-full focus:outline-none focus:ring-2 focus:ring-cranberry focus:ring-offset-2 rounded-xl"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.thumbnailUrl || photo.url}
+                    alt={photo.caption || 'Photo'}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </button>
+
+                {/* Like button overlay — bottom-right corner */}
+                <button
+                  onClick={(e) => handleLike(e, photo.id)}
+                  disabled={likeLoading === photo.id}
+                  className={`absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-all ${
+                    isLiked
+                      ? 'bg-cranberry text-white shadow-md shadow-cranberry/30'
+                      : 'bg-black/50 text-white hover:bg-black/70 opacity-0 group-hover:opacity-100'
+                  } ${isLiked ? '' : 'sm:opacity-0 sm:group-hover:opacity-100'} disabled:opacity-50`}
+                  aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
+                >
+                  <svg
+                    className={`h-3.5 w-3.5 transition-transform ${likeLoading === photo.id ? 'scale-75' : isLiked ? 'scale-110' : ''}`}
+                    viewBox="0 0 24 24"
+                    fill={isLiked ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  {likeCount > 0 && <span>{likeCount}</span>}
+                </button>
+
+                {/* Hover gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              </div>
+            );
+          })}
         </div>
       )}
 

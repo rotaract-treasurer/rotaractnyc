@@ -7,6 +7,8 @@ import { formatDate } from '@/lib/utils/format';
 import SafeHtml from '@/components/ui/SafeHtml';
 import { SITE } from '@/lib/constants';
 import Badge from '@/components/ui/Badge';
+import ArticleViewTracker from '@/components/public/ArticleViewTracker';
+import ArticleLikeButton from '@/components/public/ArticleLikeButton';
 
 export const revalidate = 300;
 
@@ -92,7 +94,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
             )}
             <span>By {article.author.name}</span>
             {article.publishedAt && <span>{formatDate(article.publishedAt)}</span>}
-            {article.viewCount != null && article.viewCount > 0 && <span>· {article.viewCount} views</span>}
+            {article.viewCount != null && article.viewCount > 30 && <span>· {article.viewCount} views</span>}
           </div>
         </div>
       </section>
@@ -122,10 +124,8 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
           {/* Share & engagement */}
           <div className="max-w-3xl mx-auto mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              {article.likeCount != null && article.likeCount > 0 && (
-                <span>❤️ {article.likeCount} likes</span>
-              )}
-              {article.viewCount != null && article.viewCount > 0 && (
+              <ArticleLikeButton slug={slug} initialLikeCount={article.likeCount ?? 0} />
+              {article.viewCount != null && article.viewCount > 30 && (
                 <span>👁 {article.viewCount} views</span>
               )}
             </div>
@@ -133,6 +133,9 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
               ← More articles
             </Link>
           </div>
+
+          {/* Track page view */}
+          <ArticleViewTracker slug={slug} />
         </div>
       </section>
     </>

@@ -62,7 +62,7 @@ export default async function NewsPage() {
                   </p>
                   <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
                     <span>By {article.author.name}</span>
-                    {article.viewCount && <span>· {article.viewCount} views</span>}
+                    {article.viewCount != null && article.viewCount > 30 && <span>· {article.viewCount} views</span>}
                   </div>
                 </div>
               </Link>

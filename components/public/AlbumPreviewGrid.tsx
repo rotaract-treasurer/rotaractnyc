@@ -41,6 +41,17 @@ export default function AlbumPreviewGrid({ photos, totalCount, remainingCount, a
               loading="lazy"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            {/* Like count badge */}
+            {(photo.likes ?? 0) > 0 && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm px-2 py-0.5 text-xs text-white">
+                <svg className="h-3 w-3 text-cranberry-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                {photo.likes}
+              </div>
+            )}
+
             {photo.caption && (
               <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-sm font-medium text-white line-clamp-1">{photo.caption}</p>

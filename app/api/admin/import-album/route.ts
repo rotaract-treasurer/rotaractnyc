@@ -14,7 +14,7 @@
  * Returns immediately with { jobId, mode: 'actions' | 'local' }.
  *
  * GitHub Actions mode requires three env vars (set in Vercel project settings):
- *   GITHUB_ACTIONS_TOKEN  — PAT with "workflow" scope
+ *   ACTIONS_DISPATCH_TOKEN  — PAT with "workflow" scope
  *   GITHUB_OWNER          — repo owner  (e.g. "rotaractnyc-org")
  *   GITHUB_REPO           — repo name   (e.g. "rotaractnyc")
  *
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
   });
 
   // ── Mode A: GitHub Actions (production / Vercel) ─────────────────────────
-  const GITHUB_TOKEN = process.env.GITHUB_ACTIONS_TOKEN;
+  const GITHUB_TOKEN = process.env.ACTIONS_DISPATCH_TOKEN;
   const GITHUB_OWNER = process.env.GITHUB_OWNER;
   const GITHUB_REPO  = process.env.GITHUB_REPO;
 

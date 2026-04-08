@@ -85,8 +85,6 @@ export const defaultArticles: Article[] = [
     isPublished: true,
     publishedAt: '2026-01-15T10:00:00',
     createdAt: '2026-01-14T10:00:00',
-    viewCount: 342,
-    likeCount: 28,
   },
   {
     id: 'art-2',
@@ -101,8 +99,6 @@ export const defaultArticles: Article[] = [
     isPublished: true,
     publishedAt: '2026-01-05T10:00:00',
     createdAt: '2026-01-04T10:00:00',
-    viewCount: 215,
-    likeCount: 45,
   },
   {
     id: 'art-3',
@@ -117,8 +113,6 @@ export const defaultArticles: Article[] = [
     isPublished: true,
     publishedAt: '2025-12-20T10:00:00',
     createdAt: '2025-12-19T10:00:00',
-    viewCount: 489,
-    likeCount: 67,
   },
 ];
 

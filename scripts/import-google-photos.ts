@@ -50,6 +50,7 @@ import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
 import * as os from 'os';
+import sharp from 'sharp';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
@@ -448,6 +449,30 @@ async function uploadToStorage(
   return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 }
 
+/**
+ * Generate a resized thumbnail and upload it alongside the full-res image.
+ * Returns the public URL of the thumbnail.
+ */
+async function generateAndUploadThumbnail(
+  localPath: string,
+  storagePath: string,
+): Promise<string> {
+  const thumbPath = localPath.replace(/\.jpg$/i, '_thumb.jpg');
+  const thumbStoragePath = storagePath.replace(/\.jpg$/i, '_thumb.jpg');
+
+  await sharp(localPath)
+    .resize(480, 480, { fit: 'cover', withoutEnlargement: true })
+    .jpeg({ quality: 70 })
+    .toFile(thumbPath);
+
+  const url = await uploadToStorage(thumbPath, thumbStoragePath, 'image/jpeg');
+
+  // Clean up local thumbnail
+  try { fs.unlinkSync(thumbPath); } catch { /* ignore */ }
+
+  return url;
+}
+
 // ─── Cloud Vision API tagging ─────────────────────────────────────────────────
 
 /**
@@ -562,6 +587,14 @@ async function importAlbum(
         // Upload to Firebase Storage
         const publicUrl = await uploadToStorage(localPath, storagePath, 'image/jpeg');
 
+        // Generate and upload thumbnail (480px)
+        let thumbnailUrl = '';
+        try {
+          thumbnailUrl = await generateAndUploadThumbnail(localPath, storagePath);
+        } catch (thumbErr: any) {
+          console.log(`\n  ⚠️  Thumbnail failed for photo ${i + 1}: ${thumbErr.message}`);
+        }
+
         // Auto-tag: album context tags + Vision API labels
         const visionLabels = await getVisionLabels(publicUrl);
         const tags = buildTags(album.slug, visionLabels);
@@ -574,6 +607,7 @@ async function importAlbum(
         await galleryRef.set({
           albumId,
           url: publicUrl,
+          thumbnailUrl,
           storagePath,
           caption: '',
           order: i,
