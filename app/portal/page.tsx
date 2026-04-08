@@ -17,6 +17,7 @@ import PostComposerModal from '@/components/portal/PostComposerModal';
 import FeedCard from '@/components/portal/FeedCard';
 import ProfileCompletionCard from '@/components/portal/ProfileCompletionCard';
 import OnboardingChecklist from '@/components/portal/OnboardingChecklist';
+import { TutorialLauncher, useTutorial } from '@/components/portal/tutorial';
 import { formatRelativeTime } from '@/lib/utils/format';
 import type { CommunityPost, RotaractEvent, ServiceHour } from '@/types';
 
@@ -61,6 +62,7 @@ export default function PortalDashboard() {
   const { data: events, loading: eventsLoading } = usePortalEvents();
   const { data: serviceHours } = useServiceHours(member?.id ?? null);
   const { status: duesStatus } = useDues();
+  const { isMemberComplete, isAdminComplete, isActive: tutorialActive } = useTutorial();
   const [activeTab, setActiveTab] = useState('all');
   const [mobileView, setMobileView] = useState<'overview' | 'feed' | 'widgets'>('overview');
   const [showComposer, setShowComposer] = useState(false);
@@ -434,6 +436,14 @@ export default function PortalDashboard() {
       onClose={() => setShowComposer(false)}
       onSubmit={handlePost}
     />
+
+    {/* Tutorial Launchers — shown once per track */}
+    {!tutorialActive && !isMemberComplete && (
+      <TutorialLauncher track="member" />
+    )}
+    {!tutorialActive && isMemberComplete && !isAdminComplete && isBoardMember && (
+      <TutorialLauncher track="admin" />
+    )}
     </>
   );
 }

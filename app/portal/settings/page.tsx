@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/firebase/auth';
+import { useTutorial } from '@/components/portal/tutorial';
 import { useToast } from '@/components/ui/Toast';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import NotificationPreferences from '@/components/portal/NotificationPreferences
 export default function SettingsPage() {
   const { user, member, signOut } = useAuth();
   const { toast } = useToast();
+  const { restart, isMemberComplete, isAdminComplete } = useTutorial();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -132,6 +134,36 @@ export default function SettingsPage() {
         </div>
         <div className="px-6 py-5">
           <NotificationPreferences />
+        </div>
+      </section>
+
+      {/* ── Tutorial ── */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Portal Tour</h2>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Replay the interactive guided tour to rediscover portal features.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => restart('member')}
+            >
+              {isMemberComplete ? 'Restart' : 'Start'} Member Tour
+            </Button>
+            {(member?.role === 'board' || member?.role === 'president' || member?.role === 'treasurer') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => restart('admin')}
+              >
+                {isAdminComplete ? 'Restart' : 'Start'} Admin Tour
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
