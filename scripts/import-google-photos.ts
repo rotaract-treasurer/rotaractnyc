@@ -76,6 +76,8 @@ const IS_PUBLIC_FLAG  = !args.includes('--private');
 const PREVIEW_FLAG    = args.includes('--preview-count')  ? parseInt(args[args.indexOf('--preview-count') + 1], 10) : 6;
 const FEAT_FLAG       = args.includes('--featured');
 const FEAT_COUNT_FLAG = args.includes('--featured-count') ? parseInt(args[args.indexOf('--featured-count') + 1], 10) : 3;
+// Set by GitHub Actions workflow (or --job-id flag) to stream logs to Firestore
+const JOB_ID = args.includes('--job-id') ? args[args.indexOf('--job-id') + 1] : null;
 
 // ─── Album context tags ───────────────────────────────────────────────────────
 // Deterministic tags inferred from album slug — zero cost, always applied
@@ -628,6 +630,59 @@ async function importAlbum(
   }
 }
 
+// ─── Firestore log sink ──────────────────────────────────────────────────────
+// Used when --job-id is set (GitHub Actions / browser-triggered imports).
+// Intercepts console.log/error and mirrors output to Firestore so the portal
+// UI can display a live import log via onSnapshot.
+
+class LogSink {
+  private db: FirebaseFirestore.Firestore;
+  private jobId: string;
+  private accum = '';
+  private buffer: string[] = [];
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(db: FirebaseFirestore.Firestore, jobId: string) {
+    this.db = db;
+    this.jobId = jobId;
+  }
+
+  async start() {
+    await this.db.collection('import_jobs').doc(this.jobId).update({
+      status: 'running',
+      startedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  log(line: string) {
+    this.buffer.push(line);
+    if (!this.timer) {
+      this.timer = setTimeout(() => { this.timer = null; void this.flush(); }, 500);
+    }
+  }
+
+  private async flush() {
+    if (this.buffer.length === 0) return;
+    this.accum += (this.accum ? '\n' : '') + this.buffer.splice(0).join('\n');
+    try {
+      await this.db.collection('import_jobs').doc(this.jobId).update({ logText: this.accum });
+    } catch { /* never crash the import over a log write */ }
+  }
+
+  async finalize(status: 'done' | 'error', extras: Record<string, unknown> = {}) {
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    await this.flush();
+    await this.db.collection('import_jobs').doc(this.jobId).update({
+      status,
+      completedAt: FieldValue.serverTimestamp(),
+      ...extras,
+    });
+  }
+}
+
+// Module-level reference so the .catch() handler can finalize on fatal error
+let _sink: LogSink | null = null;
+
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -655,6 +710,16 @@ async function main() {
   }
 
   const db = DRY_RUN ? null as any : getFirestore();
+
+  // Hook up Firestore log sink when running from GitHub Actions / browser UI
+  if (!DRY_RUN && JOB_ID) {
+    _sink = new LogSink(db, JOB_ID);
+    await _sink.start();
+    const origLog   = console.log.bind(console);
+    const origError = console.error.bind(console);
+    console.log   = (...a: any[]) => { const s = a.map(String).join(' '); origLog(s);   _sink!.log(s); };
+    console.error = (...a: any[]) => { const s = a.map(String).join(' '); origError(s); _sink!.log(s); };
+  }
 
   // ── Determine which albums to import ──────────────────────────────────────
 
@@ -731,9 +796,15 @@ async function main() {
   console.log('  1. Visit your site → /gallery to see the albums');
   console.log('  2. Visit Portal → Media → Albums to manage them');
   console.log('  3. Set accurate dates per album in the portal editor');
+
+  // Finalize the Firestore log sink (marks job as done)
+  await _sink?.finalize('done');
+  _sink = null;
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('Fatal error:', err);
+  await _sink?.finalize('error', { error: String(err.message ?? err) });
+  _sink = null;
   process.exit(1);
 });

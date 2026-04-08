@@ -1,0 +1,98 @@
+name: Import Google Photos Album
+
+# Triggered by the Rotaract NYC portal (Media Manager → Import from Google Photos).
+# The portal API creates a Firestore job doc, then dispatches this workflow.
+# The import script writes live log output back to that Firestore doc so the
+# portal UI can display progress in real time via onSnapshot.
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Firestore import_jobs document ID (set by portal)'
+        required: true
+      url:
+        description: 'Google Photos shared album URL'
+        required: true
+      title:
+        description: 'Album title (blank = auto-derived from page title)'
+        required: false
+        default: ''
+      slug:
+        description: 'Album slug (blank = derived from title)'
+        required: false
+        default: ''
+      description:
+        description: 'Album description'
+        required: false
+        default: ''
+      is_public:
+        description: 'Public album (true / false)'
+        required: false
+        default: 'true'
+      preview_count:
+        description: 'Public preview photo count'
+        required: false
+        default: '6'
+      featured:
+        description: 'Mark first photos as featured for carousel (true / false)'
+        required: false
+        default: 'false'
+      featured_count:
+        description: 'How many photos to mark as featured'
+        required: false
+        default: '3'
+      dry_run:
+        description: 'Dry run — scrape only, no uploads (true / false)'
+        required: false
+        default: 'false'
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run import script
+        env:
+          # Firebase credentials ─ store these as repo secrets
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          GOOGLE_CLOUD_VISION_API_KEY: ${{ secrets.GOOGLE_CLOUD_VISION_API_KEY }}
+          # Import params forwarded from workflow_dispatch inputs
+          GH_IMPORT_JOB_ID: ${{ github.event.inputs.job_id }}
+          GH_IMPORT_URL: ${{ github.event.inputs.url }}
+          GH_IMPORT_TITLE: ${{ github.event.inputs.title }}
+          GH_IMPORT_SLUG: ${{ github.event.inputs.slug }}
+          GH_IMPORT_DESCRIPTION: ${{ github.event.inputs.description }}
+          GH_IMPORT_IS_PUBLIC: ${{ github.event.inputs.is_public }}
+          GH_IMPORT_PREVIEW_COUNT: ${{ github.event.inputs.preview_count }}
+          GH_IMPORT_FEATURED: ${{ github.event.inputs.featured }}
+          GH_IMPORT_FEATURED_COUNT: ${{ github.event.inputs.featured_count }}
+          GH_IMPORT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          # Build args array safely — no eval, no shell injection risk
+          args=(--url "$GH_IMPORT_URL" --job-id "$GH_IMPORT_JOB_ID")
+          [ -n "$GH_IMPORT_TITLE" ]         && args+=(--title "$GH_IMPORT_TITLE")
+          [ -n "$GH_IMPORT_SLUG" ]          && args+=(--slug "$GH_IMPORT_SLUG")
+          [ -n "$GH_IMPORT_DESCRIPTION" ]   && args+=(--description "$GH_IMPORT_DESCRIPTION")
+          [ "$GH_IMPORT_IS_PUBLIC" = "false" ] && args+=(--private)
+          [ -n "$GH_IMPORT_PREVIEW_COUNT" ] && args+=(--preview-count "$GH_IMPORT_PREVIEW_COUNT")
+          [ "$GH_IMPORT_FEATURED" = "true" ] && args+=(--featured)
+          [ -n "$GH_IMPORT_FEATURED_COUNT" ] && args+=(--featured-count "$GH_IMPORT_FEATURED_COUNT")
+          [ "$GH_IMPORT_DRY_RUN" = "true" ] && args+=(--dry-run)
+          node_modules/.bin/tsx scripts/import-google-photos.ts "${args[@]}"

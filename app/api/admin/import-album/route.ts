@@ -1,29 +1,38 @@
 /**
  * POST /api/admin/import-album
  *
- * Spawns `scripts/import-google-photos.ts` as a child process and streams
- * its stdout/stderr back to the browser as plain text (chunked transfer).
+ * Creates a Firestore `import_jobs/{jobId}` document, then either:
+ *   a) Dispatches the `import-album.yml` GitHub Actions workflow (production /
+ *      Vercel) — the Actions runner has Playwright and writes log output back
+ *      to the Firestore doc in real time via the script's LogSink.
+ *   b) Spawns `scripts/import-google-photos.ts` as a detached background
+ *      process (dev container / local Node.js server) — same LogSink path.
  *
- * ⚠️  REQUIRES PLAYWRIGHT — this endpoint only works when the app is running
- *    locally or inside the dev container. Vercel serverless functions do not
- *    have Chromium available and would time-out for any non-trivial album.
+ * The portal UI subscribes to the Firestore doc with onSnapshot and displays
+ * a live terminal — no streaming HTTP required.
  *
- * Auth: board | president | treasurer role required (session cookie).
+ * Returns immediately with { jobId, mode: 'actions' | 'local' }.
+ *
+ * GitHub Actions mode requires three env vars (set in Vercel project settings):
+ *   GITHUB_ACTIONS_TOKEN  — PAT with "workflow" scope
+ *   GITHUB_OWNER          — repo owner  (e.g. "rotaractnyc-org")
+ *   GITHUB_REPO           — repo name   (e.g. "rotaractnyc")
+ *
+ * Auth: board | president | treasurer session cookie required.
  */
 export const dynamic = 'force-dynamic';
-// Allow up to 30 min — import of large albums is slow
-export const maxDuration = 1800;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import { cookies } from 'next/headers';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
 const ADMIN_ROLES = ['board', 'president', 'treasurer'];
 
-// Only allow real Google Photos shared-album URLs
+// Only accept real Google Photos shared-album short URLs — blocks SSRF
 const GOOGLE_PHOTOS_URL_RE = /^https:\/\/photos\.app\.goo\.gl\/[A-Za-z0-9]+$/;
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
@@ -56,7 +65,7 @@ async function requireAdmin(): Promise<{ uid: string } | NextResponse> {
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── Rate limit: 3 imports per 10 minutes per user (Chromium is heavy) ───
+  // Rate limit: 3 imports per 10 minutes per user (Chromium is resource-heavy)
   const rlKey = getRateLimitKey(req, 'admin-import-album');
   const rl = await rateLimit(rlKey, { max: 3, windowSec: 600 });
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
@@ -86,8 +95,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'url is required' }, { status: 400 });
   }
 
-  // Allowlist: only accept real Google Photos shared-album short URLs.
-  // This blocks SSRF attempts (internal IPs, file://, metadata endpoints, etc.)
   if (!GOOGLE_PHOTOS_URL_RE.test(body.url.trim())) {
     return NextResponse.json(
       { error: 'URL must be a Google Photos shared album link (https://photos.app.goo.gl/…)' },
@@ -95,73 +102,88 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Build CLI args ──────────────────────────────────────────────────────
-  const scriptArgs: string[] = [
-    path.join(process.cwd(), 'scripts/import-google-photos.ts'),
-    '--url', body.url.trim(),
-  ];
-  if (body.title)                        scriptArgs.push('--title', body.title);
-  if (body.slug)                         scriptArgs.push('--slug', body.slug);
-  if (body.description)                  scriptArgs.push('--description', body.description);
-  if (body.isPublic === false)           scriptArgs.push('--private');
-  if (body.previewCount != null)         scriptArgs.push('--preview-count', String(body.previewCount));
-  if (body.featured)                     scriptArgs.push('--featured');
-  if (body.featuredCount != null)        scriptArgs.push('--featured-count', String(body.featuredCount));
-  if (body.dryRun)                       scriptArgs.push('--dry-run');
+  // ── Create Firestore job doc ─────────────────────────────────────────────
+  const jobRef = adminDb.collection('import_jobs').doc();
+  const jobId  = jobRef.id;
 
-  const tsxBin = path.join(process.cwd(), 'node_modules/.bin/tsx');
-
-  // ── Stream stdout + stderr back to the client ────────────────────────────
-  const encoder = new TextEncoder();
-
-  // Track the child process outside the stream so cancel() can reach it
-  let importProc: ReturnType<typeof spawn> | null = null;
-
-  const stream = new ReadableStream({
-    start(controller) {
-      const send = (text: string) => {
-        try { controller.enqueue(encoder.encode(text)); } catch { /* closed */ }
-      };
-
-      try {
-        importProc = spawn(tsxBin, scriptArgs, {
-          cwd: process.cwd(),
-          env: { ...process.env },
-        });
-      } catch (err) {
-        send(`\n❌ Failed to start import script: ${err}\n`);
-        controller.close();
-        return;
-      }
-
-      importProc.stdout?.on('data', (data: Buffer) => send(data.toString()));
-      importProc.stderr?.on('data', (data: Buffer) => send(data.toString()));
-
-      importProc.on('error', (err) => {
-        send(`\n❌ Process error: ${err.message}\n`);
-        controller.close();
-      });
-
-      importProc.on('close', (code) => {
-        send(`\n${code === 0 ? '✅' : '❌'} Process exited with code ${code}\n`);
-        controller.close();
-      });
-    },
-
-    // Kill the Chromium/tsx process if the browser disconnects mid-import.
-    // Without this, zombie Playwright processes accumulate on the server.
-    cancel() {
-      if (importProc && !importProc.killed) {
-        importProc.kill('SIGTERM');
-      }
-    },
+  await jobRef.set({
+    status: 'pending',
+    triggeredBy: auth.uid,
+    url: body.url.trim(),
+    title: body.title ?? null,
+    slug: body.slug ?? null,
+    description: body.description ?? null,
+    isPublic: body.isPublic ?? true,
+    previewCount: body.previewCount ?? 6,
+    featured: body.featured ?? false,
+    featuredCount: body.featuredCount ?? 3,
+    dryRun: body.dryRun ?? false,
+    logText: '',
+    createdAt: FieldValue.serverTimestamp(),
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'no-cache',
-    },
+  // ── Mode A: GitHub Actions (production / Vercel) ─────────────────────────
+  const GITHUB_TOKEN = process.env.GITHUB_ACTIONS_TOKEN;
+  const GITHUB_OWNER = process.env.GITHUB_OWNER;
+  const GITHUB_REPO  = process.env.GITHUB_REPO;
+
+  if (GITHUB_TOKEN && GITHUB_OWNER && GITHUB_REPO) {
+    const inputs: Record<string, string> = {
+      job_id:         jobId,
+      url:            body.url.trim(),
+      title:          body.title          ?? '',
+      slug:           body.slug           ?? '',
+      description:    body.description    ?? '',
+      is_public:      String(body.isPublic    ?? true),
+      preview_count:  String(body.previewCount ?? 6),
+      featured:       String(body.featured     ?? false),
+      featured_count: String(body.featuredCount ?? 3),
+      dry_run:        String(body.dryRun       ?? false),
+    };
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/import-album.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main', inputs }),
+      },
+    );
+
+    if (!ghRes.ok) {
+      const text = await ghRes.text().catch(() => ghRes.statusText);
+      await jobRef.update({ status: 'error', logText: `❌ GitHub API error ${ghRes.status}: ${text}` });
+      return NextResponse.json({ error: `GitHub API error: ${ghRes.status}` }, { status: 502 });
+    }
+
+    return NextResponse.json({ jobId, mode: 'actions' });
+  }
+
+  // ── Mode B: detached local process (dev container / self-hosted) ─────────
+  const tsxBin    = path.join(process.cwd(), 'node_modules/.bin/tsx');
+  const scriptPath = path.join(process.cwd(), 'scripts/import-google-photos.ts');
+
+  const scriptArgs = [scriptPath, '--url', body.url.trim(), '--job-id', jobId];
+  if (body.title)               scriptArgs.push('--title',          body.title);
+  if (body.slug)                scriptArgs.push('--slug',           body.slug);
+  if (body.description)         scriptArgs.push('--description',    body.description);
+  if (body.isPublic === false)  scriptArgs.push('--private');
+  if (body.previewCount != null) scriptArgs.push('--preview-count', String(body.previewCount));
+  if (body.featured)            scriptArgs.push('--featured');
+  if (body.featuredCount != null) scriptArgs.push('--featured-count', String(body.featuredCount));
+  if (body.dryRun)              scriptArgs.push('--dry-run');
+
+  const proc = spawn(tsxBin, scriptArgs, {
+    cwd: process.cwd(),
+    env: { ...process.env },
+    detached: true,   // runs independently even if Next.js hot-reloads
+    stdio: 'ignore',  // stdout/stderr mirrored to Firestore via LogSink
   });
+  proc.unref(); // allow API response to return without waiting for child
+
+  return NextResponse.json({ jobId, mode: 'local' });
 }

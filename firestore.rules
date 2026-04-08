@@ -276,6 +276,18 @@ service cloud.firestore {
     }
 
     // ───────────────────────────────────────
+    // Import Jobs (Google Photos import log)
+    // ───────────────────────────────────────
+    match /import_jobs/{jobId} {
+      // The triggering board member can read their own job; all board can see any
+      allow read: if isBoard()
+                  || (isAuthenticated() && resource.data.triggeredBy == request.auth.uid);
+
+      // All writes are via the Admin SDK (import script + API route)
+      allow write: if false;
+    }
+
+    // ───────────────────────────────────────
     // Deny everything else
     // ───────────────────────────────────────
     match /{document=**} {
