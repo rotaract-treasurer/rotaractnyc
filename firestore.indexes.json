@@ -285,6 +285,22 @@
       ]
     },
     {
+      "collectionGroup": "albums",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "albums",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "slug", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "gallery",
       "queryScope": "COLLECTION",
       "fields": [
@@ -292,14 +308,7 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
-    {
-      "collectionGroup": "gallery",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "likes", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "DESCENDING" }
-      ]
-    },
+
     {
       "collectionGroup": "gallery",
       "queryScope": "COLLECTION",
