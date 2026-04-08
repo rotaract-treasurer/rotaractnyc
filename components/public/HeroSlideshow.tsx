@@ -16,7 +16,8 @@ interface HeroSlideshowProps {
 }
 
 export default function HeroSlideshow({ slides }: HeroSlideshowProps) {
-  const images = slides && slides.length > 0 ? slides.map((s) => s.url) : FALLBACK_IMAGES;
+  const hasRemote = slides && slides.length > 0;
+  const images = hasRemote ? slides.map((s) => s.url) : FALLBACK_IMAGES;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -35,7 +36,18 @@ export default function HeroSlideshow({ slides }: HeroSlideshowProps) {
         const isPrev = i === (currentIndex - 1 + images.length) % images.length;
         if (!isActive && !isNext && !isPrev) return null;
 
-        return (
+        return hasRemote ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              isActive ? 'opacity-100' : 'opacity-0'
+            }`}
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ) : (
           <Image
             key={src}
             src={src}

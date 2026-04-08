@@ -178,16 +178,116 @@ export interface HeroSlide {
 
 export async function getHeroSlides(): Promise<HeroSlide[]> {
   try {
+    // Tier 1: explicit hero slides from site_media
     const snap = await adminDb
       .collection('site_media')
       .where('section', '==', 'hero')
       .orderBy('order', 'asc')
       .get();
 
-    if (snap.empty) return [];
-    return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as HeroSlide);
+    if (!snap.empty) {
+      return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as HeroSlide);
+    }
+
+    // Tier 2: auto-populate from album photos (2 per album, most liked first)
+    return await getHeroPhotosFromAlbums();
   } catch (e) {
     console.error('getHeroSlides error:', e);
+    return [];
+  }
+}
+
+/**
+ * Picks up to 2 photos per public album for the hero slideshow.
+ *
+ * Selection priority per album:
+ *   1. Most liked photos (community favourites)
+ *   2. isFeatured photos
+ *   3. First photos by order
+ */
+async function getHeroPhotosFromAlbums(perAlbum = 2): Promise<HeroSlide[]> {
+  try {
+    const albumSnap = await adminDb
+      .collection('albums')
+      .where('isPublic', '==', true)
+      .orderBy('date', 'desc')
+      .limit(10)
+      .get();
+
+    if (albumSnap.empty) return [];
+
+    const picks: HeroSlide[] = [];
+    let order = 0;
+
+    for (const albumDoc of albumSnap.docs) {
+      const albumId = albumDoc.id;
+      const chosen: GalleryImage[] = [];
+
+      // Try most-liked first
+      try {
+        const likedSnap = await adminDb
+          .collection('gallery')
+          .where('albumId', '==', albumId)
+          .where('likes', '>=', 1)
+          .orderBy('likes', 'desc')
+          .limit(perAlbum)
+          .get();
+        likedSnap.docs.forEach((d) =>
+          chosen.push(serializeDoc({ id: d.id, ...d.data() }) as GalleryImage)
+        );
+      } catch { /* index may not exist yet */ }
+
+      // Fill remaining with featured photos
+      if (chosen.length < perAlbum) {
+        const chosenIds = new Set(chosen.map((p) => p.id));
+        try {
+          const featSnap = await adminDb
+            .collection('gallery')
+            .where('albumId', '==', albumId)
+            .where('isFeatured', '==', true)
+            .orderBy('order', 'asc')
+            .limit(perAlbum)
+            .get();
+          featSnap.docs.forEach((d) => {
+            if (chosen.length < perAlbum && !chosenIds.has(d.id)) {
+              chosen.push(serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+              chosenIds.add(d.id);
+            }
+          });
+        } catch { /* index may not exist yet */ }
+      }
+
+      // Final fallback: first photos by order
+      if (chosen.length < perAlbum) {
+        const chosenIds = new Set(chosen.map((p) => p.id));
+        const fallSnap = await adminDb
+          .collection('gallery')
+          .where('albumId', '==', albumId)
+          .orderBy('order', 'asc')
+          .limit(perAlbum + chosen.length)
+          .get();
+        fallSnap.docs.forEach((d) => {
+          if (chosen.length < perAlbum && !chosenIds.has(d.id)) {
+            chosen.push(serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+          }
+        });
+      }
+
+      // Convert to HeroSlide shape
+      for (const photo of chosen) {
+        picks.push({
+          id: photo.id,
+          url: photo.url,
+          storagePath: photo.storagePath || '',
+          order: order++,
+          createdAt: photo.createdAt,
+        });
+      }
+    }
+
+    return picks;
+  } catch (e) {
+    console.error('getHeroPhotosFromAlbums error:', e);
     return [];
   }
 }
