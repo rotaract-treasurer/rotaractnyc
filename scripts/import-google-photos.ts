@@ -6,13 +6,37 @@
  * and indexes them in Firestore under the `albums` and `gallery` collections.
  *
  * USAGE (from the project root, with .env.local present):
+ *
+ *   # Import a new album directly from a Google Photos URL:
+ *   npx tsx scripts/import-google-photos.ts --url "https://photos.app.goo.gl/xxx"
+ *
+ *   # With custom title, slug, description:
+ *   npx tsx scripts/import-google-photos.ts --url "https://photos.app.goo.gl/xxx" \
+ *     --title "Gala 2026" --slug "gala-2026" --description "Annual Gala"
+ *
+ *   # Dry-run (no uploads) to preview what would be imported:
+ *   npx tsx scripts/import-google-photos.ts --url "https://photos.app.goo.gl/xxx" --dry-run
+ *
+ *   # Import all pre-defined albums:
  *   npx tsx scripts/import-google-photos.ts
  *
+ *   # Import a specific pre-defined album:
+ *   npx tsx scripts/import-google-photos.ts --album pickleball-2025
+ *
  * FLAGS:
- *   --dry-run       Print what would be imported without uploading anything
- *   --album <slug>  Only import the album matching this slug
- *   --limit <n>     Max photos per album (default: all)
- *   --skip-existing Skip albums that already exist in Firestore (default: true)
+ *   --url <url>           Import a new album from a Google Photos shared link
+ *   --title <title>       Album title (auto-derived from page title if omitted with --url)
+ *   --slug <slug>         Album slug  (derived from title if omitted)
+ *   --description <text>  Album description
+ *   --private             Mark the album as non-public (default: public)
+ *   --preview-count <n>   Number of preview photos for public visitors (default: 6)
+ *   --featured            Mark first few photos as featured (for homepage carousel)
+ *   --featured-count <n>  How many photos to mark as featured (default: 3)
+ *   --dry-run             Print what would be imported without uploading anything
+ *   --album <slug>        Only import the pre-defined album matching this slug
+ *   --limit <n>           Max photos per album (default: all)
+ *   --no-skip-existing    Re-import albums that already exist in Firestore
+ *   --debug               Verbose URL logging during scraping
  *
  * REQUIREMENTS:
  *   - .env.local with FIREBASE_SERVICE_ACCOUNT_KEY (or FIREBASE_PROJECT_ID etc.)
@@ -42,6 +66,16 @@ const ONLY_ALBUM = args.includes('--album') ? args[args.indexOf('--album') + 1] 
 const LIMIT = args.includes('--limit') ? parseInt(args[args.indexOf('--limit') + 1], 10) : Infinity;
 const SKIP_EXISTING = !args.includes('--no-skip-existing');
 const VISION_API_KEY = process.env.GOOGLE_CLOUD_VISION_API_KEY || null;
+
+// CLI-driven single album (--url mode)
+const URL_FLAG        = args.includes('--url')            ? args[args.indexOf('--url') + 1]            : null;
+const TITLE_FLAG      = args.includes('--title')          ? args[args.indexOf('--title') + 1]          : null;
+const SLUG_FLAG       = args.includes('--slug')           ? args[args.indexOf('--slug') + 1]           : null;
+const DESC_FLAG       = args.includes('--description')    ? args[args.indexOf('--description') + 1]    : null;
+const IS_PUBLIC_FLAG  = !args.includes('--private');
+const PREVIEW_FLAG    = args.includes('--preview-count')  ? parseInt(args[args.indexOf('--preview-count') + 1], 10) : 6;
+const FEAT_FLAG       = args.includes('--featured');
+const FEAT_COUNT_FLAG = args.includes('--featured-count') ? parseInt(args[args.indexOf('--featured-count') + 1], 10) : 3;
 
 // ─── Album context tags ───────────────────────────────────────────────────────
 // Deterministic tags inferred from album slug — zero cost, always applied
@@ -98,14 +132,14 @@ const VISION_TAG_MAP: Record<string, string[]> = {
 // ─── Album definitions ───────────────────────────────────────────────────────
 
 interface AlbumDef {
-  slug: string;
-  title: string;
-  date: string;         // ISO date string
+  slug?: string;          // derived from title if not set
+  title?: string;         // derived from scraped page title if not set
+  date: string;           // ISO date string
   description?: string;
   googlePhotosUrl: string;
   isPublic: boolean;
   publicPreviewCount: number;
-  isFeatured?: boolean; // first N photos marked as featured (for homepage mosaic)
+  isFeatured?: boolean;   // first N photos marked as featured (for homepage carousel)
   featuredCount?: number;
 }
 
@@ -257,7 +291,11 @@ function toFullRes(url: string): string {
 
 const DEBUG = args.includes('--debug');
 
-async function scrapeAlbum(page: Page, albumUrl: string, limit: number): Promise<string[]> {
+async function scrapeAlbum(
+  page: Page,
+  albumUrl: string,
+  limit: number,
+): Promise<{ urls: string[]; scrapedTitle: string }> {
   console.log(`  🌐 Opening album: ${albumUrl}`);
 
   // Use 'load' instead of 'networkidle' — Google Photos makes continuous API calls
@@ -283,13 +321,13 @@ async function scrapeAlbum(page: Page, albumUrl: string, limit: number): Promise
     pageTitle.toLowerCase().includes('log in')
   ) {
     console.log('  ⚠️  Redirected to sign-in — album may be private or require Google account');
-    return [];
+    return { urls: [], scrapedTitle: '' };
   }
 
   // Detect error / empty pages
   if (pageTitle.includes('Error') || pageTitle.includes('not found') || pageTitle === '') {
     console.log(`  ⚠️  Unexpected page: "${pageTitle}"`);
-    return [];
+    return { urls: [], scrapedTitle: '' };
   }
 
   // Scroll to load all photos (Google Photos lazy-loads thumbnails)
@@ -381,7 +419,7 @@ async function scrapeAlbum(page: Page, albumUrl: string, limit: number): Promise
   }
 
   console.log(`  ✅ Found ${unique.length} unique photos`);
-  return unique.slice(0, limit);
+  return { urls: unique.slice(0, limit), scrapedTitle: pageTitle };
 }
 
 // ─── Upload to Firebase Storage ──────────────────────────────────────────────
@@ -459,6 +497,19 @@ async function importAlbum(
   album: AlbumDef,
   db: FirebaseFirestore.Firestore,
 ): Promise<void> {
+  // Scrape photo URLs (and pick up the page title for auto-derive)
+  const { urls: photoUrls, scrapedTitle } = await scrapeAlbum(page, album.googlePhotosUrl, LIMIT);
+
+  // Auto-fill title + slug from the scraped Google Photos page title
+  if (!album.title) {
+    album.title = scrapedTitle.replace(/ - Google Photos$/i, '').trim() || 'Imported Album';
+    console.log(`  📝 Auto-title: "${album.title}"`);
+  }
+  if (!album.slug) {
+    album.slug = slugify(album.title);
+    console.log(`  📝 Auto-slug:  "${album.slug}"`);
+  }
+
   console.log(`\n📁 Album: ${album.title} (${album.slug})`);
 
   // Check if album already exists (skip in dry-run)
@@ -469,9 +520,6 @@ async function importAlbum(
       return;
     }
   }
-
-  // Scrape photo URLs from Google Photos
-  const photoUrls = await scrapeAlbum(page, album.googlePhotosUrl, LIMIT);
 
   if (photoUrls.length === 0) {
     console.log('  ⚠️  No photos found — album may be private or require sign-in');
@@ -608,18 +656,45 @@ async function main() {
 
   const db = DRY_RUN ? null as any : getFirestore();
 
-  // Filter albums if --album flag provided
-  const albumsToImport = ONLY_ALBUM
-    ? ALBUMS.filter((a) => a.slug === ONLY_ALBUM)
-    : ALBUMS;
+  // ── Determine which albums to import ──────────────────────────────────────
 
-  if (albumsToImport.length === 0) {
-    console.error(`❌ No album found with slug "${ONLY_ALBUM}"`);
-    console.error('   Available slugs:', ALBUMS.map((a) => a.slug).join(', '));
-    process.exit(1);
+  let albumsToImport: AlbumDef[];
+
+  if (URL_FLAG) {
+    // Single-shot import from a Google Photos URL passed on the CLI
+    albumsToImport = [{
+      googlePhotosUrl: URL_FLAG,
+      title:           TITLE_FLAG   || undefined,   // auto-derive from page if not set
+      slug:            SLUG_FLAG    || undefined,
+      description:     DESC_FLAG    || undefined,
+      date:            new Date().toISOString().split('T')[0],
+      isPublic:        IS_PUBLIC_FLAG,
+      publicPreviewCount: PREVIEW_FLAG,
+      isFeatured:      FEAT_FLAG,
+      featuredCount:   FEAT_COUNT_FLAG,
+    }];
+    console.log(`🔗 URL mode: ${URL_FLAG}`);
+    if (TITLE_FLAG) console.log(`   Title:       ${TITLE_FLAG}`);
+    if (SLUG_FLAG)  console.log(`   Slug:        ${SLUG_FLAG}`);
+    console.log(`   Public:      ${IS_PUBLIC_FLAG}`);
+    console.log(`   Preview:     ${PREVIEW_FLAG} photos`);
+    console.log(`   Featured:    ${FEAT_FLAG ? `yes (${FEAT_COUNT_FLAG} photos)` : 'no'}`);
+    console.log('');
+  } else {
+    // Pre-defined albums list
+    albumsToImport = ONLY_ALBUM
+      ? ALBUMS.filter((a) => a.slug === ONLY_ALBUM)
+      : ALBUMS;
+
+    if (albumsToImport.length === 0) {
+      console.error(`❌ No album found with slug "${ONLY_ALBUM}"`);
+      console.error('   Available slugs:', ALBUMS.map((a) => a.slug).join(', '));
+      process.exit(1);
+    }
+
+    console.log(`📋 Albums to import: ${albumsToImport.map((a) => a.title).join(', ')}`);
   }
 
-  console.log(`📋 Albums to import: ${albumsToImport.map((a) => a.title).join(', ')}`);
   console.log(`🔢 Photo limit per album: ${LIMIT === Infinity ? 'all' : LIMIT}`);
   console.log('');
 

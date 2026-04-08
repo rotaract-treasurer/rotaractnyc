@@ -243,23 +243,59 @@ export async function getAlbumPhotos(albumId: string, limit?: number): Promise<G
 }
 
 /**
- * Returns the top N most-liked photos across all public albums.
- * Used for the "Community Favourites" carousel on the public homepage.
- * Only returns photos that have at least one like.
+ * Returns up to `limit` photos for the public homepage carousel.
+ *
+ * Tier 1 — liked photos ordered by likes desc (most community love first).
+ * Tier 2 — isFeatured photos fill any remaining slots so the carousel is
+ *           always populated from day one, before likes accumulate.
+ *
+ * As members like photos, tier-2 placeholders are naturally pushed out.
  */
-export async function getMostLikedPhotos(limit = 10): Promise<GalleryImage[]> {
+export async function getCarouselPhotos(limit = 10): Promise<GalleryImage[]> {
   try {
-    const snap = await adminDb
+    // Tier 1: top liked photos
+    const likedSnap = await adminDb
       .collection('gallery')
       .where('likes', '>=', 1)
       .orderBy('likes', 'desc')
       .limit(limit)
       .get();
 
-    if (snap.empty) return [];
-    return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+    const liked = likedSnap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+
+    if (liked.length >= limit) return liked;
+
+    // Tier 2: fill remaining slots with featured photos not already shown
+    const likedIds = new Set(liked.map((p) => p.id));
+    const needed   = limit - liked.length;
+
+    const featSnap = await adminDb
+      .collection('gallery')
+      .where('isFeatured', '==', true)
+      .orderBy('order', 'asc')
+      .limit(needed + liked.length) // slight over-fetch to account for any overlap
+      .get();
+
+    const featured = featSnap.docs
+      .map((d) => serializeDoc({ id: d.id, ...d.data() }) as GalleryImage)
+      .filter((p) => !likedIds.has(p.id))
+      .slice(0, needed);
+
+    return [...liked, ...featured];
   } catch (e) {
-    console.error('getMostLikedPhotos error:', e);
-    return [];
+    console.error('getCarouselPhotos error:', e);
+    // Final fallback: grab any recent gallery photos
+    try {
+      const snap = await adminDb
+        .collection('gallery')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
+      return snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }) as GalleryImage);
+    } catch {
+      return [];
+    }
   }
 }
+
+

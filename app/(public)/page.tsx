@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SITE, IMPACT_STATS } from '@/lib/constants';
 import { generateMeta } from '@/lib/seo';
-import { getPublicEvents, getPublishedArticles, getHeroSlides, getGalleryImages, getMostLikedPhotos } from '@/lib/firebase/queries';
+import { getPublicEvents, getPublishedArticles, getHeroSlides, getCarouselPhotos } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import Badge from '@/components/ui/Badge';
 import HeroSlideshow from '@/components/public/HeroSlideshow';
@@ -63,13 +63,15 @@ const typeColors: Record<string, 'cranberry' | 'green' | 'azure' | 'gold'> = {
 };
 
 export default async function HomePage() {
-  const [events, articles, heroSlides, galleryImages, mostLikedPhotos] = await Promise.all([
+  const [events, articles, heroSlides, carouselPhotos] = await Promise.all([
     getPublicEvents(),
     getPublishedArticles(),
     getHeroSlides(),
-    getGalleryImages(),
-    getMostLikedPhotos(10),
+    getCarouselPhotos(10),
   ]);
+
+  // Does the carousel have any community-liked photos yet?
+  const hasLikes = carouselPhotos.some((p) => (p.likes ?? 0) > 0);
 
   // Take only the next 3 upcoming events (filter out past)
   const now = new Date().toISOString();
@@ -297,63 +299,24 @@ export default async function HomePage() {
         <div className="container-page">
           <div className="text-center mb-10">
             <p className="text-cranberry font-semibold text-sm uppercase tracking-wider mb-2">
-              {mostLikedPhotos.length > 0 ? 'Community Favourites' : 'Gallery'}
+              {hasLikes ? 'Community Favourites' : 'Gallery'}
             </p>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 dark:text-white">
-              {mostLikedPhotos.length > 0 ? 'Photos Members Love' : 'Life at Rotaract NYC'}
+              {hasLikes ? 'Photos Members Love' : 'Life at Rotaract NYC'}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mt-3 max-w-xl mx-auto">
-              {mostLikedPhotos.length > 0
+              {hasLikes
                 ? 'The top-liked photos voted by our members'
                 : 'Snapshots from our events, service projects, and fellowship activities'}
             </p>
           </div>
 
-          {mostLikedPhotos.length > 0 ? (
-            // Community favourites carousel — driven by member likes
-            <MostLikedCarousel photos={mostLikedPhotos} />
-          ) : galleryImages.length > 0 ? (
-            // Fallback: static mosaic until photos accumulate likes
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                {galleryImages.slice(0, 8).map((img, i) => (
-                  <div
-                    key={img.id}
-                    className={`relative rounded-2xl overflow-hidden group ${
-                      i === 0 ? 'md:col-span-2 md:row-span-2' : ''
-                    } ${i === 3 ? 'md:col-span-2' : ''}`}
-                  >
-                    <div className={`${i === 0 ? 'aspect-square' : 'aspect-[4/3]'} w-full`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt={img.caption || 'Rotaract NYC'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    {img.caption && (
-                      <p className="absolute bottom-3 left-3 right-3 text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 line-clamp-1">
-                        {img.caption}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="text-center mt-8">
-                <Link href="/gallery" className="btn-sm btn-outline">View Full Gallery →</Link>
-              </div>
-            </>
+          {carouselPhotos.length > 0 ? (
+            <MostLikedCarousel photos={carouselPhotos} hasLikes={hasLikes} />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-2xl ${
-                    i === 0 ? 'md:col-span-2 md:row-span-2' : ''
-                  } ${i === 3 ? 'md:col-span-2' : ''}`}
-                >
+                <div key={i} className={`rounded-2xl ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''} ${i === 3 ? 'md:col-span-2' : ''}`}>
                   <div className={`${i === 0 ? 'aspect-square' : 'aspect-[4/3]'} w-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-2xl`} />
                 </div>
               ))}

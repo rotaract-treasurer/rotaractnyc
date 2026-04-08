@@ -6,9 +6,11 @@ import type { GalleryImage } from '@/types';
 
 interface MostLikedCarouselProps {
   photos: GalleryImage[];
+  /** Pass true once any photo has at least one like; controls the CTA copy. */
+  hasLikes?: boolean;
 }
 
-export default function MostLikedCarousel({ photos }: MostLikedCarouselProps) {
+export default function MostLikedCarousel({ photos, hasLikes = false }: MostLikedCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
