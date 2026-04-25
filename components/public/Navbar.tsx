@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
 import { cn } from '@/lib/utils/cn';
+import { SITE } from '@/lib/constants';
 
 const SearchModal = dynamic(() => import('@/components/SearchModal'), { ssr: false });
 
@@ -51,6 +52,7 @@ export default function Navbar() {
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const dropdownMenuRef = useRef<HTMLDivElement>(null);
+  const dropdownCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -133,6 +135,26 @@ export default function Navbar() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
+  const openDropdownHover = useCallback((label: string, hasChildren: boolean) => {
+    if (!hasChildren) return;
+    if (dropdownCloseTimeoutRef.current) {
+      clearTimeout(dropdownCloseTimeoutRef.current);
+      dropdownCloseTimeoutRef.current = null;
+    }
+    setOpenDropdown(label);
+  }, []);
+
+  const closeDropdownHover = useCallback(() => {
+    if (dropdownCloseTimeoutRef.current) clearTimeout(dropdownCloseTimeoutRef.current);
+    dropdownCloseTimeoutRef.current = setTimeout(() => setOpenDropdown(null), 120);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (dropdownCloseTimeoutRef.current) clearTimeout(dropdownCloseTimeoutRef.current);
+    };
+  }, []);
+
   return (
     <header
       className={cn(
@@ -155,7 +177,7 @@ export default function Navbar() {
         <Link href="/" className="flex items-center group">
           <Image
             src="/rotaract-logo.png"
-            alt="Rotaract NYC at the United Nations"
+            alt={SITE.name}
             width={240}
             height={60}
             className={cn(
@@ -171,9 +193,9 @@ export default function Navbar() {
           {navigation.map((item) => (
             <div
               key={item.label}
-              className="relative"
-              onMouseEnter={() => item.children && setOpenDropdown(item.label)}
-              onMouseLeave={() => setOpenDropdown(null)}
+              className="relative pb-1"
+              onMouseEnter={() => openDropdownHover(item.label, Boolean(item.children))}
+              onMouseLeave={closeDropdownHover}
             >
               {item.children ? (
                 <button
@@ -223,7 +245,9 @@ export default function Navbar() {
                   ref={dropdownMenuRef}
                   role="menu"
                   aria-label={`${item.label} submenu`}
-                  className="absolute top-full left-0 mt-1 w-52 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 py-2 animate-slide-down"
+                  onMouseEnter={() => openDropdownHover(item.label, true)}
+                  onMouseLeave={closeDropdownHover}
+                  className="absolute top-full left-0 mt-0 w-52 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 py-2 animate-slide-down"
                 >
                   {item.children.map((child) => (
                     <Link

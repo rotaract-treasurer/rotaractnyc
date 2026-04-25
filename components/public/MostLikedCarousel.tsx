@@ -23,10 +23,16 @@ export default function MostLikedCarousel({ photos, hasLikes = false }: MostLike
     (index: number) => {
       const next = (index + count) % count;
       setActiveIndex(next);
-      trackRef.current?.children[next]?.scrollIntoView({
+      const track = trackRef.current;
+      const target = track?.children[next] as HTMLElement | undefined;
+      if (!track || !target) return;
+
+      // Use horizontal scroll math instead of element.scrollIntoView()
+      // to avoid unintended page-level vertical scrolling.
+      const left = target.offsetLeft - (track.clientWidth - target.clientWidth) / 2;
+      track.scrollTo({
+        left: Math.max(0, left),
         behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
       });
     },
     [count],

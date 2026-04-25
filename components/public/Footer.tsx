@@ -44,14 +44,14 @@ export default function Footer() {
             <div className="mb-4">
               <Image
                 src="/rotaract-logo.png"
-                alt="Rotaract NYC at the United Nations"
+                alt={SITE.name}
                 width={240}
                 height={60}
                 className="h-12 w-auto brightness-0 invert"
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed mb-4">
-              A community of young professionals and students aged 18–30 dedicated to service, leadership, and global fellowship.
+              A community of young professionals and emerging leaders dedicated to service, leadership, and global fellowship.
             </p>
             <p className="text-xs text-gold font-semibold italic">&ldquo;{SITE.motto}&rdquo;</p>
           </div>

@@ -72,10 +72,10 @@ describe('IMPACT_STATS', () => {
     });
   });
 
-  it('has known categories (Service Hours, Active Members, etc.)', () => {
+  it('has known categories (Service Hours, Community Members, etc.)', () => {
     const labels = IMPACT_STATS.map((s) => s.label);
     expect(labels).toContain('Service Hours');
-    expect(labels).toContain('Active Members');
+    expect(labels).toContain('Community Members');
   });
 });
 

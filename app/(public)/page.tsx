@@ -117,7 +117,7 @@ export default async function HomePage() {
           {/* Logo */}
           <Image
             src="/rotaract-logo.png"
-            alt="Rotaract NYC at the United Nations"
+            alt={SITE.name}
             width={280}
             height={70}
             className="h-16 sm:h-20 w-auto mx-auto mb-8 brightness-0 invert animate-fade-in"
@@ -136,7 +136,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-cranberry-200 max-w-2xl mx-auto animate-fade-in animation-delay-200">
-            We are the {SITE.name} — a diverse community of young professionals and students creating positive change through service, leadership, and fellowship.
+            We are the {SITE.name} — a diverse community of young professionals creating positive change through service, leadership, and fellowship.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in animation-delay-400">

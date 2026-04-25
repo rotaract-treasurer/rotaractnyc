@@ -7,7 +7,7 @@ import { getImpactStats } from '@/lib/firebase/queries';
 
 export const metadata: Metadata = generateMeta({
   title: 'About',
-  description: 'Learn about the Rotaract Club of New York at the United Nations — our mission, vision, and impact.',
+  description: `Learn about ${SITE.name} — our mission, vision, and impact.`,
   path: '/about',
 });
 
@@ -37,10 +37,10 @@ export default async function AboutPage() {
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-sm font-semibold text-gold uppercase tracking-wider mb-3">Who We Are</p>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 dark:text-white mb-6">
-              The Rotaract Club of New York at the United Nations
+              The {SITE.name}
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-              Founded as part of Rotary International, we are a vibrant community of young professionals and students aged {SITE.ageRange} based in the heart of New York City. Sponsored by {SITE.sponsor}, we bring together diverse individuals united by a shared passion for making a difference.
+              Founded as part of Rotary International, we are a vibrant community of young professionals and emerging leaders in the heart of New York City. Membership is generally open to adults, with most new members joining in the {SITE.ageRange} range. Sponsored by {SITE.sponsor}, we bring together diverse individuals united by a shared passion for making a difference.
             </p>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
               We meet {SITE.meetingSchedule.toLowerCase()} at our home base near the United Nations headquarters, fostering connections between young leaders from all walks of life and all corners of the globe.
@@ -93,7 +93,7 @@ export default async function AboutPage() {
             Want to learn more?
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto">
-            Attend one of our meetings, meet our members, and see if Rotaract NYC is the right fit for you.
+            Attend one of our meetings, meet our members, and see if {SITE.name} is the right fit for you.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/membership" className="btn-md btn-primary">

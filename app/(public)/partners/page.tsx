@@ -7,7 +7,7 @@ import { SITE } from '@/lib/constants';
 export const metadata: Metadata = generateMeta({
   title: 'Partners & Sponsors',
   description:
-    'Partner with Rotaract NYC — sponsorship and collaboration opportunities for organizations looking to support young leaders and community service in New York City.',
+    `Partner with ${SITE.name} — sponsorship and collaboration opportunities for organizations looking to support young leaders and community service in New York City.`,
   path: '/partners',
 });
 
@@ -58,7 +58,7 @@ const partnershipTiers = [
 const reasons = [
   {
     title: 'Reach Young Professionals',
-    description: `Connect with ${SITE.ageRange}-year-old leaders, changemakers, and professionals building careers in NYC.`,
+    description: 'Connect with a vibrant community of young professionals, changemakers, and leaders building careers in NYC.',
     icon: '🎯',
   },
   {
@@ -86,7 +86,7 @@ export default function PartnersPage() {
     <>
       <HeroSection
         title="Partners & Sponsors"
-        subtitle="Join forces with Rotaract NYC to make a bigger impact. We partner with organizations that share our commitment to service, leadership, and community."
+        subtitle={`Join forces with ${SITE.name} to make a bigger impact. We partner with organizations that share our commitment to service, leadership, and community.`}
       />
 
       {/* Why Partner */}
