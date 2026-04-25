@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
         customer_email: email,
         line_items: lineItems,
         return_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=success&session_id={CHECKOUT_SESSION_ID}`,
-        redirect_on_completion: 'if_required',
+        redirect_on_completion: 'never',
         metadata,
       });
 

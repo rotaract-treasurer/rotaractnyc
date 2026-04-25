@@ -113,7 +113,7 @@ describe('POST /api/portal/events/checkout', () => {
       expect.objectContaining({
         mode: 'payment',
         ui_mode: 'embedded',
-        redirect_on_completion: 'if_required',
+        redirect_on_completion: 'never',
         return_url: 'https://rotaractnyc.org/portal/events?ticket=success&event=evt-123&session_id={CHECKOUT_SESSION_ID}',
       }),
     );
