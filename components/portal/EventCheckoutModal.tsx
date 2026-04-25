@@ -128,6 +128,7 @@ export default function EventCheckoutModal({
             setCheckoutClientSecret('');
             setCheckoutUrl('');
             setCheckoutError('');
+            setSelectedMethod(null);
 
             if (onCheckoutCompleteRef.current) {
               onCheckoutCompleteRef.current();
@@ -146,7 +147,8 @@ export default function EventCheckoutModal({
         if (!container) throw new Error('Embedded checkout container not found.');
 
         embeddedCheckout.mount(container);
-      } catch {
+      } catch (err) {
+        console.error('[EmbeddedCheckout] init failed:', err);
         if (!active) return;
         setCheckoutError('Unable to load in-page card form. Preparing secure popup checkout instead.');
 
@@ -211,7 +213,6 @@ export default function EventCheckoutModal({
 
       if (result.clientSecret && publishableKey) {
         setCheckoutClientSecret(result.clientSecret);
-        if (result.url) setCheckoutUrl(result.url);
         return;
       }
 

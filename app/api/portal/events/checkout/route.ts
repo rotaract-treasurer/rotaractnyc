@@ -220,11 +220,23 @@ export async function POST(request: NextRequest) {
     };
 
     if (embedded) {
+      let customerEmail: string | undefined;
+      if (uid) {
+        try {
+          const userRecord = await adminAuth.getUser(uid);
+          customerEmail = userRecord.email ?? undefined;
+        } catch {
+          // proceed without email — not required by Stripe
+        }
+      }
+
+      // redirect_on_completion: 'never' keeps the browser on-page; return_url must be omitted.
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         ui_mode: 'embedded',
         line_items: lineItems,
         redirect_on_completion: 'never',
+        ...(customerEmail ? { customer_email: customerEmail } : {}),
         metadata,
       });
 

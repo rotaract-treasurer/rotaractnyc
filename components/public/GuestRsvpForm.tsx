@@ -97,7 +97,8 @@ export default function GuestRsvpForm({
         if (!container) throw new Error('Embedded checkout container not found.');
 
         embeddedCheckout.mount(container);
-      } catch {
+      } catch (err) {
+        console.error('[EmbeddedCheckout] init failed:', err);
         if (!active) return;
         setCheckoutError('Unable to load in-page card form. Preparing secure popup checkout instead.');
 
@@ -116,6 +117,7 @@ export default function GuestRsvpForm({
               return data;
             })
             .then((data) => {
+              if (!active) return;
               if (data.url && typeof data.url === 'string' && data.url.startsWith(STRIPE_CHECKOUT_PREFIX)) {
                 setCheckoutClientSecret('');
                 setCheckoutUrl(data.url);
@@ -125,6 +127,7 @@ export default function GuestRsvpForm({
               }
             })
             .catch(() => {
+              if (!active) return;
               setCheckoutError('Unable to start popup checkout. Please try again.');
             });
         }
