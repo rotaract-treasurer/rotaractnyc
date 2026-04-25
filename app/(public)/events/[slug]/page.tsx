@@ -35,6 +35,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   if (!event) notFound();
 
+  const heroImage =
+    event.imageURL ||
+    (event as any).imageUrl ||
+    (event as any).image ||
+    (event as any).coverImage ||
+    null;
+
   const eventJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -72,10 +79,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       {/* Hero */}
       <section className="relative py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800 text-white overflow-hidden">
         {/* Event cover image background */}
-        {event.imageURL && (
+        {heroImage && (
           <div className="absolute inset-0">
             <Image
-              src={event.imageURL}
+              src={heroImage}
               alt=""
               fill
               sizes="100vw"

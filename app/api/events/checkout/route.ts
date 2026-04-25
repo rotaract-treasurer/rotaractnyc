@@ -46,11 +46,39 @@ export async function POST(request: NextRequest) {
 
     const event = eventDoc.data()!;
 
+    const isPublished =
+      typeof event.status === 'string'
+        ? event.status === 'published'
+        : Boolean(event.published);
+    const isPublic =
+      typeof event.isPublic === 'boolean'
+        ? event.isPublic
+        : event.visibility === 'public';
+
     // Verify event is published and public
-    if (!event.published || event.visibility !== 'public') {
+    if (!isPublished || !isPublic) {
       return NextResponse.json(
         { error: 'This event is not available for public registration.' },
         { status: 403 },
+      );
+    }
+
+    // Support current pricing schema (`event.pricing`) plus legacy flat fields.
+    const pricing =
+      event.pricing ||
+      ((event.memberPrice != null || event.guestPrice != null || event.earlyBirdPrice != null)
+        ? {
+            memberPrice: Number(event.memberPrice || 0),
+            guestPrice: Number(event.guestPrice || 0),
+            earlyBirdPrice: event.earlyBirdPrice != null ? Number(event.earlyBirdPrice) : undefined,
+            earlyBirdDeadline: event.earlyBirdDeadline || undefined,
+          }
+        : null);
+
+    if (!pricing) {
+      return NextResponse.json(
+        { error: 'This event is a free RSVP event. No payment is required.' },
+        { status: 400 },
       );
     }
 
@@ -60,12 +88,12 @@ export async function POST(request: NextRequest) {
     let tierLabel = 'Guest';
     const now = new Date();
 
-    if (event.pricing?.tiers?.length) {
+    if (pricing.tiers?.length) {
       let tier = tierId
-        ? event.pricing.tiers.find((t: any) => t.id === tierId)
+        ? pricing.tiers.find((t: any) => t.id === tierId)
         : undefined;
       if (!tier) {
-        tier = event.pricing.tiers
+        tier = pricing.tiers
           .filter((t: any) => {
             if (t.deadline && new Date(t.deadline) < now) return false;
             if (t.capacity != null && (t.soldCount ?? 0) >= t.capacity) return false;
@@ -86,13 +114,13 @@ export async function POST(request: NextRequest) {
       tierLabel = tier.label;
       resolvedTierId = tier.id;
     } else if (
-      event.earlyBirdPrice != null &&
-      event.earlyBirdDeadline &&
-      now < new Date(event.earlyBirdDeadline)
+      pricing.earlyBirdPrice != null &&
+      pricing.earlyBirdDeadline &&
+      now < new Date(pricing.earlyBirdDeadline)
     ) {
-      priceCents = Math.round(Number(event.earlyBirdPrice) * 100);
+      priceCents = Number(pricing.earlyBirdPrice);
     } else {
-      priceCents = Math.round(Number(event.guestPrice || 0) * 100);
+      priceCents = Number(pricing.guestPrice || 0);
     }
 
     // Free event: create RSVP directly
