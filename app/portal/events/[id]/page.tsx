@@ -172,16 +172,17 @@ export default function PortalEventDetailPage() {
 
   const handleStripeCheckout = async () => {
     try {
+      const canUseEmbeddedCheckout = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
       const res = await apiPost('/api/portal/events/checkout', {
         eventId: id,
         ticketType: checkoutTicketType,
         paymentMethod: 'stripe',
+        embedded: canUseEmbeddedCheckout,
       });
-      if (res.url) {
-        window.location.href = res.url;
-      }
+      return res;
     } catch (err: any) {
       toast(err.message || 'Checkout failed', 'error');
+      return null;
     }
   };
 

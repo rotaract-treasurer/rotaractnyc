@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { eventId, ticketType, tierId, paymentMethod = 'stripe', proofUrl } = body;
+    const { eventId, ticketType, tierId, paymentMethod = 'stripe', proofUrl, embedded = false } = body;
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
@@ -195,33 +195,49 @@ export async function POST(request: NextRequest) {
     // Create Stripe checkout session
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+    const lineItems = [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${event.title} — ${priceLabel} Ticket`,
+            description: `${event.date ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''} · ${event.location || ''}`,
+          },
+          unit_amount: priceCents,
+        },
+        quantity: 1,
+      },
+    ];
+
+    const metadata = {
+      type: 'event_ticket',
+      eventId,
+      memberId: uid || '',
+      ticketType: priceLabel.toLowerCase(),
+      tierId: resolvedTierId || '',
+      amountCents: String(priceCents),
+      eventTitle: event.title,
+    };
+
+    if (embedded) {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        ui_mode: 'embedded',
+        line_items: lineItems,
+        return_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}`,
+        metadata,
+      });
+
+      return NextResponse.json({ clientSecret: session.client_secret });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${event.title} — ${priceLabel} Ticket`,
-              description: `${event.date ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''} · ${event.location || ''}`,
-            },
-            unit_amount: priceCents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}`,
       cancel_url: `${SITE_URL}/portal/events?ticket=cancelled`,
-      metadata: {
-        type: 'event_ticket',
-        eventId,
-        memberId: uid || '',
-        ticketType: priceLabel.toLowerCase(),
-        tierId: resolvedTierId || '',
-        amountCents: String(priceCents),
-        eventTitle: event.title,
-      },
+      metadata,
     });
 
     return NextResponse.json({ url: session.url });

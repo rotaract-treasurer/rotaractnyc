@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -17,7 +18,7 @@ interface EventCheckoutModalProps {
   ticketType: 'member' | 'guest';
   priceCents: number;
   paymentSettings: PaymentSettings;
-  onStripeCheckout: () => Promise<void>;
+  onStripeCheckout: () => Promise<{ clientSecret?: string; url?: string } | null | void>;
   onOfflinePayment: (method: string, proofUrl?: string) => Promise<void>;
   loading?: boolean;
 }
@@ -40,6 +41,11 @@ export default function EventCheckoutModal({
   const [processing, setProcessing] = useState(false);
   const [proofUrl, setProofUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
   const amount = formatCurrency(priceCents);
   const priceLabel = ticketType === 'member' ? 'Member' : 'Guest';
@@ -82,10 +88,106 @@ export default function EventCheckoutModal({
     },
   ];
 
+  useEffect(() => {
+    if (!open) {
+      setSelectedMethod(null);
+      setCheckoutClientSecret('');
+      setCheckoutUrl('');
+      setCheckoutError('');
+      return;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || selectedMethod !== 'stripe' || !checkoutClientSecret || !publishableKey) return;
+
+    let active = true;
+    let embeddedCheckout: { mount: (container: HTMLElement) => void; destroy: () => void } | null = null;
+
+    (async () => {
+      try {
+        setCheckoutError('');
+        const stripe = await loadStripe(publishableKey);
+        if (!stripe || !active) return;
+
+        const initEmbeddedCheckout = (stripe as any).initEmbeddedCheckout;
+        if (typeof initEmbeddedCheckout !== 'function') {
+          throw new Error('Embedded checkout is not available.');
+        }
+
+        embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
+          fetchClientSecret: async () => checkoutClientSecret,
+        });
+
+        if (!active || !embeddedCheckout) {
+          if (embeddedCheckout) embeddedCheckout.destroy();
+          return;
+        }
+
+        const container = document.getElementById('event-embedded-checkout');
+        if (!container) throw new Error('Embedded checkout container not found.');
+
+        embeddedCheckout.mount(container);
+      } catch {
+        if (!active) return;
+        setCheckoutError('Unable to load in-page card form. You can still use secure popup checkout.');
+      }
+    })();
+
+    return () => {
+      active = false;
+      if (embeddedCheckout) embeddedCheckout.destroy();
+    };
+  }, [open, selectedMethod, checkoutClientSecret, publishableKey]);
+
+  const openStripePopup = (url: string) => {
+    const width = 520;
+    const height = 760;
+    const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+    const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
+    const left = Math.max(0, dualScreenLeft + (viewportWidth - width) / 2);
+    const top = Math.max(0, dualScreenTop + (viewportHeight - height) / 2);
+
+    const popup = window.open(
+      url,
+      'rotaract-event-checkout',
+      `popup=yes,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`
+    );
+
+    if (popup) {
+      popup.focus();
+      onClose();
+      return;
+    }
+
+    window.location.href = url;
+  };
+
   const handleStripeCheckout = async () => {
     setProcessing(true);
     try {
-      await onStripeCheckout();
+      setCheckoutError('');
+      const result = await onStripeCheckout();
+      if (!result) {
+        setCheckoutError('Unable to start checkout. Please try again.');
+        return;
+      }
+
+      if (result.clientSecret && publishableKey) {
+        setCheckoutClientSecret(result.clientSecret);
+        if (result.url) setCheckoutUrl(result.url);
+        return;
+      }
+
+      if (result.url) {
+        setCheckoutUrl(result.url);
+        openStripePopup(result.url);
+        return;
+      }
+
+      setCheckoutError('Checkout session could not be created. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -217,6 +319,41 @@ export default function EventCheckoutModal({
           </Card>
         )}
 
+        {selectedMethod === 'stripe' && (
+          <Card padding="md" className="bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Pay securely without leaving this page.
+            </div>
+
+            {checkoutError && (
+              <p role="alert" aria-live="assertive" className="text-sm text-red-600 dark:text-red-400">
+                {checkoutError}
+              </p>
+            )}
+
+            {!publishableKey && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                In-page checkout key is not configured. We&apos;ll open secure popup checkout instead.
+              </p>
+            )}
+
+            {checkoutClientSecret && publishableKey && (
+              <div
+                id="event-embedded-checkout"
+                className="min-h-[520px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+              />
+            )}
+
+            {checkoutUrl && (
+              <div className="pt-1">
+                <Button variant="outline" size="sm" onClick={() => openStripePopup(checkoutUrl)}>
+                  Open secure popup checkout instead
+                </Button>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Action buttons */}
         <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
           {selectedMethod === 'stripe' ? (
@@ -226,7 +363,7 @@ export default function EventCheckoutModal({
                 loading={processing || loading}
                 className="flex-1"
               >
-                Pay with Card
+                {checkoutClientSecret && publishableKey ? 'Refresh Card Checkout' : 'Pay with Card'}
               </Button>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </>
