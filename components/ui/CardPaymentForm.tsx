@@ -52,12 +52,7 @@ export default function CardPaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <PaymentElement
-        options={{
-          layout: 'tabs',
-          fields: { billingDetails: { email: 'never' } },
-        }}
-      />
+      <PaymentElement options={{ layout: 'tabs' }} />
 
       {error && (
         <p role="alert" aria-live="assertive" className="text-sm text-red-600 dark:text-red-400">
