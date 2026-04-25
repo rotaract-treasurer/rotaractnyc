@@ -165,6 +165,99 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
   }
 }
 
+export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
+  // Idempotency: reuse the same stripeSessionId field, keyed by payment intent ID
+  if (await isAlreadyProcessed(pi.id)) {
+    console.log('PaymentIntent already processed:', pi.id);
+    return;
+  }
+
+  if (!pi.metadata) {
+    console.error('Missing metadata on payment intent:', pi.id);
+    return;
+  }
+
+  const { type, memberId, eventId, ticketType, tierId } = pi.metadata;
+  const amountCents = pi.amount;
+  const email = pi.receipt_email ?? undefined;
+
+  if ((type === 'event' || type === 'event_ticket') && eventId && memberId) {
+    await upsertRSVP({
+      eventId,
+      memberId,
+      memberName: email || 'Member',
+      status: 'going',
+      tierId: tierId || undefined,
+    });
+
+    if (tierId) await incrementTierSoldCount(eventId, tierId);
+
+    await createTransaction({
+      type: 'income',
+      category: 'Events',
+      amount: amountCents / 100,
+      description: `Event ticket — ${ticketType || 'member'}`,
+      date: new Date().toISOString(),
+      createdBy: 'stripe',
+      createdAt: new Date().toISOString(),
+      paymentMethod: 'stripe',
+      relatedMemberId: memberId,
+      stripeSessionId: pi.id,
+    });
+  }
+
+  if (type === 'guest_event_ticket' && eventId) {
+    const { guestName, guestEmail, guestPhone } = pi.metadata;
+    const normalizedEmail = (guestEmail || '').toLowerCase();
+
+    const existingSnap = await adminDb
+      .collection('guest_rsvps')
+      .where('eventId', '==', eventId)
+      .where('email', '==', normalizedEmail)
+      .limit(1)
+      .get();
+
+    if (existingSnap.empty) {
+      await adminDb.collection('guest_rsvps').add({
+        eventId,
+        name: guestName || 'Guest',
+        email: normalizedEmail,
+        phone: guestPhone || null,
+        status: 'going',
+        ticketType: 'guest',
+        tierId: tierId || null,
+        paidAmount: amountCents,
+        paymentStatus: 'paid',
+        stripeSessionId: pi.id,
+        createdAt: new Date().toISOString(),
+      });
+    } else {
+      await adminDb.collection('guest_rsvps').doc(existingSnap.docs[0].id).update({
+        status: 'going',
+        tierId: tierId || null,
+        paidAmount: amountCents,
+        paymentStatus: 'paid',
+        stripeSessionId: pi.id,
+      });
+    }
+
+    if (tierId) await incrementTierSoldCount(eventId, tierId);
+
+    await createTransaction({
+      type: 'income',
+      category: 'Events',
+      amount: amountCents / 100,
+      description: `Guest event ticket — ${guestName || 'Guest'}`,
+      date: new Date().toISOString(),
+      createdBy: 'stripe',
+      createdAt: new Date().toISOString(),
+      paymentMethod: 'stripe',
+      stripeSessionId: pi.id,
+      email: guestEmail || undefined,
+    });
+  }
+}
+
 export async function handlePaymentFailed(intent: Stripe.PaymentIntent): Promise<void> {
   console.error('Payment failed:', intent.id, intent.last_payment_error?.message);
   // Could send notification email here
@@ -189,11 +282,13 @@ export async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
     case 'checkout.session.expired':
       await handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
       break;
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+      break;
     case 'payment_intent.payment_failed':
       await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
       break;
     default:
-      // Unhandled event type
       break;
   }
 }

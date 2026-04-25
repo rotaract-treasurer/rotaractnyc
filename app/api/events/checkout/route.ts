@@ -194,16 +194,13 @@ export async function POST(request: NextRequest) {
     };
 
     if (embedded) {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        ui_mode: 'embedded',
-        customer_email: email,
-        line_items: lineItems,
-        redirect_on_completion: 'never',
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: priceCents,
+        currency: 'usd',
+        receipt_email: email,
         metadata,
       });
-
-      return NextResponse.json({ clientSecret: session.client_secret });
+      return NextResponse.json({ clientSecret: paymentIntent.client_secret });
     }
 
     const session = await stripe.checkout.sessions.create({

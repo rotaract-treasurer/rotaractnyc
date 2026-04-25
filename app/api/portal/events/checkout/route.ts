@@ -220,27 +220,23 @@ export async function POST(request: NextRequest) {
     };
 
     if (embedded) {
-      let customerEmail: string | undefined;
+      let receiptEmail: string | undefined;
       if (uid) {
         try {
           const userRecord = await adminAuth.getUser(uid);
-          customerEmail = userRecord.email ?? undefined;
+          receiptEmail = userRecord.email ?? undefined;
         } catch {
-          // proceed without email — not required by Stripe
+          // proceed without email
         }
       }
 
-      // redirect_on_completion: 'never' keeps the browser on-page; return_url must be omitted.
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        ui_mode: 'embedded',
-        line_items: lineItems,
-        redirect_on_completion: 'never',
-        ...(customerEmail ? { customer_email: customerEmail } : {}),
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: priceCents,
+        currency: 'usd',
+        ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         metadata,
       });
-
-      return NextResponse.json({ clientSecret: session.client_secret });
+      return NextResponse.json({ clientSecret: paymentIntent.client_secret });
     }
 
     const session = await stripe.checkout.sessions.create({
