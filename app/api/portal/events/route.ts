@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import type { RecurrenceRule, RecurrenceFrequency } from '@/types';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 
@@ -255,6 +256,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Refresh public pages so newly published/public events appear right away.
+    if (eventData.isPublic && eventData.status === 'published') {
+      revalidatePath('/');
+      revalidatePath('/events');
+      for (const ev of createdEvents) {
+        if (ev.slug) revalidatePath(`/events/${ev.slug}`);
+      }
+    }
+
     return NextResponse.json(
       { id: parentId, ...eventData, totalOccurrences: createdEvents.length },
       { status: 201 },
@@ -289,6 +299,7 @@ export async function PATCH(request: NextRequest) {
     if (!doc.exists) {
       return NextResponse.json({ error: 'Event not found.' }, { status: 404 });
     }
+    const previous = doc.data() || {};
 
     // If slug is being changed, ensure uniqueness
     if (updates.slug && updates.slug !== doc.data()?.slug) {
@@ -308,6 +319,13 @@ export async function PATCH(request: NextRequest) {
     });
 
     const updated = await docRef.get();
+
+    // Refresh listing + old/new detail routes after edits.
+    revalidatePath('/');
+    revalidatePath('/events');
+    if (previous.slug) revalidatePath(`/events/${previous.slug}`);
+    if (updated.data()?.slug) revalidatePath(`/events/${updated.data()?.slug}`);
+
     return NextResponse.json(serializeDoc({ id: updated.id, ...updated.data() }));
   } catch (err: any) {
     console.error('Update event error:', err);
@@ -353,12 +371,17 @@ export async function DELETE(request: NextRequest) {
 
     // If this is a parent recurring event, delete all child occurrences too
     const eventData = doc.data();
+    const slugsToRevalidate = new Set<string>();
+    if (eventData?.slug) slugsToRevalidate.add(eventData.slug);
+
     if (eventData?.isRecurring && !eventData?.recurrenceParentId) {
       const childSnap = await adminDb
         .collection('events')
         .where('recurrenceParentId', '==', id)
         .get();
       for (const child of childSnap.docs) {
+        const childData = child.data();
+        if (childData?.slug) slugsToRevalidate.add(childData.slug);
         batch.delete(child.ref);
         // Delete child RSVPs
         const childRsvps = await adminDb
@@ -370,6 +393,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     await batch.commit();
+
+    revalidatePath('/');
+    revalidatePath('/events');
+    for (const slug of slugsToRevalidate) {
+      revalidatePath(`/events/${slug}`);
+    }
 
     return NextResponse.json({ success: true, message: 'Event deleted.' });
   } catch (err: any) {
