@@ -396,7 +396,7 @@ export async function DELETE(request: NextRequest) {
 
     revalidatePath('/');
     revalidatePath('/events');
-    for (const slug of slugsToRevalidate) {
+    for (const slug of Array.from(slugsToRevalidate)) {
       revalidatePath(`/events/${slug}`);
     }
 
