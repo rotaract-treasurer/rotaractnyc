@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, type StripeEmbeddedCheckout } from '@stripe/stripe-js';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import Modal from '@/components/ui/Modal';
 import type { TicketTier } from '@/types';
@@ -67,7 +67,7 @@ export default function GuestRsvpForm({
     if (!showCheckoutModal || !checkoutClientSecret || !publishableKey) return;
 
     let active = true;
-    let embeddedCheckout: { mount: (container: HTMLElement) => void; destroy: () => void } | null = null;
+    let embeddedCheckout: StripeEmbeddedCheckout | null = null;
 
     (async () => {
       try {
@@ -75,12 +75,7 @@ export default function GuestRsvpForm({
         const stripe = await loadStripe(publishableKey);
         if (!stripe || !active) return;
 
-        const initEmbeddedCheckout = (stripe as any).initEmbeddedCheckout;
-        if (typeof initEmbeddedCheckout !== 'function') {
-          throw new Error('Embedded checkout is not available.');
-        }
-
-        embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
+        embeddedCheckout = await stripe.createEmbeddedCheckoutPage({
           fetchClientSecret: async () => checkoutClientSecret,
           onComplete: () => {
             if (!active) return;

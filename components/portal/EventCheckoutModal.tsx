@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, type StripeEmbeddedCheckout } from '@stripe/stripe-js';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -113,7 +113,7 @@ export default function EventCheckoutModal({
     if (!open || selectedMethod !== 'stripe' || !checkoutClientSecret || !publishableKey) return;
 
     let active = true;
-    let embeddedCheckout: { mount: (container: HTMLElement) => void; destroy: () => void } | null = null;
+    let embeddedCheckout: StripeEmbeddedCheckout | null = null;
 
     (async () => {
       try {
@@ -121,12 +121,7 @@ export default function EventCheckoutModal({
         const stripe = await loadStripe(publishableKey);
         if (!stripe || !active) return;
 
-        const initEmbeddedCheckout = (stripe as any).initEmbeddedCheckout;
-        if (typeof initEmbeddedCheckout !== 'function') {
-          throw new Error('Embedded checkout is not available.');
-        }
-
-        embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
+        embeddedCheckout = await stripe.createEmbeddedCheckoutPage({
           fetchClientSecret: async () => checkoutClientSecret,
           onComplete: () => {
             if (!active) return;
