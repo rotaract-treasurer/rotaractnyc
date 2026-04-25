@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 
 const STRIPE_CHECKOUT_PREFIX = 'https://checkout.stripe.com/';
 
@@ -20,6 +21,8 @@ export default function DonateForm() {
   const [error, setError] = useState('');
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState('');
 
   const sessionId = searchParams.get('session_id');
   const cancelled = searchParams.get('cancelled') === 'true';
@@ -50,6 +53,32 @@ export default function DonateForm() {
     }
   }, [verified, cancelled]);
 
+  const openCheckoutPopup = (url: string) => {
+    const width = 520;
+    const height = 760;
+    const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+    const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
+    const left = Math.max(0, dualScreenLeft + (viewportWidth - width) / 2);
+    const top = Math.max(0, dualScreenTop + (viewportHeight - height) / 2);
+
+    const popup = window.open(
+      url,
+      'rotaract-donation-checkout',
+      `popup=yes,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`
+    );
+
+    if (popup) {
+      popup.focus();
+      setShowCheckoutModal(false);
+      return;
+    }
+
+    // Fallback when popup blockers are enabled
+    window.location.href = url;
+  };
+
   const handleDonate = async () => {
     setError('');
     setLoading(true);
@@ -78,7 +107,8 @@ export default function DonateForm() {
 
       // Validate redirect URL is a legitimate Stripe checkout URL
       if (data.url && typeof data.url === 'string' && data.url.startsWith(STRIPE_CHECKOUT_PREFIX)) {
-        window.location.href = data.url;
+        setCheckoutUrl(data.url);
+        setShowCheckoutModal(true);
       } else {
         setError('Invalid checkout URL received. Please try again.');
       }
@@ -198,9 +228,44 @@ export default function DonateForm() {
         </Button>
 
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">
-          Secure payment powered by Stripe. You&apos;ll be redirected to complete your donation.
+          Secure payment powered by Stripe. We&apos;ll keep you on the site and open checkout in a pop-up window.
         </p>
       </div>
+
+      <Modal
+        open={showCheckoutModal}
+        onClose={() => {
+          setShowCheckoutModal(false);
+          setCheckoutUrl('');
+        }}
+        title="Secure checkout"
+        size="md"
+      >
+        <div className="space-y-4 text-left">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            You&apos;re still on our site. Click below to open Stripe checkout in a secure pop-up.
+          </p>
+
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              If your browser blocks pop-ups, we&apos;ll automatically continue on the full Stripe page.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <Button variant="outline" onClick={() => setShowCheckoutModal(false)}>
+              Not now
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => checkoutUrl && openCheckoutPopup(checkoutUrl)}
+              disabled={!checkoutUrl}
+            >
+              Open secure checkout
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

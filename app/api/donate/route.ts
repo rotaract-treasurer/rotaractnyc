@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { amount, customAmount } = await request.json();
+    const { amount, customAmount, embedded } = await request.json();
+    const useEmbeddedCheckout = embedded === true;
 
     let cents: number;
     let description: string;
@@ -42,28 +43,44 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
 
+    const lineItems = [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Donation to Rotaract NYC',
+            description,
+          },
+          unit_amount: cents,
+        },
+        quantity: 1,
+      },
+    ];
+
+    const metadata = {
+      type: 'donation',
+      amountCents: String(cents),
+    };
+
+    if (useEmbeddedCheckout) {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        ui_mode: 'embedded',
+        line_items: lineItems,
+        return_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
+        metadata,
+      });
+
+      return NextResponse.json({ clientSecret: session.client_secret });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Donation to Rotaract NYC',
-              description,
-            },
-            unit_amount: cents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/donate?cancelled=true`,
-      metadata: {
-        type: 'donation',
-        amountCents: String(cents),
-      },
+      metadata,
     });
 
     return NextResponse.json({ url: session.url });
