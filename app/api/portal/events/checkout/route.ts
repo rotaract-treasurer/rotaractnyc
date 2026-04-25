@@ -224,7 +224,6 @@ export async function POST(request: NextRequest) {
         mode: 'payment',
         ui_mode: 'embedded',
         line_items: lineItems,
-        return_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}&session_id={CHECKOUT_SESSION_ID}`,
         redirect_on_completion: 'never',
         metadata,
       });

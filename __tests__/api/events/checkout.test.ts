@@ -109,7 +109,6 @@ describe('POST /api/events/checkout', () => {
         mode: 'payment',
         ui_mode: 'embedded',
         redirect_on_completion: 'never',
-        return_url: 'https://rotaractnyc.org/events/benefit-night?rsvp=success&session_id={CHECKOUT_SESSION_ID}',
       }),
     );
   });
