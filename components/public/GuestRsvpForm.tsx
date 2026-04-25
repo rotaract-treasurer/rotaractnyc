@@ -3,8 +3,12 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import Modal from '@/components/ui/Modal';
 import type { TicketTier } from '@/types';
+
+const STRIPE_CHECKOUT_PREFIX = 'https://checkout.stripe.com/';
 
 interface GuestRsvpFormProps {
   eventId: string;
@@ -36,6 +40,12 @@ export default function GuestRsvpForm({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
   // Handle return from Stripe checkout
   useEffect(() => {
@@ -43,6 +53,72 @@ export default function GuestRsvpForm({
       setSuccess(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!showCheckoutModal || !checkoutClientSecret || !publishableKey) return;
+
+    let active = true;
+    let embeddedCheckout: { mount: (container: HTMLElement) => void; destroy: () => void } | null = null;
+
+    (async () => {
+      try {
+        setCheckoutError('');
+        const stripe = await loadStripe(publishableKey);
+        if (!stripe || !active) return;
+
+        const initEmbeddedCheckout = (stripe as any).initEmbeddedCheckout;
+        if (typeof initEmbeddedCheckout !== 'function') {
+          throw new Error('Embedded checkout is not available.');
+        }
+
+        embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
+          fetchClientSecret: async () => checkoutClientSecret,
+        });
+
+        if (!active || !embeddedCheckout) {
+          if (embeddedCheckout) embeddedCheckout.destroy();
+          return;
+        }
+
+        const container = document.getElementById('public-event-embedded-checkout');
+        if (!container) throw new Error('Embedded checkout container not found.');
+
+        embeddedCheckout.mount(container);
+      } catch {
+        if (!active) return;
+        setCheckoutError('Unable to load in-page card form. You can still use secure popup checkout.');
+      }
+    })();
+
+    return () => {
+      active = false;
+      if (embeddedCheckout) embeddedCheckout.destroy();
+    };
+  }, [showCheckoutModal, checkoutClientSecret, publishableKey]);
+
+  const openCheckoutPopup = (url: string) => {
+    const width = 520;
+    const height = 760;
+    const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+    const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
+    const left = Math.max(0, dualScreenLeft + (viewportWidth - width) / 2);
+    const top = Math.max(0, dualScreenTop + (viewportHeight - height) / 2);
+
+    const popup = window.open(
+      url,
+      'rotaract-public-event-checkout',
+      `popup=yes,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`
+    );
+
+    if (popup) {
+      popup.focus();
+      return;
+    }
+
+    window.location.href = url;
+  };
 
   const hasTierPricing = tiers && tiers.length > 0;
   const now = new Date();
@@ -89,11 +165,14 @@ export default function GuestRsvpForm({
       }
 
       if (data.requiresPayment) {
-        // Redirect to Stripe checkout
+        // Start Stripe checkout
         const checkoutRes = await fetch('/api/events/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            ...body,
+            embedded: Boolean(publishableKey),
+          }),
         });
 
         const checkoutData = await checkoutRes.json();
@@ -102,9 +181,18 @@ export default function GuestRsvpForm({
           throw new Error(checkoutData.error || 'Payment setup failed. Please try again.');
         }
 
-        if (checkoutData.url) {
-          window.location.href = checkoutData.url;
+        if (checkoutData.clientSecret && typeof checkoutData.clientSecret === 'string' && publishableKey) {
+          setCheckoutClientSecret(checkoutData.clientSecret);
+          setCheckoutUrl('');
+          setShowCheckoutModal(true);
           return; // keep loading state while redirecting
+        }
+
+        if (checkoutData.url && typeof checkoutData.url === 'string' && checkoutData.url.startsWith(STRIPE_CHECKOUT_PREFIX)) {
+          setCheckoutUrl(checkoutData.url);
+          setCheckoutClientSecret('');
+          setShowCheckoutModal(true);
+          return;
         }
 
         if (checkoutData.free) {
@@ -318,6 +406,62 @@ export default function GuestRsvpForm({
           </Link>
         </p>
       </div>
+
+      <Modal
+        open={showCheckoutModal}
+        onClose={() => {
+          setShowCheckoutModal(false);
+          setCheckoutClientSecret('');
+          setCheckoutUrl('');
+          setCheckoutError('');
+        }}
+        title="Complete payment"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Complete your secure card payment below without leaving this page.
+          </p>
+
+          {checkoutError && (
+            <p role="alert" aria-live="assertive" className="text-sm text-red-600 dark:text-red-400">
+              {checkoutError}
+            </p>
+          )}
+
+          {!publishableKey && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              In-page checkout key is missing. Use secure popup checkout below.
+            </p>
+          )}
+
+          {checkoutClientSecret && publishableKey && (
+            <div
+              id="public-event-embedded-checkout"
+              className="min-h-[520px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+            />
+          )}
+
+          {checkoutUrl && (
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCheckoutModal(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => openCheckoutPopup(checkoutUrl)}
+                className="rounded-lg bg-cranberry px-4 py-2 text-sm font-semibold text-white hover:bg-cranberry-800"
+              >
+                Open secure checkout
+              </button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

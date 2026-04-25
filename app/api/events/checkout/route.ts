@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { eventId, name, email, phone, tierId } = await request.json();
+    const { eventId, name, email, phone, tierId, embedded = false } = await request.json();
 
     // Validate required inputs
     if (!eventId || !name || !email) {
@@ -169,34 +169,51 @@ export async function POST(request: NextRequest) {
     // Create Stripe checkout session for paid event
     const stripe = getStripe();
 
+    const lineItems = [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${event.title} — ${tierLabel} Ticket`,
+          },
+          unit_amount: priceCents,
+        },
+        quantity: 1,
+      },
+    ];
+
+    const metadata = {
+      type: 'guest_event_ticket',
+      eventId,
+      guestName: name,
+      guestEmail: email,
+      guestPhone: phone || '',
+      ticketType: 'guest',
+      tierId: resolvedTierId || '',
+      amountCents: String(priceCents),
+    };
+
+    if (embedded) {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        ui_mode: 'embedded',
+        customer_email: email,
+        line_items: lineItems,
+        return_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=success`,
+        metadata,
+      });
+
+      return NextResponse.json({ clientSecret: session.client_secret });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${event.title} — ${tierLabel} Ticket`,
-            },
-            unit_amount: priceCents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=success`,
       cancel_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=cancelled`,
-      metadata: {
-        type: 'guest_event_ticket',
-        eventId,
-        guestName: name,
-        guestEmail: email,
-        guestPhone: phone || '',
-        ticketType: 'guest',
-        tierId: resolvedTierId || '',
-        amountCents: String(priceCents),
-      },
+      metadata,
     });
 
     return NextResponse.json({ url: session.url });
