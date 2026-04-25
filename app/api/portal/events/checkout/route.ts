@@ -224,7 +224,8 @@ export async function POST(request: NextRequest) {
         mode: 'payment',
         ui_mode: 'embedded',
         line_items: lineItems,
-        return_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}`,
+        return_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}&session_id={CHECKOUT_SESSION_ID}`,
+        redirect_on_completion: 'if_required',
         metadata,
       });
 
@@ -235,7 +236,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       mode: 'payment',
       line_items: lineItems,
-      success_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}`,
+      success_url: `${SITE_URL}/portal/events?ticket=success&event=${eventId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/portal/events?ticket=cancelled`,
       metadata,
     });

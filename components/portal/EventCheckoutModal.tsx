@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -18,8 +18,9 @@ interface EventCheckoutModalProps {
   ticketType: 'member' | 'guest';
   priceCents: number;
   paymentSettings: PaymentSettings;
-  onStripeCheckout: () => Promise<{ clientSecret?: string; url?: string } | null | void>;
+  onStripeCheckout: (embedded?: boolean) => Promise<{ clientSecret?: string; url?: string } | null | void>;
   onOfflinePayment: (method: string, proofUrl?: string) => Promise<void>;
+  onCheckoutComplete?: () => void;
   loading?: boolean;
 }
 
@@ -35,6 +36,7 @@ export default function EventCheckoutModal({
   paymentSettings,
   onStripeCheckout,
   onOfflinePayment,
+  onCheckoutComplete,
   loading,
 }: EventCheckoutModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
@@ -46,9 +48,18 @@ export default function EventCheckoutModal({
   const [checkoutError, setCheckoutError] = useState('');
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+  const onStripeCheckoutRef = useRef(onStripeCheckout);
+  const onCheckoutCompleteRef = useRef(onCheckoutComplete);
+  const onCloseRef = useRef(onClose);
 
   const amount = formatCurrency(priceCents);
   const priceLabel = ticketType === 'member' ? 'Member' : 'Guest';
+
+  useEffect(() => {
+    onStripeCheckoutRef.current = onStripeCheckout;
+    onCheckoutCompleteRef.current = onCheckoutComplete;
+    onCloseRef.current = onClose;
+  }, [onStripeCheckout, onCheckoutComplete, onClose]);
 
   const availableMethods: {
     id: PaymentMethod;
@@ -117,6 +128,18 @@ export default function EventCheckoutModal({
 
         embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
           fetchClientSecret: async () => checkoutClientSecret,
+          onComplete: () => {
+            if (!active) return;
+            setCheckoutClientSecret('');
+            setCheckoutUrl('');
+            setCheckoutError('');
+
+            if (onCheckoutCompleteRef.current) {
+              onCheckoutCompleteRef.current();
+            } else {
+              onCloseRef.current();
+            }
+          },
         });
 
         if (!active || !embeddedCheckout) {
@@ -130,7 +153,23 @@ export default function EventCheckoutModal({
         embeddedCheckout.mount(container);
       } catch {
         if (!active) return;
-        setCheckoutError('Unable to load in-page card form. You can still use secure popup checkout.');
+        setCheckoutError('Unable to load in-page card form. Preparing secure popup checkout instead.');
+
+        try {
+          const fallback = await onStripeCheckoutRef.current(false);
+          if (!active) return;
+
+          if (fallback?.url) {
+            setCheckoutClientSecret('');
+            setCheckoutUrl(fallback.url);
+            setCheckoutError('In-page checkout is unavailable. Use the secure checkout button below.');
+            return;
+          }
+        } catch {
+          // Keep the user-facing error below.
+        }
+
+        setCheckoutError('Unable to start secure checkout. Please try again.');
       }
     })();
 
@@ -169,7 +208,7 @@ export default function EventCheckoutModal({
     setProcessing(true);
     try {
       setCheckoutError('');
-      const result = await onStripeCheckout();
+      const result = await onStripeCheckout(Boolean(publishableKey));
       if (!result) {
         setCheckoutError('Unable to start checkout. Please try again.');
         return;

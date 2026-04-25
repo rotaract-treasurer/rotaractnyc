@@ -99,13 +99,13 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // 'wasm-unsafe-eval' allows @react-pdf/renderer to compile its WASM module
-              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://js.stripe.com https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
-              "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://images.squarespace-cdn.com https://*.googleusercontent.com",
+              "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://images.squarespace-cdn.com https://*.googleusercontent.com https://*.stripe.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               // data: and blob: allow @react-pdf/renderer to load its WASM binary and generate PDF blobs
-              "connect-src 'self' data: blob: https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://va.vercel-scripts.com wss://*.firebaseio.com",
-              "frame-src 'self' https://js.stripe.com https://accounts.google.com https://rotaractnyc-ac453.firebaseapp.com https://*.firebaseapp.com",
+              "connect-src 'self' data: blob: https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://checkout.stripe.com https://va.vercel-scripts.com wss://*.firebaseio.com",
+              "frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://accounts.google.com https://rotaractnyc-ac453.firebaseapp.com https://*.firebaseapp.com",
               // blob: needed for PDF download links
               "worker-src 'self' blob:",
               "object-src 'none'",

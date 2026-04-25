@@ -82,6 +82,15 @@ export default function GuestRsvpForm({
 
         embeddedCheckout = await initEmbeddedCheckout.call(stripe, {
           fetchClientSecret: async () => checkoutClientSecret,
+          onComplete: () => {
+            if (!active) return;
+            setShowCheckoutModal(false);
+            setCheckoutClientSecret('');
+            setCheckoutUrl('');
+            setCheckoutError('');
+            setPendingCheckoutPayload(null);
+            setSuccess(true);
+          },
         });
 
         if (!active || !embeddedCheckout) {
@@ -95,7 +104,7 @@ export default function GuestRsvpForm({
         embeddedCheckout.mount(container);
       } catch {
         if (!active) return;
-        setCheckoutError('Unable to load in-page card form. Switching to secure popup checkout…');
+        setCheckoutError('Unable to load in-page card form. Preparing secure popup checkout instead.');
 
         if (pendingCheckoutPayload) {
           fetch('/api/events/checkout', {
@@ -113,8 +122,9 @@ export default function GuestRsvpForm({
             })
             .then((data) => {
               if (data.url && typeof data.url === 'string' && data.url.startsWith(STRIPE_CHECKOUT_PREFIX)) {
+                setCheckoutClientSecret('');
                 setCheckoutUrl(data.url);
-                openCheckoutPopup(data.url);
+                setCheckoutError('In-page checkout is unavailable. Use the secure checkout button below.');
               } else {
                 setCheckoutError('Unable to create popup checkout. Please try again.');
               }

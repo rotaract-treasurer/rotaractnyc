@@ -52,6 +52,7 @@ export default function PortalEventDetailPage() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateEvent, setDuplicateEvent] = useState<RotaractEvent | null>(null);
   const [checkoutTicketType, setCheckoutTicketType] = useState<'member' | 'guest'>('member');
+  const [checkoutTierId, setCheckoutTierId] = useState<string | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [checkoutPriceCents, setCheckoutPriceCents] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -131,6 +132,7 @@ export default function PortalEventDetailPage() {
         }
       } else {
         setCheckoutTicketType(ticketType);
+        setCheckoutTierId(tier.id);
         setCheckoutPriceCents(priceCents);
         setShowCheckoutModal(true);
       }
@@ -165,17 +167,19 @@ export default function PortalEventDetailPage() {
     } else {
       // Show payment modal
       setCheckoutTicketType(ticketType);
+      setCheckoutTierId(null);
       setCheckoutPriceCents(priceCents);
       setShowCheckoutModal(true);
     }
   };
 
-  const handleStripeCheckout = async () => {
+  const handleStripeCheckout = async (embedded?: boolean) => {
     try {
-      const canUseEmbeddedCheckout = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+      const canUseEmbeddedCheckout = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) && embedded !== false;
       const res = await apiPost('/api/portal/events/checkout', {
         eventId: id,
         ticketType: checkoutTicketType,
+        ...(checkoutTierId ? { tierId: checkoutTierId } : {}),
         paymentMethod: 'stripe',
         embedded: canUseEmbeddedCheckout,
       });
@@ -186,11 +190,18 @@ export default function PortalEventDetailPage() {
     }
   };
 
+  const handleCheckoutComplete = () => {
+    setShowCheckoutModal(false);
+    setCurrentRSVP('going');
+    toast("Payment complete! You're in.");
+  };
+
   const handleOfflinePayment = async (method: string, proofUrl?: string) => {
     try {
       await apiPost('/api/portal/events/checkout', {
         eventId: id,
         ticketType: checkoutTicketType,
+        ...(checkoutTierId ? { tierId: checkoutTierId } : {}),
         paymentMethod: method,
         proofUrl,
       });
@@ -579,6 +590,7 @@ export default function PortalEventDetailPage() {
           paymentSettings={paymentSettings}
           onStripeCheckout={handleStripeCheckout}
           onOfflinePayment={handleOfflinePayment}
+          onCheckoutComplete={handleCheckoutComplete}
         />
       )}
 
