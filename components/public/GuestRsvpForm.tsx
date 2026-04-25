@@ -21,6 +21,14 @@ interface GuestRsvpFormProps {
   tiers?: TicketTier[]; // tier-based pricing
 }
 
+interface GuestCheckoutPayload {
+  eventId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  tierId?: string;
+}
+
 export default function GuestRsvpForm({
   eventId,
   eventSlug,
@@ -44,6 +52,7 @@ export default function GuestRsvpForm({
   const [checkoutClientSecret, setCheckoutClientSecret] = useState('');
   const [checkoutUrl, setCheckoutUrl] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  const [pendingCheckoutPayload, setPendingCheckoutPayload] = useState<GuestCheckoutPayload | null>(null);
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
@@ -86,7 +95,34 @@ export default function GuestRsvpForm({
         embeddedCheckout.mount(container);
       } catch {
         if (!active) return;
-        setCheckoutError('Unable to load in-page card form. You can still use secure popup checkout.');
+        setCheckoutError('Unable to load in-page card form. Switching to secure popup checkout…');
+
+        if (pendingCheckoutPayload) {
+          fetch('/api/events/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...pendingCheckoutPayload,
+              embedded: false,
+            }),
+          })
+            .then(async (res) => {
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Unable to start popup checkout.');
+              return data;
+            })
+            .then((data) => {
+              if (data.url && typeof data.url === 'string' && data.url.startsWith(STRIPE_CHECKOUT_PREFIX)) {
+                setCheckoutUrl(data.url);
+                openCheckoutPopup(data.url);
+              } else {
+                setCheckoutError('Unable to create popup checkout. Please try again.');
+              }
+            })
+            .catch(() => {
+              setCheckoutError('Unable to start popup checkout. Please try again.');
+            });
+        }
       }
     })();
 
@@ -94,7 +130,7 @@ export default function GuestRsvpForm({
       active = false;
       if (embeddedCheckout) embeddedCheckout.destroy();
     };
-  }, [showCheckoutModal, checkoutClientSecret, publishableKey]);
+  }, [showCheckoutModal, checkoutClientSecret, publishableKey, pendingCheckoutPayload]);
 
   const openCheckoutPopup = (url: string) => {
     const width = 520;
@@ -151,6 +187,7 @@ export default function GuestRsvpForm({
 
     try {
       const body = { eventId, name, email, phone: phone || undefined, tierId: selectedTierId || undefined };
+      setPendingCheckoutPayload(body);
 
       const res = await fetch('/api/events/rsvp', {
         method: 'POST',
@@ -414,6 +451,7 @@ export default function GuestRsvpForm({
           setCheckoutClientSecret('');
           setCheckoutUrl('');
           setCheckoutError('');
+          setPendingCheckoutPayload(null);
         }}
         title="Complete payment"
         size="xl"
