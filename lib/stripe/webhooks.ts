@@ -116,6 +116,8 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       paymentMethod: 'stripe',
       relatedMemberId: memberId,
       stripeSessionId: session.id,
+      eventId,
+      quantity,
     });
 
     // Send confirmation email to member
@@ -184,6 +186,8 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       paymentMethod: 'stripe',
       stripeSessionId: session.id,
       email: guestEmail || undefined,
+      eventId,
+      quantity,
     });
 
     await sendTicketConfirmationEmail(
@@ -251,6 +255,8 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       paymentMethod: 'stripe',
       relatedMemberId: memberId,
       stripeSessionId: pi.id,
+      eventId,
+      quantity,
     });
 
     // Send confirmation email to member
@@ -319,6 +325,8 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       paymentMethod: 'stripe',
       stripeSessionId: pi.id,
       email: guestEmail || undefined,
+      eventId,
+      quantity,
     });
 
     await sendTicketConfirmationEmail(

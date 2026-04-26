@@ -57,6 +57,12 @@ export default function PortalEventDetailPage() {
   const [checkoutPriceCents, setCheckoutPriceCents] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [guestRsvps, setGuestRsvps] = useState<Array<{ id: string; name: string; email: string; phone?: string; status: string; paymentStatus?: string; createdAt: string }>>([]);
+  const [purchasers, setPurchasers] = useState<Array<{
+    id: string; kind: 'guest' | 'member'; name: string; email: string;
+    phone?: string | null; status: string; paymentStatus: string;
+    quantity: number; amountCents: number; tierId: string | null; createdAt: string;
+  }>>([]);
+  const [purchaserSummary, setPurchaserSummary] = useState<{ totalRevenueCents: number; totalRevenue: number; guestCount: number; memberCount: number; totalTickets: number } | null>(null);
   const { data: rsvps } = useRsvps(id);
 
   const canManageEvents = member && ['board', 'president', 'treasurer'].includes(member.role);
@@ -96,7 +102,15 @@ export default function PortalEventDetailPage() {
 
   useEffect(() => {
     if (canManageEvents && id) {
-      apiGet(`/api/events/${id}/guest-rsvps`).then(setGuestRsvps).catch(() => {});
+      apiGet(`/api/events/${id}/guest-rsvps`).then(setGuestRsvps).catch((err) => {
+        console.error('Failed to load guest RSVPs:', err);
+      });
+      apiGet(`/api/portal/events/${id}/purchasers`).then((data) => {
+        if (data?.purchasers) setPurchasers(data.purchasers);
+        if (data?.summary) setPurchaserSummary(data.summary);
+      }).catch((err) => {
+        console.error('Failed to load purchasers:', err);
+      });
     }
   }, [canManageEvents, id]);
 
@@ -532,28 +546,81 @@ export default function PortalEventDetailPage() {
             </div>
           )}
 
-          {/* Guest Registrations - admin only */}
-          {canManageEvents && guestRsvps.length > 0 && (
+          {/* Ticket Purchasers — admin only */}
+          {canManageEvents && (purchasers.length > 0 || purchaserSummary) && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
-              <h3 className="font-display font-semibold text-gray-900 dark:text-white mb-4 text-lg">
-                Guest Registrations <span className="text-gray-400 dark:text-gray-500 font-normal text-base">({guestRsvps.filter(g => g.status === 'going').length})</span>
-              </h3>
+              <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+                <h3 className="font-display font-semibold text-gray-900 dark:text-white text-lg">
+                  Ticket Purchasers
+                  {purchaserSummary && (
+                    <span className="text-gray-400 dark:text-gray-500 font-normal text-base ml-2">
+                      ({purchaserSummary.totalTickets} ticket{purchaserSummary.totalTickets !== 1 ? 's' : ''})
+                    </span>
+                  )}
+                </h3>
+                {purchaserSummary && purchaserSummary.totalRevenueCents > 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Revenue</p>
+                      <p className="text-2xl font-display font-bold text-cranberry">
+                        {formatCurrency(purchaserSummary.totalRevenueCents)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {purchaserSummary && (
+                <div className="grid grid-cols-3 gap-3 mb-5">
+                  <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Members</p>
+                    <p className="text-xl font-display font-bold text-gray-900 dark:text-white">{purchaserSummary.memberCount}</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Guests</p>
+                    <p className="text-xl font-display font-bold text-gray-900 dark:text-white">{purchaserSummary.guestCount}</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tickets</p>
+                    <p className="text-xl font-display font-bold text-gray-900 dark:text-white">{purchaserSummary.totalTickets}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                {guestRsvps.map((g) => (
-                  <div key={g.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{g.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{g.email}{g.phone ? ` · ${g.phone}` : ''}</p>
+                {purchasers.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                          p.kind === 'member'
+                            ? 'text-cranberry bg-cranberry-50 dark:bg-cranberry-900/20'
+                            : 'text-azure-700 bg-azure-50 dark:bg-azure-900/20'
+                        }`}>
+                          {p.kind}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{p.email}{p.phone ? ` · ${p.phone}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {g.paymentStatus === 'paid' && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">Paid</span>
+                      {p.quantity > 1 && (
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                          ×{p.quantity}
+                        </span>
                       )}
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        g.status === 'going' 
-                          ? 'text-cranberry bg-cranberry-50 dark:bg-cranberry-900/20' 
-                          : 'text-gray-500 bg-gray-100 dark:bg-gray-700'
-                      }`}>{g.status}</span>
+                      {p.amountCents > 0 && (
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {formatCurrency(p.amountCents)}
+                        </span>
+                      )}
+                      {p.paymentStatus === 'paid' || (p.kind === 'member' && p.status === 'going') ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">Paid</span>
+                      ) : p.paymentStatus === 'free' ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">Free</span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">Pending</span>
+                      )}
                     </div>
                   </div>
                 ))}

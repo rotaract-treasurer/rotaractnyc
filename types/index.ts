@@ -127,6 +127,8 @@ export interface GuestRsvp {
   phone?: string;
   status: 'going' | 'waitlist';
   ticketType: 'guest';
+  tierId?: string;
+  quantity?: number;
   paidAmount?: number;           // in cents
   paymentStatus?: 'free' | 'paid' | 'pending';
   stripeSessionId?: string;
@@ -252,6 +254,8 @@ export interface Transaction {
   stripeSessionId?: string;
   email?: string;
   status?: string;
+  eventId?: string;
+  quantity?: number;
 }
 
 export interface FinanceSummary {

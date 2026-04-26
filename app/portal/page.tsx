@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/firebase/auth';
-import { usePosts, usePortalEvents, useServiceHours, apiPost } from '@/hooks/useFirestore';
+import { usePosts, usePortalEvents, useServiceHours, useMemberRsvps, apiPost } from '@/hooks/useFirestore';
 import { useDues } from '@/hooks/useDues';
 import { useToast } from '@/components/ui/Toast';
 import Button from '@/components/ui/Button';
@@ -61,6 +61,7 @@ export default function PortalDashboard() {
   const { data: posts, loading: postsLoading } = usePosts();
   const { data: events, loading: eventsLoading } = usePortalEvents();
   const { data: serviceHours } = useServiceHours(member?.id ?? null);
+  const { data: myRsvps } = useMemberRsvps(member?.id ?? null);
   const { status: duesStatus } = useDues();
   const { isMemberComplete, isAdminComplete, isActive: tutorialActive } = useTutorial();
   const [activeTab, setActiveTab] = useState('all');
@@ -114,7 +115,7 @@ export default function PortalDashboard() {
     .slice(0, 4);
 
   // Phase 2: onboarding / profile completion
-  const hasRsvp = false; // TODO: derive from RSVP subcollection when available
+  const hasRsvp = (myRsvps?.length ?? 0) > 0;
   const isNewMember = member
     ? (Date.now() - new Date(member.joinedAt).getTime()) < 30 * 24 * 60 * 60 * 1000
     : false;

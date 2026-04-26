@@ -227,6 +227,14 @@ export function useRsvps(eventId: string | null) {
   );
 }
 
+export function useMemberRsvps(memberId: string | null) {
+  return useCollection(
+    'rsvps',
+    memberId ? [where('memberId', '==', memberId), limit(1)] : [],
+    !!memberId,
+  );
+}
+
 // ─── API helpers (call server-side API routes) ───
 
 export async function apiPost<T = any>(url: string, body: Record<string, any>): Promise<T> {
