@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `${SITE.url}/events/${slug}`,
       type: 'website',
       siteName: SITE.name,
+      ...(event.imageURL ? { images: [{ url: event.imageURL, width: 1200, height: 630, alt: event.title }] } : {}),
     },
     alternates: { canonical: `${SITE.url}/events/${slug}` },
   };
@@ -77,23 +78,30 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
       />
       {/* Hero */}
-      <section className="relative py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800 text-white overflow-hidden">
-        {/* Event cover image background */}
-        {heroImage && (
-          <div className="absolute inset-0">
+      <section
+        className={`relative text-white overflow-hidden flex items-end ${
+          heroImage
+            ? 'min-h-[300px] sm:min-h-[420px]'
+            : 'py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800'
+        }`}
+      >
+        {heroImage ? (
+          <>
             <Image
               src={heroImage}
-              alt=""
+              alt={event.title}
               fill
               sizes="100vw"
-              className="object-cover opacity-20"
+              className="object-cover"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-cranberry-900/60 via-cranberry-900/80 to-cranberry-900/95" />
-          </div>
-        )}
-        <div className="container-page relative z-10">
-          <Link href="/events" className="inline-flex items-center gap-1 text-cranberry-200 hover:text-white text-sm mb-6 transition-colors">
+            {/* Gradient: dark at the bottom so text stays legible, lighter at top */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/5" />
+          </>
+        ) : null}
+
+        <div className="container-page relative z-10 py-10 sm:py-14">
+          <Link href="/events" className="inline-flex items-center gap-1 text-white/70 hover:text-white text-sm mb-6 transition-colors">
             <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             Back to Events
           </Link>
@@ -109,7 +117,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             )}
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold">{event.title}</h1>
-          
+
           {/* Action buttons: Calendar, Share, Directions */}
           <div className="mt-6">
             <PublicEventActions event={event} />
