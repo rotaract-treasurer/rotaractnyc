@@ -37,7 +37,7 @@ import { GET } from '@/app/api/portal/exports/route';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeRequest(type?: string) {
   const url = type

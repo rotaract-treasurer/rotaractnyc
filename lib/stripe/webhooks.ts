@@ -83,7 +83,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
     await createTransaction({
       type: 'income',
       category: 'Dues',
-      amount: (session.amount_total || 0) / 100,
+      amount: session.amount_total || 0,
       description: `Dues payment — ${memberType} (${resolvedCycleId})`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
@@ -108,7 +108,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
     await createTransaction({
       type: 'income',
       category: 'Events',
-      amount: (session.amount_total || 0) / 100,
+      amount: session.amount_total || 0,
       description: `Event ticket — ${ticketType || 'member'}`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
@@ -178,7 +178,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
     await createTransaction({
       type: 'income',
       category: 'Events',
-      amount: (session.amount_total || 0) / 100,
+      amount: session.amount_total || 0,
       description: `Guest event ticket — ${guestName || 'Guest'}`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
@@ -203,7 +203,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
     await createTransaction({
       type: 'income',
       category: 'Donations',
-      amount: (session.amount_total || 0) / 100,
+      amount: session.amount_total || 0,
       description: `Donation — $${((session.amount_total || 0) / 100).toFixed(2)}`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
@@ -247,7 +247,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
     await createTransaction({
       type: 'income',
       category: 'Events',
-      amount: amountCents / 100,
+      amount: amountCents,
       description: `Event ticket — ${ticketType || 'member'}`,
       date: new Date().toISOString(),
       createdBy: 'stripe',
@@ -317,7 +317,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
     await createTransaction({
       type: 'income',
       category: 'Events',
-      amount: amountCents / 100,
+      amount: amountCents,
       description: `Guest event ticket — ${guestName || 'Guest'}`,
       date: new Date().toISOString(),
       createdBy: 'stripe',

@@ -50,7 +50,7 @@ jest.mock('@/lib/services/tierTracking', () => ({
 import { POST } from '@/app/api/portal/events/checkout/route';
 import { cookies } from 'next/headers';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeRequest(body: Record<string, unknown>) {
   return new Request('http://localhost/api/portal/events/checkout', {

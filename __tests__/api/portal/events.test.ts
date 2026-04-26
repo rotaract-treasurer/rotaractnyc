@@ -53,7 +53,7 @@ import { GET, POST, DELETE } from '@/app/api/portal/events/route';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeGetRequest(query = '') {
   return new NextRequest(`http://localhost/api/portal/events${query}`, { method: 'GET' });

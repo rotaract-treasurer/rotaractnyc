@@ -25,7 +25,7 @@ jest.mock('firebase-admin/firestore', () => ({
 import { POST } from '@/app/api/portal/events/rsvp/route';
 import { cookies } from 'next/headers';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeRequest(body: Record<string, any>) {
   return new Request('http://localhost/api/portal/events/rsvp', {

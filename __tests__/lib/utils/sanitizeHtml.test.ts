@@ -52,7 +52,6 @@ describe('sanitizeHtml', () => {
   });
 
   it('returns empty string for falsy input', () => {
-    // @ts-expect-error testing edge case with undefined-like input
     expect(sanitizeHtml(undefined as unknown as string)).toBe('');
     expect(sanitizeHtml(null as unknown as string)).toBe('');
   });

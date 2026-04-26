@@ -52,7 +52,7 @@ import { GET, POST } from '@/app/api/portal/members/route';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeGetRequest() {
   return new NextRequest('http://localhost/api/portal/members', { method: 'GET' });

@@ -19,7 +19,7 @@ import { POST } from '@/app/api/portal/upload/route';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeRequest(body: Record<string, any>) {
   return new NextRequest('http://localhost/api/portal/upload', {

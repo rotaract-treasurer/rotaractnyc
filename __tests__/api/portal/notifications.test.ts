@@ -30,7 +30,7 @@ import { NextRequest } from 'next/server';
 
 const mockAdminAuth = adminAuth as jest.Mocked<typeof adminAuth>;
 const mockAdminDb = adminDb as jest.Mocked<typeof adminDb>;
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 const DEFAULT_PREFERENCES = {
   duesReminders: true,

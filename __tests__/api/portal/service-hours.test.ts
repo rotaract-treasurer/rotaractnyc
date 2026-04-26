@@ -50,7 +50,7 @@ import { GET, POST, PATCH } from '@/app/api/portal/service-hours/route';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const mockCookies = cookies as jest.MockedFunction<typeof cookies>;
+const mockCookies = cookies as unknown as jest.Mock;
 
 function makeGetRequest(params = '') {
   return new NextRequest(`http://localhost/api/portal/service-hours${params}`, { method: 'GET' });

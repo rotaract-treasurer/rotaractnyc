@@ -103,7 +103,7 @@ export async function GET(
 
   let totalRevenueCents = 0;
   txSnap.docs.forEach((doc) => {
-    totalRevenueCents += Math.round((doc.data().amount || 0) * 100);
+    totalRevenueCents += doc.data().amount || 0;
   });
 
   // Fill in member amountCents from transactions where possible
@@ -111,7 +111,7 @@ export async function GET(
   txSnap.docs.forEach((doc) => {
     const d = doc.data();
     if (d.relatedMemberId) {
-      memberTxMap.set(d.relatedMemberId, Math.round((d.amount || 0) * 100));
+      memberTxMap.set(d.relatedMemberId, d.amount || 0);
     }
   });
   members.forEach((m) => {
@@ -137,7 +137,7 @@ export async function GET(
     purchasers,
     summary: {
       totalRevenueCents,
-      totalRevenue: totalRevenueCents / 100,
+      totalRevenue: totalRevenueCents,
       guestCount: guests.length,
       memberCount: members.length,
       totalTickets:
