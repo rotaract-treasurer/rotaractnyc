@@ -43,7 +43,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event is not available for registration.' }, { status: 400 });
     }
 
-    // Check if this guest already RSVP'd (by email + eventId)
+    // For paid events, skip to checkout immediately — don't check for duplicate RSVPs
+    // so guests can buy multiple tickets or retry after a failed payment.
+    if (event.pricing && (event.type === 'paid' || event.type === 'hybrid') && event.pricing.guestPrice > 0) {
+      return NextResponse.json({
+        requiresPayment: true,
+        guestPrice: event.pricing.guestPrice,
+        earlyBirdPrice: event.pricing.earlyBirdPrice,
+        earlyBirdDeadline: event.pricing.earlyBirdDeadline,
+        message: 'This event requires a ticket purchase.',
+      });
+    }
+
+    // Check if this guest already RSVP'd (free events only)
     const existingSnap = await adminDb
       .collection('guest_rsvps')
       .where('eventId', '==', eventId)
@@ -71,17 +83,6 @@ export async function POST(request: NextRequest) {
           { status: 409 },
         );
       }
-    }
-
-    // For paid events, don't create RSVP here - redirect to checkout
-    if (event.pricing && (event.type === 'paid' || event.type === 'hybrid') && event.pricing.guestPrice > 0) {
-      return NextResponse.json({
-        requiresPayment: true,
-        guestPrice: event.pricing.guestPrice,
-        earlyBirdPrice: event.pricing.earlyBirdPrice,
-        earlyBirdDeadline: event.pricing.earlyBirdDeadline,
-        message: 'This event requires a ticket purchase.',
-      });
     }
 
     // Create guest RSVP for free events

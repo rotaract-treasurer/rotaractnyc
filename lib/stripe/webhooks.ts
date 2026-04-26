@@ -2,11 +2,13 @@
  * Stripe webhook event handlers.
  */
 import type Stripe from 'stripe';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { recordDuesPayment } from '@/lib/services/dues';
 import { upsertRSVP } from '@/lib/services/events';
 import { createTransaction } from '@/lib/services/finance';
-import { incrementTierSoldCount } from '@/lib/services/tierTracking';
+import { adjustTierSoldCount } from '@/lib/services/tierTracking';
+import { sendEmail } from '@/lib/email/send';
+import { guestTicketConfirmationEmail } from '@/lib/email/templates';
 
 /**
  * 5.1 — Idempotency: check if we already processed this Stripe session.
@@ -18,6 +20,35 @@ async function isAlreadyProcessed(sessionId: string): Promise<boolean> {
     .limit(1)
     .get();
   return !snap.empty;
+}
+
+/** Fetch event and send a ticket confirmation email. Silently no-ops on failure. */
+async function sendTicketConfirmationEmail(
+  name: string,
+  email: string,
+  eventId: string,
+  amountCents: number,
+): Promise<void> {
+  try {
+    if (!email) return;
+    const eventDoc = await adminDb.collection('events').doc(eventId).get();
+    if (!eventDoc.exists) return;
+    const event = eventDoc.data()!;
+    const content = guestTicketConfirmationEmail(
+      name,
+      {
+        title: event.title || 'Event',
+        date: event.date || '',
+        time: event.time || '',
+        location: event.location || '',
+        slug: event.slug || eventId,
+      },
+      amountCents,
+    );
+    await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
+  } catch (err) {
+    console.error('Failed to send ticket confirmation email:', err);
+  }
 }
 
 export async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
@@ -34,6 +65,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
   }
 
   const { type, memberId, memberType, cycleId, cycleName, eventId, ticketType, tierId } = session.metadata;
+  const quantity = parseInt(session.metadata.quantity || '1', 10) || 1;
 
   if (type === 'dues' && memberId && memberType) {
     // cycleId is the canonical field; cycleName is kept for backward compat
@@ -48,7 +80,6 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       stripePaymentId: session.payment_intent as string,
     });
 
-    // Record as income transaction
     await createTransaction({
       type: 'income',
       category: 'Dues',
@@ -72,10 +103,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       tierId: tierId || undefined,
     });
 
-    // Increment tier sold count for capacity tracking
-    if (tierId) {
-      await incrementTierSoldCount(eventId, tierId);
-    }
+    if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
     await createTransaction({
       type: 'income',
@@ -89,13 +117,27 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       relatedMemberId: memberId,
       stripeSessionId: session.id,
     });
+
+    // Send confirmation email to member
+    try {
+      const userRecord = await adminAuth.getUser(memberId);
+      if (userRecord.email) {
+        await sendTicketConfirmationEmail(
+          userRecord.displayName || 'Member',
+          userRecord.email,
+          eventId,
+          session.amount_total || 0,
+        );
+      }
+    } catch (err) {
+      console.error('Failed to send member ticket confirmation email:', err);
+    }
   }
 
   // Guest event ticket purchase
   if (type === 'guest_event_ticket' && eventId) {
     const { guestName, guestEmail, guestPhone } = session.metadata;
 
-    // Create or update guest RSVP
     const existingSnap = await adminDb
       .collection('guest_rsvps')
       .where('eventId', '==', eventId)
@@ -112,6 +154,7 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
         status: 'going',
         ticketType: 'guest',
         tierId: tierId || null,
+        quantity,
         paidAmount: session.amount_total || 0,
         paymentStatus: 'paid',
         stripeSessionId: session.id,
@@ -121,18 +164,15 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       await adminDb.collection('guest_rsvps').doc(existingSnap.docs[0].id).update({
         status: 'going',
         tierId: tierId || null,
+        quantity,
         paidAmount: session.amount_total || 0,
         paymentStatus: 'paid',
         stripeSessionId: session.id,
       });
     }
 
-    // Increment tier sold count for capacity tracking
-    if (tierId) {
-      await incrementTierSoldCount(eventId, tierId);
-    }
+    if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
-    // Record income transaction
     await createTransaction({
       type: 'income',
       category: 'Events',
@@ -145,6 +185,13 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       stripeSessionId: session.id,
       email: guestEmail || undefined,
     });
+
+    await sendTicketConfirmationEmail(
+      guestName || 'Guest',
+      guestEmail || '',
+      eventId,
+      session.amount_total || 0,
+    );
   }
 
   // 5.6 — Track donations in Firestore
@@ -178,19 +225,20 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
   }
 
   const { type, memberId, eventId, ticketType, tierId } = pi.metadata;
+  const quantity = parseInt(pi.metadata.quantity || '1', 10) || 1;
   const amountCents = pi.amount;
-  const email = pi.receipt_email ?? undefined;
+  const receiptEmail = pi.receipt_email ?? undefined;
 
   if ((type === 'event' || type === 'event_ticket') && eventId && memberId) {
     await upsertRSVP({
       eventId,
       memberId,
-      memberName: email || 'Member',
+      memberName: receiptEmail || 'Member',
       status: 'going',
       tierId: tierId || undefined,
     });
 
-    if (tierId) await incrementTierSoldCount(eventId, tierId);
+    if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
     await createTransaction({
       type: 'income',
@@ -204,6 +252,21 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       relatedMemberId: memberId,
       stripeSessionId: pi.id,
     });
+
+    // Send confirmation email to member
+    try {
+      const userRecord = await adminAuth.getUser(memberId);
+      if (userRecord.email) {
+        await sendTicketConfirmationEmail(
+          userRecord.displayName || 'Member',
+          userRecord.email,
+          eventId,
+          amountCents,
+        );
+      }
+    } catch (err) {
+      console.error('Failed to send member ticket confirmation email:', err);
+    }
   }
 
   if (type === 'guest_event_ticket' && eventId) {
@@ -226,6 +289,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
         status: 'going',
         ticketType: 'guest',
         tierId: tierId || null,
+        quantity,
         paidAmount: amountCents,
         paymentStatus: 'paid',
         stripeSessionId: pi.id,
@@ -235,13 +299,14 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       await adminDb.collection('guest_rsvps').doc(existingSnap.docs[0].id).update({
         status: 'going',
         tierId: tierId || null,
+        quantity,
         paidAmount: amountCents,
         paymentStatus: 'paid',
         stripeSessionId: pi.id,
       });
     }
 
-    if (tierId) await incrementTierSoldCount(eventId, tierId);
+    if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
     await createTransaction({
       type: 'income',
@@ -255,12 +320,18 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       stripeSessionId: pi.id,
       email: guestEmail || undefined,
     });
+
+    await sendTicketConfirmationEmail(
+      guestName || 'Guest',
+      guestEmail || '',
+      eventId,
+      amountCents,
+    );
   }
 }
 
 export async function handlePaymentFailed(intent: Stripe.PaymentIntent): Promise<void> {
   console.error('Payment failed:', intent.id, intent.last_payment_error?.message);
-  // Could send notification email here
 }
 
 /**

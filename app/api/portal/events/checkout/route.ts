@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { eventId, ticketType, tierId, paymentMethod = 'stripe', proofUrl, embedded = false } = body;
+    const { eventId, ticketType, tierId, paymentMethod = 'stripe', proofUrl, embedded = false, quantity: rawQuantity = 1 } = body;
+    const quantity = Math.max(1, Math.min(10, parseInt(String(rawQuantity), 10) || 1));
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
           },
           unit_amount: priceCents,
         },
-        quantity: 1,
+        quantity,
       },
     ];
 
@@ -215,7 +216,8 @@ export async function POST(request: NextRequest) {
       memberId: uid || '',
       ticketType: priceLabel.toLowerCase(),
       tierId: resolvedTierId || '',
-      amountCents: String(priceCents),
+      quantity: String(quantity),
+      amountCents: String(priceCents * quantity),
       eventTitle: event.title,
     };
 
@@ -231,7 +233,7 @@ export async function POST(request: NextRequest) {
       }
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: priceCents,
+        amount: priceCents * quantity,
         currency: 'usd',
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         metadata,

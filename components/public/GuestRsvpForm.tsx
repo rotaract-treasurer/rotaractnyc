@@ -49,6 +49,7 @@ export default function GuestRsvpForm({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -80,13 +81,15 @@ export default function GuestRsvpForm({
   const isEarlyBird =
     !hasTierPricing && earlyBirdPrice != null && earlyBirdDeadline && new Date(earlyBirdDeadline) > now;
 
-  const displayPrice = hasTierPricing
+  const unitPrice = hasTierPricing
     ? selectedTierId
       ? (tiers.find((t) => t.id === selectedTierId)?.guestPrice ?? null)
       : (availableTiers[0]?.guestPrice ?? null)
     : isEarlyBird
     ? earlyBirdPrice!
     : guestPrice;
+
+  const totalPrice = unitPrice != null ? unitPrice * quantity : null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -108,7 +111,7 @@ export default function GuestRsvpForm({
         const checkoutRes = await fetch('/api/events/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...body, embedded: Boolean(publishableKey) }),
+          body: JSON.stringify({ ...body, quantity, embedded: Boolean(publishableKey) }),
         });
         const checkoutData = await checkoutRes.json();
         if (!checkoutRes.ok) throw new Error(checkoutData.error || 'Payment setup failed. Please try again.');
@@ -219,16 +222,49 @@ export default function GuestRsvpForm({
             })
           )}
         </div>
-      ) : isPaid && displayPrice != null ? (
+      ) : isPaid && unitPrice != null ? (
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
           Guest ticket:{' '}
-          <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(displayPrice)}</span>
+          <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(unitPrice)}</span>
           {isEarlyBird && <span className="ml-2 text-green-700 dark:text-green-400 font-medium">🐦 Early bird</span>}
         </p>
       ) : (
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
           Register below to reserve your spot — it&rsquo;s free!
         </p>
+      )}
+
+      {/* Quantity selector — only for paid events */}
+      {isPaid && unitPrice != null && unitPrice > 0 && (
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Number of Tickets
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+              className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+            >
+              −
+            </button>
+            <span className="w-8 text-center font-semibold text-gray-900 dark:text-white">{quantity}</span>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+              disabled={quantity >= 10}
+              className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+            >
+              +
+            </button>
+            {quantity > 1 && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                = <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(unitPrice * quantity)}</span> total
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -279,7 +315,11 @@ export default function GuestRsvpForm({
               </svg>
               Processing…
             </span>
-          ) : isPaid ? 'Get Your Ticket' : 'Register as Guest'}
+          ) : isPaid
+            ? quantity > 1
+              ? `Get ${quantity} Tickets`
+              : 'Get Your Ticket'
+            : 'Register as Guest'}
         </button>
       </form>
 
@@ -300,8 +340,13 @@ export default function GuestRsvpForm({
         <div className="space-y-4">
           <div className="rounded-xl bg-cranberry-50 dark:bg-cranberry-900/10 border border-cranberry-100 dark:border-cranberry-900/30 px-4 py-3 text-center">
             <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">{eventTitle}</p>
-            {displayPrice != null && (
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(displayPrice)}</p>
+            {totalPrice != null && (
+              <>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalPrice)}</p>
+                {quantity > 1 && unitPrice != null && (
+                  <p className="text-xs text-gray-500 mt-0.5">{quantity} × {formatCurrency(unitPrice)}</p>
+                )}
+              </>
             )}
           </div>
 
@@ -311,7 +356,7 @@ export default function GuestRsvpForm({
               options={{ clientSecret: checkoutClientSecret, appearance: stripeAppearance }}
             >
               <CardPaymentForm
-                amount={displayPrice != null ? formatCurrency(displayPrice) : ''}
+                amount={totalPrice != null ? formatCurrency(totalPrice) : ''}
                 onSuccess={handlePaymentSuccess}
                 onBack={handleClosePaymentModal}
                 accentClass="bg-cranberry hover:bg-cranberry-800 focus-visible:outline-cranberry"

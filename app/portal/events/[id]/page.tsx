@@ -173,7 +173,7 @@ export default function PortalEventDetailPage() {
     }
   };
 
-  const handleStripeCheckout = async (embedded?: boolean) => {
+  const handleStripeCheckout = async (embedded?: boolean, quantity?: number) => {
     try {
       const canUseEmbeddedCheckout = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) && embedded !== false;
       const res = await apiPost('/api/portal/events/checkout', {
@@ -182,6 +182,7 @@ export default function PortalEventDetailPage() {
         ...(checkoutTierId ? { tierId: checkoutTierId } : {}),
         paymentMethod: 'stripe',
         embedded: canUseEmbeddedCheckout,
+        quantity: quantity || 1,
       });
       return res;
     } catch (err: any) {

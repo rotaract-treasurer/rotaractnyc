@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { eventId, name, email, phone, tierId, embedded = false } = await request.json();
+    const { eventId, name, email, phone, tierId, embedded = false, quantity: rawQuantity = 1 } = await request.json();
+    const quantity = Math.max(1, Math.min(10, parseInt(String(rawQuantity), 10) || 1));
 
     // Validate required inputs
     if (!eventId || !name || !email) {
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
           },
           unit_amount: priceCents,
         },
-        quantity: 1,
+        quantity,
       },
     ];
 
@@ -190,12 +191,13 @@ export async function POST(request: NextRequest) {
       guestPhone: phone || '',
       ticketType: 'guest',
       tierId: resolvedTierId || '',
-      amountCents: String(priceCents),
+      quantity: String(quantity),
+      amountCents: String(priceCents * quantity),
     };
 
     if (embedded) {
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: priceCents,
+        amount: priceCents * quantity,
         currency: 'usd',
         receipt_email: email,
         metadata,

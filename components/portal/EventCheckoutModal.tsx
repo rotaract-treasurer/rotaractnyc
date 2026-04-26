@@ -30,7 +30,7 @@ interface EventCheckoutModalProps {
   ticketType: 'member' | 'guest';
   priceCents: number;
   paymentSettings: PaymentSettings;
-  onStripeCheckout: (embedded?: boolean) => Promise<{ clientSecret?: string; url?: string } | null | void>;
+  onStripeCheckout: (embedded?: boolean, quantity?: number) => Promise<{ clientSecret?: string; url?: string } | null | void>;
   onOfflinePayment: (method: string, proofUrl?: string) => Promise<void>;
   onCheckoutComplete?: () => void;
   loading?: boolean;
@@ -52,18 +52,21 @@ export default function EventCheckoutModal({
   loading,
 }: EventCheckoutModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [proofUrl, setProofUrl] = useState('');
   const [checkoutClientSecret, setCheckoutClientSecret] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
 
-  const amount = formatCurrency(priceCents);
+  const totalCents = priceCents * quantity;
+  const amount = formatCurrency(totalCents);
   const priceLabel = ticketType === 'member' ? 'Member' : 'Guest';
 
   // Reset state whenever the modal closes
   useEffect(() => {
     if (!open) {
       setSelectedMethod(null);
+      setQuantity(1);
       setCheckoutClientSecret('');
       setCheckoutError('');
       setProofUrl('');
@@ -107,7 +110,7 @@ export default function EventCheckoutModal({
     setProcessing(true);
     setCheckoutError('');
     try {
-      const result = await onStripeCheckout(true);
+      const result = await onStripeCheckout(true, quantity);
       if (!result) {
         setCheckoutError('Unable to start checkout. Please try again.');
         return;
@@ -154,7 +157,7 @@ export default function EventCheckoutModal({
   const showingPaymentForm = selectedMethod === 'stripe' && !!checkoutClientSecret;
 
   return (
-    <Modal open={open} onClose={onClose} title={`Buy ${priceLabel} Ticket — ${amount}`}>
+    <Modal open={open} onClose={onClose} title={`Buy ${priceLabel} Ticket — ${formatCurrency(priceCents)}`}>
       <div className="space-y-4">
 
         {/* Price summary */}
@@ -162,9 +165,39 @@ export default function EventCheckoutModal({
           <div className="text-center">
             <div className="text-sm text-gray-600 dark:text-gray-400">{eventTitle}</div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{amount}</div>
-            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{priceLabel} Ticket</div>
+            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">
+              {quantity > 1 ? `${quantity} × ${formatCurrency(priceCents)} · ${priceLabel} Ticket` : `${priceLabel} Ticket`}
+            </div>
           </div>
         </Card>
+
+        {/* Quantity selector — hidden once card form is open */}
+        {!showingPaymentForm && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Number of Tickets
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+                className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+              >
+                −
+              </button>
+              <span className="w-8 text-center font-semibold text-gray-900 dark:text-white">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                disabled={quantity >= 10}
+                className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Payment method selector — hidden once card form is open */}
         {!showingPaymentForm && (
