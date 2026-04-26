@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 import type { RotaractEvent, EventType } from '@/types';
@@ -114,13 +115,31 @@ export default function EventsFilter({ events }: EventsFilterProps) {
             href={`/events/${event.slug}`}
             className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 overflow-hidden hover:shadow-lg hover:border-cranberry-200 dark:hover:border-cranberry-800 transition-all duration-200"
           >
-            {/* Date strip */}
-            <div className="bg-gradient-to-r from-cranberry to-cranberry-800 px-6 py-3 flex items-center justify-between">
-              <div className="text-white">
-                <p className="text-xs font-medium text-cranberry-200">{formatDate(event.date, { weekday: 'long' })}</p>
-                <p className="text-sm font-bold">{formatDate(event.date, { month: 'short', day: 'numeric' })}</p>
+            {/* Image banner (or gradient fallback) */}
+            <div className="relative h-44 overflow-hidden">
+              {event.imageURL ? (
+                <>
+                  <Image
+                    src={event.imageURL}
+                    alt={event.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-cranberry to-cranberry-800" />
+              )}
+
+              {/* Date — bottom left */}
+              <div className="absolute bottom-3 left-4 text-white">
+                <p className="text-[11px] font-medium opacity-80">{formatDate(event.date, { weekday: 'long' })}</p>
+                <p className="text-sm font-bold leading-tight">{formatDate(event.date, { month: 'short', day: 'numeric' })}</p>
               </div>
-              <div className="flex items-center gap-1.5">
+
+              {/* Type badge — top right */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
                 <Badge variant={typeColors[event.type] || 'gray'}>
                   {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
                 </Badge>
