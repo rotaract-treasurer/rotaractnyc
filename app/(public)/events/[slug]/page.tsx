@@ -79,13 +79,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       />
       {/* Hero */}
       <section
-        className={`relative text-white overflow-hidden flex items-end ${
+        className={`relative text-white overflow-hidden flex flex-col ${
           heroImage
-            ? 'min-h-[300px] sm:min-h-[420px]'
-            : 'py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800'
+            ? 'min-h-[320px] sm:min-h-[440px]'
+            : 'bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800'
         }`}
       >
-        {heroImage ? (
+        {heroImage && (
           <>
             <Image
               src={heroImage}
@@ -95,17 +95,27 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               className="object-cover"
               priority
             />
-            {/* Gradient: dark at the bottom so text stays legible, lighter at top */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/5" />
+            {/* Heavier at the bottom so title stays legible */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
           </>
-        ) : null}
+        )}
 
-        <div className="container-page relative z-10 py-10 sm:py-14">
-          <Link href="/events" className="inline-flex items-center gap-1 text-white/70 hover:text-white text-sm mb-6 transition-colors">
-            <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        {/* Back link — always at the top */}
+        <div className="container-page relative z-10 pt-8 sm:pt-10">
+          <Link
+            href="/events"
+            className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors"
+          >
+            <svg aria-hidden="true" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
             Back to Events
           </Link>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+        </div>
+
+        {/* Title block — pushed to bottom */}
+        <div className="container-page relative z-10 mt-auto pb-10 sm:pb-12 pt-6">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <Badge variant={event.type === 'service' ? 'azure' : event.type === 'paid' ? 'gold' : event.type === 'hybrid' ? 'cranberry' : 'green'}>
               {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
             </Badge>
@@ -116,10 +126,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <Badge variant="gold">🎟️ {formatCurrency(event.pricing.guestPrice)}</Badge>
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold">{event.title}</h1>
-
-          {/* Action buttons: Calendar, Share, Directions */}
-          <div className="mt-6">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight">{event.title}</h1>
+          <div className="mt-5">
             <PublicEventActions event={event} />
           </div>
         </div>
