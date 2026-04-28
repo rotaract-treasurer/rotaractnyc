@@ -653,3 +653,93 @@ DonateForm (name+email) ──► /api/donate ──► Stripe Session (with don
 ---
 
 *End of audit.*
+
+---
+
+## 7. Implemented Event Payment Fixes (2026-04-28)
+
+Based on the audit findings and user review, the following improvements have been
+implemented for the public and private event ticketing flows.
+
+### 7.1 🔴 HIGH — Event-Level Sold-Out Signal
+
+**Problem:** Only tier-level sold-out badges were shown. A completely sold-out
+event still showed an RSVP form with no explanation.
+
+**Fix:** Added an event-level sold-out banner on `app/(public)/events/[slug]/page.tsx`.
+When all pricing tiers are expired or sold out, a prominent red banner is displayed
+("Sold Out — All tickets for this event have been claimed.") and the Guest RSVP form
+and member login link are both hidden.
+
+### 7.2 🟡 MEDIUM — Atomic Tier Capacity Check & Reservation
+
+**Problem:** The checkout route read tier capacity and then later incremented it in
+two separate operations, allowing a race condition where two concurrent purchases
+could both pass the capacity check and oversell a tier.
+
+**Fix:** Created `tryReserveTierSpot()` in `lib/services/tierTracking.ts` that uses a
+single Firestore transaction to atomically:
+1. Read the current soldCount and capacity
+2. If full, return `false` (caller rejects with 409)
+3. If room available, increment soldCount atomically and return `true`
+
+Updated `app/api/events/checkout/route.ts` to:
+- Call `tryReserveTierSpot()` for capacity-limited tiers
+- Clean up reserved spots on Stripe session creation failure via `decrementTierSoldCount()`
+- Handle free events: skip atomic reservation for unlimited tiers, still track soldCount
+
+### 7.3 🟡 MEDIUM — Promo Code / Discount Coupon System
+
+**Problem:** No mechanism for discount codes, batch discounts, or promotional offers.
+
+**Fix:** Created `lib/services/promoCodes.ts` with:
+- `PromoCode` type (`percent`, `fixed`, `free`)
+- `validatePromoCode()` checks expiry, event scope, max uses, minimum order
+- `redeemPromoCode()` atomically increments usedCount with max-use guard
+- Firestore schema: `promo_codes` collection with `upperCode`, `isActive`, `eventId`,
+  `type`, `value`, `maxUses`, `usedCount`, `expiresAt`, `minAmountCents`
+
+### 7.4 🟡 MEDIUM — Custom Attendee Fields for Public Events
+
+**Status:** Not yet implemented. Recommended schema:
+- Add `attendeeFields: Array<{id, label, type, required, options?}>` to event document
+- Render in `GuestRsvpForm.tsx` during checkout
+- Store in `guest_rsvps` / Stripe metadata
+
+### 7.5 🟡 MEDIUM — Waitlist for Full Events
+
+**Status:** Not yet implemented. Recommended approach:
+- `waitlist` collection: `{eventId, email, name, tierId, joinedAt, status}`
+- Cron job opens tier spots when cancellations free up capacity
+- Auto-emails when spot becomes available
+
+### 7.6 🟢 LOW — Remaining Improvements (Not Yet Implemented)
+
+| # | Item | Effort |
+|---|------|--------|
+| 1 | Tax / donation split on ticket checkouts | Small |
+| 2 | QR codes for guests in confirmation emails | Small |
+| 3 | `.ics` calendar attachments in confirmation emails | Small |
+| 4 | Event-level capacity enforcement in member RSVP route | Small |
+| 5 | Guest refund RSVP status update in webhook | Small |
+| 6 | Promo code UI in `GuestRsvpForm.tsx` | Medium |
+| 7 | Promo code admin CRUD page (`app/portal/admin/promo-codes/`) | Medium |
+| 8 | Promo code validation API endpoint (`/api/events/validate-promo`) | Small |
+| 9 | Tier swap / upgrade flow (guest upgrades to higher tier) | Medium |
+| 10 | Bulk ticket purchase (multiple guests per transaction) | Medium |
+| 11 | Member early-access periods for tiered events | Small |
+| 12 | Export event attendee list with tier + payment info | Small |
+| 13 | Firestore composite index for `promo_codes` (`upperCode`, `isActive`) | Tiny |
+
+---
+
+## 8. Files Changed
+
+| File | Change |
+|------|--------|
+| `lib/services/tierTracking.ts` | Added `tryReserveTierSpot()` for atomic capacity reservation |
+| `app/api/events/checkout/route.ts` | Integrated atomic reservation, spot cleanup on failure |
+| `app/(public)/events/[slug]/page.tsx` | Added event-level sold-out banner and conditional RSVP hiding |
+| `lib/services/promoCodes.ts` | **New** — Promo code validation and redemption service |
+| `docs/AUDIT.md` | Added this implementation summary (section 7) |
+
