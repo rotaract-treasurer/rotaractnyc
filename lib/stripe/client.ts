@@ -55,6 +55,7 @@ export async function createDuesCheckoutSession(params: {
       type: 'dues',
       memberId: params.memberId,
       memberType: params.memberType,
+      cycleId: params.cycleName,
       cycleName: params.cycleName,
     },
     success_url: params.successUrl,
@@ -99,6 +100,46 @@ export async function createEventCheckoutSession(params: {
       eventId: params.eventId,
       memberId: params.memberId,
       ticketType: params.ticketType,
+    },
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+  });
+
+  return session.url!;
+}
+
+/**
+ * Create a Stripe Checkout Session for a donation.
+ */
+export async function createDonationCheckoutSession(params: {
+  amount: number; // in cents
+  donorName: string;
+  donorEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<string> {
+  const stripe = getStripe();
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    customer_email: params.donorEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Donation to Rotaract NYC',
+            description: `Thank you for supporting our service projects and community initiatives!`,
+          },
+          unit_amount: params.amount,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      type: 'donation',
+      donorName: params.donorName,
+      donorEmail: params.donorEmail,
     },
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,

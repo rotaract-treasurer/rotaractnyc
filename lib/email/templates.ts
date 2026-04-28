@@ -332,3 +332,31 @@ export function guestTicketConfirmationEmail(
     text: `You're all set, ${name}!\n\nYour ticket has been confirmed for:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}\n\nAmount paid: ${amountFormatted}\n\nView event details: ${SITE.url}/events/${event.slug}\n\n---\n\nInterested in joining Rotaract NYC?\nBecome a member and get access to exclusive events, service opportunities, and a community of young professionals making a difference.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
+
+export function donationThankYouEmail(
+  donorName: string,
+  amountCents: number,
+): { subject: string; html: string; text: string } {
+  const safeName = escapeHtml(donorName);
+  const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
+
+  return {
+    subject: `Thank you for your donation! 💛`,
+    html: wrapTemplate(`
+      <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px;">Thank You, ${safeName}!</h2>
+      <p style="color: #374151; margin: 0 0 20px;">Your generous donation of <strong>${amountFormatted}</strong> has been received by ${SITE.name}.</p>
+      <div style="background-color: #fef9e7; border: 1px solid #EBC85B; border-radius: 8px; padding: 20px; margin: 0 0 24px;">
+        <p style="color: #374151; margin: 0;">Your contribution directly supports our service projects and community initiatives. Every dollar helps us make a bigger impact in our local community and beyond.</p>
+      </div>
+      <p style="color: #374151; margin: 0 0 12px;">With your support, we can continue to:</p>
+      <ul style="color: #374151; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Run food bank drives and meal distribution programs</li>
+        <li style="margin-bottom: 8px;">Organize park and neighborhood cleanups</li>
+        <li style="margin-bottom: 8px;">Support educational programs for underserved youth</li>
+        <li style="margin-bottom: 8px;">Expand international service initiatives</li>
+      </ul>
+      <p style="color: #374151; margin: 16px 0 0;">Thank you for being part of our mission to create positive change!</p>
+    `),
+    text: `Thank You, ${donorName}!\n\nYour generous donation of ${amountFormatted} has been received by ${SITE.name}.\n\nYour contribution directly supports our service projects and community initiatives. Every dollar helps us make a bigger impact in our local community and beyond.\n\nWith your support, we can continue to:\n- Run food bank drives and meal distribution programs\n- Organize park and neighborhood cleanups\n- Support educational programs for underserved youth\n- Expand international service initiatives\n\nThank you for being part of our mission to create positive change!\n\n--\n${SITE.name}\n${SITE.address}`,
+  };
+}

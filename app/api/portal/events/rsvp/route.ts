@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const { uid } = await adminAuth.verifySessionCookie(sessionCookie, true);
     const body = await request.json();
-    const { eventId, status } = body;
+    const { eventId, status, tierId } = body;
 
     if (!eventId || !status) {
       return NextResponse.json({ error: 'Event ID and status are required' }, { status: 400 });
@@ -32,30 +32,69 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Invalid RSVP status. Must be one of: ${VALID_RSVP_STATUSES.join(', ')}` }, { status: 400 });
     }
 
+    // P0 #2: If tierId is provided, validate it belongs to the event's pricing tiers
+    if (tierId) {
+      const eventDoc = await adminDb.collection('events').doc(eventId).get();
+      if (eventDoc.exists) {
+        const pricing = eventDoc.data()?.pricing;
+        if (!pricing?.tiers?.length) {
+          return NextResponse.json({ error: 'This event does not have ticket tiers.' }, { status: 400 });
+        }
+        const tier = pricing.tiers.find((t: any) => t.id === tierId);
+        if (!tier) {
+          return NextResponse.json({ error: 'Invalid tier selected.' }, { status: 400 });
+        }
+        // Check tier capacity and deadline
+        const now = new Date();
+        if (tier.deadline && new Date(tier.deadline) < now) {
+          return NextResponse.json({ error: `The "${tier.label}" tier has expired.` }, { status: 409 });
+        }
+        if (tier.capacity != null && (tier.soldCount ?? 0) >= tier.capacity) {
+          return NextResponse.json({ error: `The "${tier.label}" tier is sold out.` }, { status: 409 });
+        }
+      }
+    }
+
     // Read existing RSVP to track tier sold-count changes
     const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
     const existingDoc = await rsvpRef.get();
     const prevStatus = existingDoc.exists ? existingDoc.data()?.status : null;
     const prevTierId = existingDoc.exists ? existingDoc.data()?.tierId : null;
 
-    // Upsert RSVP
+    // Upsert RSVP — include tierId (P0 #2)
     await rsvpRef.set(
       {
         memberId: uid,
         eventId,
         status, // going | maybe | not_going
+        ...(tierId ? { tierId } : {}),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
 
-    // Adjust tier sold count when status changes to/from 'going'
-    if (prevTierId) {
-      const wasGoing = prevStatus === 'going';
-      const nowGoing = status === 'going';
+    // Adjust tier sold count when status or tierId changes
+    const wasGoing = prevStatus === 'going';
+    const nowGoing = status === 'going';
+    const tierChanged = tierId && prevTierId && tierId !== prevTierId;
 
+    if (tierChanged) {
+      // Switched tiers: decrement old tier, increment new tier
+      if (wasGoing && nowGoing) {
+        await Promise.all([
+          decrementTierSoldCount(eventId, prevTierId),
+          incrementTierSoldCount(eventId, tierId),
+        ]);
+      } else if (wasGoing && !nowGoing) {
+        // Un-RSVP with tier change: just decrement old
+        await decrementTierSoldCount(eventId, prevTierId);
+      } else if (!wasGoing && nowGoing) {
+        // New RSVP with tier: just increment new
+        await incrementTierSoldCount(eventId, tierId);
+      }
+    } else if (prevTierId) {
       if (!wasGoing && nowGoing) {
-        // Re-attending → increment
+        // Re-attending with same tier → increment
         await incrementTierSoldCount(eventId, prevTierId);
       } else if (wasGoing && !nowGoing) {
         // Cancelling → decrement to free up the spot

@@ -67,8 +67,7 @@ export function middleware(request: NextRequest) {
       }
 
       // Token should not be older than 14 days (max-age guard)
-      const MAX_AGE_SECONDS = 14 * 24 * 60 * 60; // 14 days
-      if (payload.iat && (now / 1000 - payload.iat) > MAX_AGE_SECONDS) {
+      if (payload.iat && (now / 1000 - payload.iat) > 14 * 24 * 60 * 60) {
         throw new Error('token too old');
       }
     } catch {

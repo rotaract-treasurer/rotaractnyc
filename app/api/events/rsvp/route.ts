@@ -43,19 +43,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event is not available for registration.' }, { status: 400 });
     }
 
-    // For paid events, skip to checkout immediately — don't check for duplicate RSVPs
-    // so guests can buy multiple tickets or retry after a failed payment.
-    if (event.pricing && (event.type === 'paid' || event.type === 'hybrid') && event.pricing.guestPrice > 0) {
-      return NextResponse.json({
-        requiresPayment: true,
-        guestPrice: event.pricing.guestPrice,
-        earlyBirdPrice: event.pricing.earlyBirdPrice,
-        earlyBirdDeadline: event.pricing.earlyBirdDeadline,
-        message: 'This event requires a ticket purchase.',
-      });
+    // Determine if this event requires payment.
+    // For tier-based pricing: paid if any tier has a non-zero guestPrice.
+    // For legacy pricing: paid if guestPrice > 0.
+    let isPaid = false;
+    const pricing = event.pricing || null;
+    if (pricing) {
+      if (pricing.tiers?.length) {
+        isPaid = pricing.tiers.some((t: any) => (t.guestPrice ?? 0) > 0);
+      } else {
+        isPaid = (pricing.guestPrice ?? 0) > 0;
+      }
     }
 
-    // Check if this guest already RSVP'd (free events only)
+    // P0 #3: Better dedup — only block if they have an active (going/maybe) RSVP
+    // Allow retry for cancelled, expired, payment_failed, or refunded RSVPs
     const existingSnap = await adminDb
       .collection('guest_rsvps')
       .where('eventId', '==', eventId)
@@ -64,10 +66,28 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (!existingSnap.empty) {
-      return NextResponse.json(
-        { error: 'You have already registered for this event.' },
-        { status: 409 },
-      );
+      const existing = existingSnap.docs[0].data();
+      const activeStatuses = ['going', 'maybe', 'pending'];
+      if (activeStatuses.includes(existing.status)) {
+        return NextResponse.json(
+          { error: 'You have already registered for this event.'
+            + (existing.status === 'pending' ? ' Your payment is still being processed.' : '') },
+          { status: 409 },
+        );
+      }
+      // If their previous RSVP was cancelled/expired/failed/refunded, allow re-registration
+    }
+
+    // For paid events, redirect to checkout
+    if (isPaid && pricing) {
+      return NextResponse.json({
+        requiresPayment: true,
+        guestPrice: pricing.guestPrice ?? 0,
+        earlyBirdPrice: pricing.earlyBirdPrice,
+        earlyBirdDeadline: pricing.earlyBirdDeadline,
+        tiers: pricing.tiers || undefined,
+        message: 'This event requires a ticket purchase.',
+      });
     }
 
     // Check capacity (combine member RSVPs + guest RSVPs)

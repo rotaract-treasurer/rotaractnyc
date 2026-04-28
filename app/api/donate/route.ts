@@ -22,8 +22,18 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { amount, customAmount, embedded } = await request.json();
+    const { amount, customAmount, embedded, donorName, donorEmail, idempotencyKey } = await request.json();
     const useEmbeddedCheckout = embedded === true;
+
+    const safeDonorName = donorName || 'Anonymous';
+    const safeDonorEmail = donorEmail || '';
+
+    if (!safeDonorName || !safeDonorEmail) {
+      return NextResponse.json(
+        { error: 'Please provide your name and email.' },
+        { status: 400 },
+      );
+    }
 
     let cents: number;
     let description: string;
@@ -60,28 +70,45 @@ export async function POST(request: NextRequest) {
     const metadata = {
       type: 'donation',
       amountCents: String(cents),
+      donorName: safeDonorName,
+      donorEmail: safeDonorEmail,
     };
 
+    // 30-minute expiry for donation checkout sessions
+    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
+
     if (useEmbeddedCheckout) {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        ui_mode: 'embedded',
-        line_items: lineItems,
-        return_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
-        metadata,
-      });
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: 'payment',
+          ui_mode: 'embedded',
+          line_items: lineItems,
+          expires_at: expiresAt,
+          return_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
+          metadata,
+        },
+        idempotencyKey
+          ? { idempotencyKey: `donate_embedded_${idempotencyKey}` }
+          : undefined,
+      );
 
       return NextResponse.json({ clientSecret: session.client_secret });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: lineItems,
-      success_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/donate?cancelled=true`,
-      metadata,
-    });
+    const session = await stripe.checkout.sessions.create(
+      {
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: lineItems,
+        expires_at: expiresAt,
+        success_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${SITE_URL}/donate?cancelled=true`,
+        metadata,
+      },
+      idempotencyKey
+        ? { idempotencyKey: `donate_redirect_${idempotencyKey}` }
+        : undefined,
+    );
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {

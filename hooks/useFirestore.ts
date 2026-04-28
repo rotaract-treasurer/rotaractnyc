@@ -23,23 +23,27 @@ import { Timestamp } from 'firebase/firestore';
 
 // ─── Helpers ───
 
-/** Recursively convert Firestore Timestamp fields to ISO strings */
-function serialiseTimestamps(obj: any): any {
+/**
+ * Recursively convert Firestore Timestamp fields to ISO strings.
+ */
+function serialiseTimestamps<T>(obj: T): T {
   if (obj == null) return obj;
-  if (obj instanceof Timestamp) return obj.toDate().toISOString();
-  if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString();
-  if (Array.isArray(obj)) return obj.map(serialiseTimestamps);
+  if (obj instanceof Timestamp) return obj.toDate().toISOString() as T;
+  if ((obj as Record<string, unknown>).toDate && typeof (obj as Record<string, unknown>).toDate === 'function') {
+    return ((obj as Record<string, unknown>).toDate() as Date).toISOString() as T;
+  }
+  if (Array.isArray(obj)) return obj.map(serialiseTimestamps) as T;
   if (typeof obj === 'object') {
-    const out: any = {};
-    for (const key of Object.keys(obj)) {
-      out[key] = serialiseTimestamps(obj[key]);
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      out[key] = serialiseTimestamps((obj as Record<string, unknown>)[key]);
     }
-    return out;
+    return out as T;
   }
   return obj;
 }
 
-// ─── Generic hooks ───
+export type LoadingState = 'idle' | 'loading' | 'loaded' | 'error';
 
 /** Subscribe to a Firestore collection with real-time updates */
 export function useCollection<T = DocumentData>(
@@ -48,22 +52,27 @@ export function useCollection<T = DocumentData>(
   enabled = true,
 ) {
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [error, setError] = useState<string | null>(null);
 
   // Serialize constraints to a stable string key so the effect re-runs
   // when filters change, without causing infinite loops from object identity.
-  const constraintKey = useMemo(
-    () => JSON.stringify(constraints.map((c) => `${(c as any).type}:${(c as any)._field ?? ''}:${JSON.stringify((c as any)._value ?? (c as any)._direction ?? (c as any)._limit ?? '')}`)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(constraints.map(String))],
-  );
+  const constraintKey = useMemo(() => {
+    return constraints
+      .map((c) => {
+        const constraint = c as Record<string, unknown>;
+        return `${String(constraint.type)}:${String(constraint._field ?? '')}:${JSON.stringify(constraint._value ?? constraint._direction ?? constraint._limit ?? '')}`;
+      })
+      .join('||');
+  }, [constraints]);
 
   useEffect(() => {
     if (!enabled) {
-      setLoading(false);
+      setLoadingState('idle');
       return;
     }
+
+    setLoadingState('loading');
 
     const q = query(collection(getDb(), collectionName), ...constraints);
     const unsubscribe = onSnapshot(
@@ -71,13 +80,13 @@ export function useCollection<T = DocumentData>(
       (snapshot) => {
         const items = snapshot.docs.map((d) => serialiseTimestamps({ id: d.id, ...d.data() }) as T);
         setData(items);
-        setLoading(false);
+        setLoadingState('loaded');
         setError(null);
       },
       (err) => {
         console.error(`Error fetching ${collectionName}:`, err);
         setError(err.message);
-        setLoading(false);
+        setLoadingState('error');
       },
     );
 
@@ -85,7 +94,7 @@ export function useCollection<T = DocumentData>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionName, enabled, constraintKey]);
 
-  return { data, loading, error };
+  return { data, loading: loadingState === 'loading', loadingState, error };
 }
 
 /** Fetch a single Firestore document */
@@ -230,7 +239,7 @@ export function useRsvps(eventId: string | null) {
 export function useMemberRsvps(memberId: string | null) {
   return useCollection(
     'rsvps',
-    memberId ? [where('memberId', '==', memberId), limit(1)] : [],
+    memberId ? [where('memberId', '==', memberId), orderBy('createdAt', 'desc'), limit(50)] : [],
     !!memberId,
   );
 }

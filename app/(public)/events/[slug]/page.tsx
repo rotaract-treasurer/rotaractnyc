@@ -159,6 +159,27 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <p>{event.description}</p>
             </div>
 
+            {/* ── Sold-out banner (event-level) ── */}
+            {(() => {
+              const now = new Date();
+              const allTiersSoldOrExpired =
+                event.pricing?.tiers?.length > 0 &&
+                event.pricing.tiers.every(
+                  (t: any) =>
+                    (t.deadline && new Date(t.deadline) < now) ||
+                    (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
+                );
+              return allTiersSoldOrExpired ? (
+                <div className="mt-10 p-6 bg-red-50 dark:bg-red-950/40 rounded-2xl border-2 border-red-300 dark:border-red-800 text-center">
+                  <span className="inline-block text-3xl mb-2">🎟️</span>
+                  <h3 className="text-lg font-bold text-red-700 dark:text-red-400">Sold Out</h3>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                    All tickets for this event have been claimed. Check back for future events!
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
             {/* Pricing */}
             {event.pricing && (event.type === 'paid' || event.type === 'hybrid') && (
               <div className="mt-10 p-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -252,27 +273,42 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               </div>
             )}
 
-            {/* Guest RSVP + Member CTA */}
-            <GuestRsvpForm
-              eventId={event.id}
-              eventSlug={event.slug}
-              eventTitle={event.title}
-              isPaid={!!(event.pricing && (event.type === 'paid' || event.type === 'hybrid') && event.pricing.guestPrice > 0)}
-              guestPrice={event.pricing?.guestPrice}
-              earlyBirdPrice={event.pricing?.earlyBirdPrice}
-              earlyBirdDeadline={event.pricing?.earlyBirdDeadline}
-              tiers={event.pricing?.tiers}
-            />
+            {/* Guest RSVP + Member CTA — hidden when fully sold out */}
+            {(() => {
+              const now = new Date();
+              const allTiersSoldOrExpired =
+                event.pricing?.tiers?.length > 0 &&
+                event.pricing.tiers.every(
+                  (t: any) =>
+                    (t.deadline && new Date(t.deadline) < now) ||
+                    (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
+                );
+              if (allTiersSoldOrExpired) return null;
+              return (
+                <>
+                  <GuestRsvpForm
+                    eventId={event.id}
+                    eventSlug={event.slug}
+                    eventTitle={event.title}
+                    isPaid={!!(event.pricing && (event.type === 'paid' || event.type === 'hybrid') && event.pricing.guestPrice > 0)}
+                    guestPrice={event.pricing?.guestPrice}
+                    earlyBirdPrice={event.pricing?.earlyBirdPrice}
+                    earlyBirdDeadline={event.pricing?.earlyBirdDeadline}
+                    tiers={event.pricing?.tiers}
+                  />
 
-            {/* Member login link */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Already a member?{' '}
-                <Link href="/portal/login" className="text-cranberry hover:underline font-medium">
-                  Sign in for member pricing
-                </Link>
-              </p>
-            </div>
+                  {/* Member login link */}
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Already a member?{' '}
+                      <Link href="/portal/login" className="text-cranberry hover:underline font-medium">
+                        Sign in for member pricing
+                      </Link>
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </section>

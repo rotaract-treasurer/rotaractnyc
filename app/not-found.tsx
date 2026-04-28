@@ -9,7 +9,10 @@ export default function NotFound() {
         <p className="text-gray-600 dark:text-gray-400 mb-8">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <Link href="/" className="btn-md btn-primary">
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 px-6 py-2.5 text-sm bg-cranberry text-white hover:bg-cranberry-800 focus-visible:ring-cranberry-500 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+        >
           Back to Home
         </Link>
       </div>

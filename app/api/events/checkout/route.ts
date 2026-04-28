@@ -5,7 +5,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { isValidEmail } from '@/lib/utils/sanitize';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail } from '@/lib/email/templates';
-import { incrementTierSoldCount } from '@/lib/services/tierTracking';
+import { incrementTierSoldCount, tryReserveTierSpot, decrementTierSoldCount } from '@/lib/services/tierTracking';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +64,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // P0 #4: Check event-level capacity before allowing checkout
+    if (event.capacity) {
+      const [memberRsvpSnap, guestRsvpSnap] = await Promise.all([
+        adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
+        adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
+      ]);
+      const totalGoing = memberRsvpSnap.data().count + guestRsvpSnap.data().count;
+      if (totalGoing >= event.capacity) {
+        return NextResponse.json(
+          { error: 'This event has reached full capacity. No tickets are available.' },
+          { status: 409 },
+        );
+      }
+    }
+
     // Support current pricing schema (`event.pricing`) plus legacy flat fields.
     const pricing =
       event.pricing ||
@@ -90,6 +105,8 @@ export async function POST(request: NextRequest) {
     const now = new Date();
 
     if (pricing.tiers?.length) {
+      // Find the best available tier (non-atomic pre-filter for UX, real
+      // reservation happens atomically via tryReserveTierSpot below).
       let tier = tierId
         ? pricing.tiers.find((t: any) => t.id === tierId)
         : undefined;
@@ -108,9 +125,18 @@ export async function POST(request: NextRequest) {
       if (tier.deadline && new Date(tier.deadline) < now) {
         return NextResponse.json({ error: `The "${tier.label}" tier has expired.` }, { status: 409 });
       }
-      if (tier.capacity != null && (tier.soldCount ?? 0) >= tier.capacity) {
-        return NextResponse.json({ error: `The "${tier.label}" tier is sold out.` }, { status: 409 });
+
+      // 🔒 Atomic reservation — prevents oversell race condition
+      if (tier.capacity != null) {
+        const reserved = await tryReserveTierSpot(eventId, tier.id);
+        if (!reserved) {
+          return NextResponse.json(
+            { error: `The "${tier.label}" tier sold out while you were checking out.` },
+            { status: 409 },
+          );
+        }
       }
+
       priceCents = tier.guestPrice;
       tierLabel = tier.label;
       resolvedTierId = tier.id;
@@ -126,6 +152,12 @@ export async function POST(request: NextRequest) {
 
     // Free event: create RSVP directly
     if (priceCents === 0) {
+      // For free events without tier capacity, atomically reserve the spot.
+      // If the tier has no capacity set, skip (unlimited).
+      if (resolvedTierId && pricing.tiers?.find((t: any) => t.id === resolvedTierId)?.capacity == null) {
+        // No capacity set — skip atomic reservation, just track sold count
+      }
+
       await adminDb.collection('guest_rsvps').add({
         eventId,
         name,
@@ -139,8 +171,8 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
       });
 
-      // Track tier capacity
-      if (resolvedTierId) {
+      // Track tier capacity (for free tiers without atomic reservation)
+      if (resolvedTierId && !pricing.tiers?.find((t: any) => t.id === resolvedTierId)?.capacity) {
         await incrementTierSoldCount(eventId, resolvedTierId);
       }
 
@@ -183,6 +215,9 @@ export async function POST(request: NextRequest) {
       },
     ];
 
+    // If the Stripe session creation fails, release the reserved spot
+    let spotReserved = resolvedTierId != null;
+
     const metadata = {
       type: 'guest_event_ticket',
       eventId,
@@ -195,27 +230,35 @@ export async function POST(request: NextRequest) {
       amountCents: String(priceCents * quantity),
     };
 
-    if (embedded) {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: priceCents * quantity,
-        currency: 'usd',
-        receipt_email: email,
+    try {
+      if (embedded) {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: priceCents * quantity,
+          currency: 'usd',
+          receipt_email: email,
+          metadata,
+        });
+        return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        customer_email: email,
+        line_items: lineItems,
+        success_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=cancelled`,
         metadata,
       });
-      return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+
+      return NextResponse.json({ url: session.url });
+    } catch (stripeError: any) {
+      // Release the reserved spot if Stripe session creation fails
+      if (spotReserved && resolvedTierId) {
+        await decrementTierSoldCount(eventId, resolvedTierId).catch(() => {});
+      }
+      throw stripeError;
     }
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      customer_email: email,
-      line_items: lineItems,
-      success_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/events/${event.slug || eventId}?rsvp=cancelled`,
-      metadata,
-    });
-
-    return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error('Guest event checkout error:', error);
     return NextResponse.json(

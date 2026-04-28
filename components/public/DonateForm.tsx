@@ -17,6 +17,8 @@ export default function DonateForm() {
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
+  const [donorName, setDonorName] = useState('');
+  const [donorEmail, setDonorEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [verified, setVerified] = useState<boolean | null>(null);
@@ -50,6 +52,8 @@ export default function DonateForm() {
     if (verified || cancelled) {
       setSelected(null);
       setCustomAmount('');
+      setDonorName('');
+      setDonorEmail('');
     }
   }, [verified, cancelled]);
 
@@ -83,7 +87,28 @@ export default function DonateForm() {
     setError('');
     setLoading(true);
     try {
-      const body: Record<string, string> = {};
+      const trimmedName = donorName.trim();
+      const trimmedEmail = donorEmail.trim();
+
+      if (!trimmedName) {
+        setError('Please enter your name.');
+        setLoading(false);
+        return;
+      }
+      if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        setError('Please enter a valid email address.');
+        setLoading(false);
+        return;
+      }
+
+      // Client-side idempotency key to prevent duplicate session creation
+      const idempotencyKey = crypto.randomUUID();
+
+      const body: Record<string, string> = {
+        donorName: trimmedName,
+        donorEmail: trimmedEmail,
+        idempotencyKey,
+      };
       if (selected) {
         body.amount = String(selected);
       } else if (customAmount) {
@@ -185,6 +210,37 @@ export default function DonateForm() {
           ))}
         </div>
 
+        <div className="max-w-sm mx-auto mb-6 space-y-4">
+          <div>
+            <label htmlFor="donor-name" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+              Your name <span className="text-cranberry">*</span>
+            </label>
+            <input
+              id="donor-name"
+              type="text"
+              autoComplete="name"
+              placeholder="Jane Doe"
+              value={donorName}
+              onChange={(e) => { setDonorName(e.target.value); setError(''); }}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-cranberry/30 focus:border-cranberry outline-none transition-all dark:text-white"
+            />
+          </div>
+          <div>
+            <label htmlFor="donor-email" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+              Email for receipt <span className="text-cranberry">*</span>
+            </label>
+            <input
+              id="donor-email"
+              type="email"
+              autoComplete="email"
+              placeholder="jane@example.com"
+              value={donorEmail}
+              onChange={(e) => { setDonorEmail(e.target.value); setError(''); }}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-cranberry/30 focus:border-cranberry outline-none transition-all dark:text-white"
+            />
+          </div>
+        </div>
+
         <div className="max-w-xs mx-auto mb-8">
           <label htmlFor="custom-amount" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
             Or enter a custom amount
@@ -211,7 +267,7 @@ export default function DonateForm() {
           variant="primary"
           size="lg"
           onClick={handleDonate}
-          disabled={loading || (!selected && !customAmount)}
+          disabled={loading || (!selected && !customAmount) || !donorName.trim() || !donorEmail.trim()}
           className="w-full sm:w-auto min-w-[200px]"
         >
           {loading ? (

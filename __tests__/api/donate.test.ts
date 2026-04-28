@@ -20,6 +20,8 @@ import { NextRequest } from 'next/server';
 // Must import AFTER mocks
 import { POST } from '@/app/api/donate/route';
 
+const DONOR = { donorName: 'Test Donor', donorEmail: 'donor@test.com' };
+
 function makeRequest(body: Record<string, any>) {
   return new NextRequest('http://localhost/api/donate', {
     method: 'POST',
@@ -41,13 +43,13 @@ describe('POST /api/donate', () => {
   it('returns 500 when Stripe is not configured', async () => {
     delete process.env.STRIPE_SECRET_KEY;
     const spy = jest.spyOn(console, 'error').mockImplementation();
-    const res = await POST(makeRequest({ amount: '25' }));
+    const res = await POST(makeRequest({ ...DONOR, amount: '25' }));
     expect(res.status).toBe(500);
     spy.mockRestore();
   });
 
   it('creates checkout session for preset $25', async () => {
-    const res = await POST(makeRequest({ amount: '25' }));
+    const res = await POST(makeRequest({ ...DONOR, amount: '25' }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.url).toBe('https://checkout.stripe.com/test');
@@ -64,7 +66,7 @@ describe('POST /api/donate', () => {
   });
 
   it('creates checkout session for preset $100', async () => {
-    const res = await POST(makeRequest({ amount: '100' }));
+    const res = await POST(makeRequest({ ...DONOR, amount: '100' }));
     expect(res.status).toBe(200);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -78,7 +80,7 @@ describe('POST /api/donate', () => {
   });
 
   it('creates checkout session for custom amount', async () => {
-    const res = await POST(makeRequest({ customAmount: '75' }));
+    const res = await POST(makeRequest({ ...DONOR, customAmount: '75' }));
     expect(res.status).toBe(200);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -92,19 +94,26 @@ describe('POST /api/donate', () => {
   });
 
   it('rejects custom amount below $5', async () => {
-    const res = await POST(makeRequest({ customAmount: '3' }));
+    const res = await POST(makeRequest({ ...DONOR, customAmount: '3' }));
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toMatch(/minimum/i);
   });
 
   it('rejects request with no amount', async () => {
-    const res = await POST(makeRequest({}));
+    const res = await POST(makeRequest({ ...DONOR }));
     expect(res.status).toBe(400);
   });
 
   it('rejects invalid preset amount', async () => {
-    const res = await POST(makeRequest({ amount: '999' }));
+    const res = await POST(makeRequest({ ...DONOR, amount: '999' }));
     expect(res.status).toBe(400);
+  });
+
+  it('rejects donation without donor name or email', async () => {
+    const res = await POST(makeRequest({ amount: '25' }));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/name and email/i);
   });
 });

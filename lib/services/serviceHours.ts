@@ -48,23 +48,48 @@ export async function updateServiceHourStatus(
   });
 }
 
+/**
+ * Get total approved hours for a member using server-side aggregation.
+ * Fetches only approved records to minimise data transfer.
+ */
 export async function getMemberTotalHours(memberId: string): Promise<number> {
-  const hours = await getServiceHours(memberId);
-  return hours
-    .filter((h) => h.status === 'approved')
-    .reduce((sum, h) => sum + (h.hours || 0), 0);
+  try {
+    const snap = await adminDb
+      .collection(COLLECTION)
+      .where('memberId', '==', memberId)
+      .where('status', '==', 'approved')
+      .get();
+
+    return snap.docs.reduce((sum, d) => sum + (d.data().hours || 0), 0);
+  } catch (e) {
+    console.error('getMemberTotalHours error:', e);
+    return 0;
+  }
 }
 
+/**
+ * Get approved hours for a member within the current Rotary year
+ * (starting July 1st).
+ */
 export async function getMemberYearHours(memberId: string): Promise<number> {
   const now = new Date();
   const yearStart = now.getMonth() >= 6
-    ? new Date(now.getFullYear(), 6, 1)
-    : new Date(now.getFullYear() - 1, 6, 1);
+    ? new Date(now.getFullYear(), 6, 1).toISOString()
+    : new Date(now.getFullYear() - 1, 6, 1).toISOString();
 
-  const hours = await getServiceHours(memberId);
-  return hours
-    .filter((h) => h.status === 'approved' && new Date(h.createdAt) >= yearStart)
-    .reduce((sum, h) => sum + (h.hours || 0), 0);
+  try {
+    const snap = await adminDb
+      .collection(COLLECTION)
+      .where('memberId', '==', memberId)
+      .where('status', '==', 'approved')
+      .where('createdAt', '>=', yearStart)
+      .get();
+
+    return snap.docs.reduce((sum, d) => sum + (d.data().hours || 0), 0);
+  } catch (e) {
+    console.error('getMemberYearHours error:', e);
+    return 0;
+  }
 }
 
 export async function getPendingServiceHours(): Promise<ServiceHour[]> {

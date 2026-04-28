@@ -97,7 +97,9 @@ export default function GuestRsvpForm({
     setError('');
 
     try {
-      const body = { eventId, name, email, phone: phone || undefined, tierId: selectedTierId || undefined };
+      // Determine tierId: selected tier, or first available tier (only for tier-based pricing)
+      const tierId = hasTierPricing ? (selectedTierId || availableTiers[0]?.id || undefined) : undefined;
+      const body = { eventId, name, email, phone: phone || undefined, tierId };
 
       const rsvpRes = await fetch('/api/events/rsvp', {
         method: 'POST',

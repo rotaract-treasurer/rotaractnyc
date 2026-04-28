@@ -18,7 +18,7 @@ jest.mock('@/lib/email/templates', () => ({
 
 jest.mock('@/lib/firebase/admin', () => {
   // Shared state so we can configure per-test
-  const mockData: { users: any[]; dues: any[] } = { users: [], dues: [] };
+    const mockData: { members: any[]; memberDues: any[]; duesCycles: any[] } = { members: [], memberDues: [], duesCycles: [] };
 
   /** Minimal Firestore query builder that operates on mockData. */
   function makeQuery(collectionName: string) {
@@ -52,6 +52,7 @@ jest.mock('@/lib/firebase/admin', () => {
             ref: { update: jest.fn() },
           })),
           size: items.length,
+          empty: items.length === 0,
         };
       }),
     };
@@ -92,8 +93,9 @@ describe('GET /api/cron/dues-reminders', () => {
     process.env = { ...ORIGINAL_ENV, CRON_SECRET: 'cron-test-secret' };
     // Reset mock data
     const data = (adminDb as any).__mockData;
-    data.users = [];
-    data.dues = [];
+    data.members = [];
+    data.memberDues = [];
+    data.duesCycles = [];
     mockSendEmail.mockResolvedValue({ success: true, id: 'msg-1' });
   });
 
@@ -124,7 +126,16 @@ describe('GET /api/cron/dues-reminders', () => {
 
   it('sends a reminder email for a member with unpaid dues', async () => {
     const data = (adminDb as any).__mockData;
-    data.users = [
+    data.duesCycles = [
+      {
+        _id: 'cycle-1',
+        _data: {
+          isActive: true,
+          name: '2025-2026',
+        },
+      },
+    ];
+    data.members = [
       {
         _id: 'user-1',
         _data: {
@@ -135,12 +146,12 @@ describe('GET /api/cron/dues-reminders', () => {
         },
       },
     ];
-    data.dues = [
+    data.memberDues = [
       {
         _id: 'dues-1',
         _data: {
-          userId: 'user-1',
-          cycleName: '2025-2026',
+          memberId: 'user-1',
+          cycleId: 'cycle-1',
           status: 'UNPAID',
           amount: 8500,
         },
@@ -164,7 +175,16 @@ describe('GET /api/cron/dues-reminders', () => {
 
   it('skips members whose dues are already paid', async () => {
     const data = (adminDb as any).__mockData;
-    data.users = [
+    data.duesCycles = [
+      {
+        _id: 'cycle-2',
+        _data: {
+          isActive: true,
+          name: '2025-2026',
+        },
+      },
+    ];
+    data.members = [
       {
         _id: 'user-2',
         _data: {
@@ -175,12 +195,12 @@ describe('GET /api/cron/dues-reminders', () => {
         },
       },
     ];
-    data.dues = [
+    data.memberDues = [
       {
         _id: 'dues-2',
         _data: {
-          userId: 'user-2',
-          cycleName: '2025-2026',
+          memberId: 'user-2',
+          cycleId: 'cycle-2',
           status: 'PAID',
           amount: 6500,
         },

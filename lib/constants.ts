@@ -56,3 +56,31 @@ export const IMPACT_STATS = [
   { value: '$50K+', label: 'Raised for Charity (All-Time)' },
   { value: '15+', label: 'Global Partners' },
 ];
+
+// ── Reusable numeric constants ──────────────────────────────────────────────
+
+/** Default service hours goal for the Rotary year. */
+export const SERVICE_HOURS_GOAL = 40;
+
+/** Session cookie max age in seconds (14 days). */
+export const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
+
+/** Default page size for collection queries. */
+export const DEFAULT_PAGE_SIZE = 30;
+
+/** Larger page size for admin views. */
+export const ADMIN_PAGE_SIZE = 50;
+
+/** Firestore max query result size for aggregation. */
+export const AGGREGATION_MAX_SIZE = 500;
+
+// ── Stripe / Donation constants ─────────────────────────────────────────────
+
+/** Rotaract NYC EIN — required for IRS-compliant tax receipts. */
+export const ORG_EIN = 'XX-XXXXXXX'; // TODO: replace with actual EIN
+
+/** Minimum donation amount in cents ($5). */
+export const MIN_DONATION_CENTS = 500;
+
+/** Maximum donation amount in cents ($10,000). */
+export const MAX_DONATION_CENTS = 1_000_000;

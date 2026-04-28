@@ -28,18 +28,20 @@ export default function FinanceDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch pending approvals
-      const approvals = await apiGet('/api/finance/approvals');
-      
-      // Calculate YTD stats (simplified - would need proper Rotary year calculation)
-      // For now, just show placeholder values
+      const [approvals, finance] = await Promise.all([
+        apiGet('/api/finance/approvals').catch(() => ({})),
+        apiGet('/api/portal/finance').catch(() => null),
+      ]);
+
+      const summary = finance?.summary;
+
       setStats({
         pendingBudgets: approvals.pendingBudgets?.length || 0,
         pendingPayments: approvals.pendingPayments?.length || 0,
         pendingExpenses: approvals.pendingExpenses?.length || 0,
-        ytdCollected: 0, // TODO: Calculate from dues + event revenue
-        ytdSpent: 0, // TODO: Calculate from expenses
-        ytdBalance: 0,
+        ytdCollected: summary?.totalIncome || 0,
+        ytdSpent: summary?.totalExpenses || 0,
+        ytdBalance: summary?.balance || 0,
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

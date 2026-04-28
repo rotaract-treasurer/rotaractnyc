@@ -19,6 +19,7 @@ import ProfileCompletionCard from '@/components/portal/ProfileCompletionCard';
 import OnboardingChecklist from '@/components/portal/OnboardingChecklist';
 import { TutorialLauncher, useTutorial } from '@/components/portal/tutorial';
 import { formatRelativeTime } from '@/lib/utils/format';
+import { SERVICE_HOURS_GOAL } from '@/lib/constants';
 import type { CommunityPost, RotaractEvent, ServiceHour } from '@/types';
 
 /* ── Icons ── */
@@ -33,7 +34,7 @@ const FolderIcon = () => <svg aria-hidden="true" className="w-5 h-5" fill="none"
 const ChartIcon = () => <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const TrendingUpIcon = () => <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>;
 
-const SERVICE_HOURS_GOAL = 40;
+// SERVICE_HOURS_GOAL is now imported from '@/lib/constants'
 
 type QuickAction = {
   label: string;

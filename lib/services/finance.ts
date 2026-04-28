@@ -15,23 +15,42 @@ const COLLECTION = 'transactions';
 const SUMMARY_TTL_MS = 60_000; // 60 seconds for summary / dashboard data
 const LIST_TTL_MS = 30_000;    // 30 seconds for transaction lists
 
-const cache = new Map<string, { data: unknown; expiry: number }>();
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+const inflightCache = new Map<string, Promise<unknown>>();
 
 /**
  * Return cached data when the entry is still fresh; otherwise invoke
- * `fetcher`, store the result, and return it.  The *promise itself* is
- * not cached — only the resolved value — but we store eagerly so a
- * concurrent call that arrives while the first fetch is in-flight will
- * simply start its own fetch rather than returning stale data.
+ * `fetcher`, store the result, and return it.
+ *
+ * Fixes cache stampede: the *promise* is cached so concurrent callers
+ * share the same in-flight request instead of each starting their own.
  */
 function getCached<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
-  const entry = cache.get(key);
-  if (entry && entry.expiry > Date.now()) return Promise.resolve(entry.data as T);
+  const entry = cache.get(key) as CacheEntry<T> | undefined;
+  if (entry && entry.expiry > Date.now()) return Promise.resolve(entry.data);
 
-  const promise = fetcher().then((data) => {
-    cache.set(key, { data, expiry: Date.now() + ttlMs });
-    return data;
-  });
+  // Check if there's already an in-flight request for this key
+  const inflight = inflightCache.get(key) as Promise<T> | undefined;
+  if (inflight) return inflight;
+
+  // Start a new fetch and cache the promise
+  const promise = fetcher()
+    .then((data) => {
+      cache.set(key, { data, expiry: Date.now() + ttlMs });
+      inflightCache.delete(key);
+      return data;
+    })
+    .catch((err) => {
+      inflightCache.delete(key);
+      throw err;
+    });
+
+  inflightCache.set(key, promise);
   return promise;
 }
 
@@ -41,6 +60,7 @@ function getCached<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Pr
  */
 export function invalidateFinanceCache(): void {
   cache.clear();
+  inflightCache.clear();
 }
 
 // ─── Read operations ────────────────────────────────────────────────────────
