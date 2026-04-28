@@ -273,6 +273,9 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
       paidAmount: session.amount_total || 0,
       paymentStatus: 'paid',
       stripeSessionId: session.id,
+      promoCode: session.metadata?.promoCode || null,
+      discountPercent: session.metadata?.discountPercent ? Number(session.metadata.discountPercent) : null,
+      customFields: session.metadata?.customFields ? JSON.parse(session.metadata.customFields) : null,
       createdAt: new Date().toISOString(),
     });
   } else {
@@ -284,6 +287,9 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
       paidAmount: session.amount_total || 0,
       paymentStatus: 'paid',
       stripeSessionId: session.id,
+      promoCode: session.metadata?.promoCode || null,
+      discountPercent: session.metadata?.discountPercent ? Number(session.metadata.discountPercent) : null,
+      customFields: session.metadata?.customFields ? JSON.parse(session.metadata.customFields) : null,
     });
   }
 

@@ -50,6 +50,7 @@ export default function GuestRsvpForm({
   const [phone, setPhone] = useState('');
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -99,7 +100,7 @@ export default function GuestRsvpForm({
     try {
       // Determine tierId: selected tier, or first available tier (only for tier-based pricing)
       const tierId = hasTierPricing ? (selectedTierId || availableTiers[0]?.id || undefined) : undefined;
-      const body = { eventId, name, email, phone: phone || undefined, tierId };
+      const body = { eventId, name, email, phone: phone || undefined, tierId, promoCode: promoCode || undefined };
 
       const rsvpRes = await fetch('/api/events/rsvp', {
         method: 'POST',
@@ -302,6 +303,21 @@ export default function GuestRsvpForm({
             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-cranberry focus:ring-2 focus:ring-cranberry/20 outline-none transition"
           />
         </div>
+
+        {/* Promo code */}
+        {isPaid && unitPrice != null && unitPrice > 0 && (
+          <div>
+            <label htmlFor="guest-promo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Promo Code
+            </label>
+            <input
+              id="guest-promo" type="text" value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="Enter promo code"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-cranberry focus:ring-2 focus:ring-cranberry/20 outline-none transition"
+            />
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>}
 

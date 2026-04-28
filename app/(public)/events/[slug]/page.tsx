@@ -159,7 +159,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <p>{event.description}</p>
             </div>
 
-            {/* ── Sold-out banner (event-level) ── */}
+            {/* ── Sold-out banner (event-level capacity + tier-level) ── */}
             {(() => {
               const now = new Date();
               const allTiersSoldOrExpired =
@@ -169,15 +169,66 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     (t.deadline && new Date(t.deadline) < now) ||
                     (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
                 );
-              return allTiersSoldOrExpired ? (
+              const eventFull =
+                event.capacity != null && (event.totalGoing ?? 0) >= event.capacity;
+              const isSoldOut = allTiersSoldOrExpired || eventFull;
+
+              if (!isSoldOut) return null;
+
+              return (
                 <div className="mt-10 p-6 bg-red-50 dark:bg-red-950/40 rounded-2xl border-2 border-red-300 dark:border-red-800 text-center">
                   <span className="inline-block text-3xl mb-2">🎟️</span>
                   <h3 className="text-lg font-bold text-red-700 dark:text-red-400">Sold Out</h3>
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                    All tickets for this event have been claimed. Check back for future events!
+                    {eventFull
+                      ? 'This event has reached full capacity. Check back for future events!'
+                      : 'All tickets for this event have been claimed. Check back for future events!'}
                   </p>
+                  {/* Waitlist CTA */}
+                  {event.waitlistEnabled !== false && (
+                    <div className="mt-4 pt-4 border-t border-red-300 dark:border-red-800">
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                        Want to join the waitlist? Enter your email below to be notified if a spot opens up.
+                      </p>
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const form = e.currentTarget;
+                          const email = (form.querySelector('input') as HTMLInputElement).value;
+                          if (!email) return;
+                          try {
+                            const res = await fetch('/api/events/waitlist', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ eventId: event.id, email: email.toLowerCase() }),
+                            });
+                            if (res.ok) {
+                              const btn = form.querySelector('button') as HTMLButtonElement;
+                              btn.textContent = '✓ Joined Waitlist';
+                              btn.disabled = true;
+                              (form.querySelector('input') as HTMLInputElement).disabled = true;
+                            }
+                          } catch { /* silently ignore */ }
+                        }}
+                        className="mt-3 flex gap-2 max-w-sm mx-auto"
+                      >
+                        <input
+                          type="email"
+                          placeholder="Enter your email"
+                          required
+                          className="flex-1 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-sm"
+                        />
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Join Waitlist
+                        </button>
+                      </form>
+                    </div>
+                  )}
                 </div>
-              ) : null;
+              );
             })()}
 
             {/* Pricing */}

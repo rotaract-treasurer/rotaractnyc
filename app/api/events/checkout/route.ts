@@ -21,7 +21,18 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { eventId, name, email, phone, tierId, embedded = false, quantity: rawQuantity = 1 } = await request.json();
+    const {
+      eventId,
+      name,
+      email,
+      phone,
+      tierId,
+      embedded = false,
+      quantity: rawQuantity = 1,
+      promoCode,
+      customFields,
+      guestName,
+    } = await request.json();
     const quantity = Math.max(1, Math.min(10, parseInt(String(rawQuantity), 10) || 1));
 
     // Validate required inputs
@@ -98,6 +109,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Promo code validation ──
+    let discountPercent = 0;
+    let discountCode: string | null = null;
+
+    if (promoCode) {
+      const promoSnap = await adminDb
+        .collection('promo_codes')
+        .where('code', '==', promoCode.toUpperCase().trim())
+        .where('active', '==', true)
+        .limit(1)
+        .get();
+
+      if (promoSnap.empty) {
+        return NextResponse.json({ error: 'Invalid or expired promo code.' }, { status: 400 });
+      }
+
+      const promo = promoSnap.docs[0].data()!;
+      const promoNow = new Date();
+
+      // Check validity window
+      if (promo.validFrom && new Date(promo.validFrom) > promoNow) {
+        return NextResponse.json({ error: 'This promo code is not yet active.' }, { status: 400 });
+      }
+      if (promo.validUntil && new Date(promo.validUntil) < promoNow) {
+        return NextResponse.json({ error: 'This promo code has expired.' }, { status: 400 });
+      }
+      // Check usage limit
+      if (promo.maxUses && (promo.usedCount ?? 0) >= promo.maxUses) {
+        return NextResponse.json({ error: 'This promo code has reached its usage limit.' }, { status: 400 });
+      }
+      // Check event-specific restriction
+      if (promo.eventId && promo.eventId !== eventId) {
+        return NextResponse.json({ error: 'This promo code is not valid for this event.' }, { status: 400 });
+      }
+
+      discountPercent = promo.discountPercent ?? 0;
+      discountCode = promo.code;
+
+      // Increment usage count atomically
+      await promoSnap.docs[0].ref.update({
+        usedCount: adminDb.FieldValue.increment(1),
+      });
+    }
+
     // Determine price: check tiers first, then early bird, then guestPrice
     let priceCents: number;
     let resolvedTierId: string | undefined;
@@ -150,8 +205,25 @@ export async function POST(request: NextRequest) {
       priceCents = Number(pricing.guestPrice || 0);
     }
 
+    // Apply promo discount
+    let finalPriceCents = priceCents;
+    if (discountPercent > 0) {
+      const discountMultiplier = (100 - discountPercent) / 100;
+      finalPriceCents = Math.round(priceCents * discountMultiplier);
+    }
+
+    // Validate custom fields against event registration questions schema
+    if (customFields && event.registrationQuestions?.length) {
+      const requiredMissing = event.registrationQuestions
+        .filter((q: any) => q.required)
+        .some((q: any) => !customFields[q.id]);
+      if (requiredMissing) {
+        return NextResponse.json({ error: 'Please fill in all required registration fields.' }, { status: 400 });
+      }
+    }
+
     // Free event: create RSVP directly
-    if (priceCents === 0) {
+    if (finalPriceCents === 0) {
       // For free events without tier capacity, atomically reserve the spot.
       // If the tier has no capacity set, skip (unlimited).
       if (resolvedTierId && pricing.tiers?.find((t: any) => t.id === resolvedTierId)?.capacity == null) {
@@ -168,6 +240,9 @@ export async function POST(request: NextRequest) {
         tierId: resolvedTierId || null,
         paidAmount: 0,
         paymentStatus: 'free',
+        promoCode: discountCode,
+        discountPercent,
+        customFields: customFields || null,
         createdAt: new Date().toISOString(),
       });
 
@@ -202,14 +277,18 @@ export async function POST(request: NextRequest) {
     // Create Stripe checkout session for paid event
     const stripe = getStripe();
 
+    const lineItemName = discountCode
+      ? `${event.title} — ${tierLabel} Ticket (${discountPercent}% off)`
+      : `${event.title} — ${tierLabel} Ticket`;
+
     const lineItems = [
       {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `${event.title} — ${tierLabel} Ticket`,
+            name: lineItemName,
           },
-          unit_amount: priceCents,
+          unit_amount: finalPriceCents,
         },
         quantity,
       },
@@ -218,7 +297,7 @@ export async function POST(request: NextRequest) {
     // If the Stripe session creation fails, release the reserved spot
     let spotReserved = resolvedTierId != null;
 
-    const metadata = {
+    const metadata: Record<string, string> = {
       type: 'guest_event_ticket',
       eventId,
       guestName: name,
@@ -229,6 +308,10 @@ export async function POST(request: NextRequest) {
       quantity: String(quantity),
       amountCents: String(priceCents * quantity),
     };
+
+    if (discountCode) metadata.promoCode = discountCode;
+    if (discountPercent) metadata.discountPercent = String(discountPercent);
+    if (customFields) metadata.customFields = JSON.stringify(customFields);
 
     try {
       if (embedded) {
