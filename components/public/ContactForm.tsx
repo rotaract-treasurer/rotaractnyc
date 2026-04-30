@@ -13,8 +13,30 @@ export default function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSending(true);
     setError('');
+
+    if (!form.name.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
+    if (!form.email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!form.message.trim()) {
+      setError('Please enter a message.');
+      return;
+    }
+    if (form.message.trim().length > 5000) {
+      setError('Message must be 5,000 characters or fewer.');
+      return;
+    }
+
+    setSending(true);
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',

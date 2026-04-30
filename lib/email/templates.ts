@@ -83,7 +83,7 @@ const headerHtml = `
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
     <tr>
       <td style="background-color: ${CRIMSON}; padding: 32px 40px; text-align: center;">
-        <img src="${SITE.url}/rotaract-logo.png" alt="${SITE.shortName}" width="180" style="height: auto; display: block; margin: 0 auto;" />
+        <img src="${SITE.url}/rotaract-logo.png" alt="${SITE.shortName}" width="180" style="height: auto; display: block; margin: 0 auto; filter: brightness(0) invert(1);" />
         <p style="color: ${GOLD}; font-size: 11px; font-weight: 600; margin: 12px 0 0; letter-spacing: 2px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${SITE.motto}</p>
       </td>
     </tr>
