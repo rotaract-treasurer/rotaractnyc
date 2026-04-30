@@ -101,7 +101,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         ) : null}
 
         <div className="container-page relative z-10 py-10 sm:py-14">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mx-auto">
             <Link href="/events" className="inline-flex items-center gap-1 text-white/70 hover:text-white text-sm mb-6 transition-colors">
               <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               Back to Events
@@ -130,7 +130,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       {/* Details */}
       <section className="section-padding bg-white dark:bg-gray-950">
         <div className="container-page">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mx-auto">
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
               <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Date & Time</p>
