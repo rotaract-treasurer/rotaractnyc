@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
-import { incrementTierSoldCount } from '@/lib/services/tierTracking';
+import { tryReserveTierSpot, releaseTierSpot } from '@/lib/services/tierTracking';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { eventId, ticketType, tierId, paymentMethod = 'stripe', proofUrl, embedded = false, quantity: rawQuantity = 1 } = body;
+    const { eventId, ticketType, tierId, promoCode, paymentMethod = 'stripe', proofUrl, embedded = false, quantity: rawQuantity = 1 } = body;
     const quantity = Math.max(1, Math.min(10, parseInt(String(rawQuantity), 10) || 1));
 
     if (!eventId) {
@@ -53,6 +54,19 @@ export async function POST(request: NextRequest) {
     }
 
     const event = eventDoc.data()!;
+
+    // ── P0-1: Capacity check ──
+    if (event.capacity) {
+      const goingSnapshot = await adminDb.collection('rsvps')
+        .where('eventId', '==', eventId)
+        .where('status', '==', 'going')
+        .count()
+        .get();
+      const currentGoing = goingSnapshot.data().count;
+      if (currentGoing + quantity > event.capacity) {
+        return NextResponse.json({ error: 'This event is sold out. No tickets remaining.' }, { status: 409 });
+      }
+    }
 
     if (!event.pricing) {
       return NextResponse.json({ error: 'This is a free event — no payment required.' }, { status: 400 });
@@ -89,8 +103,16 @@ export async function POST(request: NextRequest) {
       if (tier.deadline && new Date(tier.deadline) < now) {
         return NextResponse.json({ error: `The "${tier.label}" tier has expired.` }, { status: 409 });
       }
-      if (tier.capacity != null && (tier.soldCount ?? 0) >= tier.capacity) {
-        return NextResponse.json({ error: `The "${tier.label}" tier is sold out.` }, { status: 409 });
+      if (tier.capacity != null && (tier.soldCount ?? 0) + quantity > tier.capacity) {
+        return NextResponse.json({ error: `Not enough remaining capacity in "${tier.label}" tier for quantity ${quantity}.` }, { status: 409 });
+      }
+
+      // Respect min/max quantity per tier if defined
+      if (tier.minQuantity && quantity < tier.minQuantity) {
+        return NextResponse.json({ error: `The "${tier.label}" tier requires a minimum of ${tier.minQuantity} tickets.` }, { status: 400 });
+      }
+      if (tier.maxQuantity && quantity > tier.maxQuantity) {
+        return NextResponse.json({ error: `The "${tier.label}" tier allows a maximum of ${tier.maxQuantity} tickets.` }, { status: 400 });
       }
 
       priceCents = isMember && ticketType !== 'guest' ? tier.memberPrice : tier.guestPrice;
@@ -115,29 +137,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── P0-2: Tier atomic reservation ──
+    let tierReservationId: string | null = null;
+    if (resolvedTierId) {
+      const tier = event.pricing.tiers?.find((t: any) => t.id === resolvedTierId);
+      if (tier?.capacity != null) {
+        const reserved = await tryReserveTierSpot(eventId, resolvedTierId, tier.capacity, quantity);
+        if (!reserved) {
+          return NextResponse.json({ error: `The "${tier.label}" tier just sold out. Please try another tier.` }, { status: 409 });
+        }
+        tierReservationId = resolvedTierId;
+      }
+    }
+
     // If price is 0 (free for members), just RSVP directly
     if (priceCents === 0) {
-      if (uid) {
-        const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
-        await rsvpRef.set(
-          {
-            memberId: uid,
-            eventId,
-            status: 'going',
-            ticketType: priceLabel.toLowerCase(),
-            tierId: resolvedTierId || null,
-            paidAmount: 0,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-
-        // Track tier capacity
-        if (resolvedTierId) {
-          await incrementTierSoldCount(eventId, resolvedTierId);
-        }
+      if (!uid) {
+        if (tierReservationId) await releaseTierSpot(eventId, tierReservationId, quantity);
+        return NextResponse.json({ error: 'You must be logged in to claim a free member ticket.' }, { status: 401 });
       }
+      const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
+      await rsvpRef.set(
+        {
+          memberId: uid,
+          eventId,
+          status: 'going',
+          ticketType: priceLabel.toLowerCase(),
+          tierId: resolvedTierId || null,
+          paidAmount: 0,
+          quantity,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
       return NextResponse.json({ free: true, message: 'Free ticket — you\'re in!' });
+    }
+
+    // ── P0-5: Require authentication for paid tickets ──
+    if (!uid) {
+      if (tierReservationId) {
+        await releaseTierSpot(eventId, tierReservationId, quantity);
+      }
+      return NextResponse.json({ error: 'You must be logged in to purchase tickets.' }, { status: 401 });
     }
 
     // Handle offline payment methods
@@ -148,12 +189,13 @@ export async function POST(request: NextRequest) {
         type: 'event',
         relatedId: eventId,
         relatedName: event.title,
-        memberId: uid || null,
+        memberId: uid,
         memberName: null,
         memberEmail: null,
         amount: priceCents,
         method: paymentMethod,
         tierId: resolvedTierId || null,
+        tierReservationId: tierReservationId,
         status: 'pending',
         proofUrl: proofUrl || null,
         submittedAt: new Date().toISOString(),
@@ -161,30 +203,23 @@ export async function POST(request: NextRequest) {
         confirmedBy: null,
       });
 
-      // If authenticated, also mark RSVP as going (with pending payment status)
-      if (uid) {
-        const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
-        await rsvpRef.set(
-          {
-            memberId: uid,
-            eventId,
-            status: 'going',
-            ticketType: priceLabel.toLowerCase(),
-            tierId: resolvedTierId || null,
-            paidAmount: 0,
-            paymentStatus: 'pending_offline',
-            paymentMethod: paymentMethod,
-            offlinePaymentId: offlinePaymentRef.id,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-
-        // Track tier capacity (reserved even while pending)
-        if (resolvedTierId) {
-          await incrementTierSoldCount(eventId, resolvedTierId);
-        }
-      }
+      const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
+      await rsvpRef.set(
+        {
+          memberId: uid,
+          eventId,
+          status: 'going',
+          ticketType: priceLabel.toLowerCase(),
+          tierId: resolvedTierId || null,
+          paidAmount: 0,
+          quantity,
+          paymentStatus: 'pending_offline',
+          paymentMethod: paymentMethod,
+          offlinePaymentId: offlinePaymentRef.id,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
 
       return NextResponse.json({
         success: true,
@@ -192,6 +227,48 @@ export async function POST(request: NextRequest) {
         offlinePaymentId: offlinePaymentRef.id,
       });
     }
+
+    // ── P2-22: Validate promo code for member checkout ──
+    let finalPriceCents = priceCents;
+    let promoApplied = false;
+    let promoUsedId: string | null = null;
+    if (promoCode) {
+      const promosSnapshot = await adminDb.collection('promoCodes')
+        .where('code', '==', promoCode.trim().toUpperCase())
+        .where('active', '==', true)
+        .limit(1)
+        .get();
+      if (!promosSnapshot.empty) {
+        const promo = promosSnapshot.docs[0].data() as any;
+        const promoNow = new Date();
+        if (promo.startsAt && new Date(promo.startsAt) > promoNow) {
+          return NextResponse.json({ error: 'Promo code is not yet active.' }, { status: 400 });
+        }
+        if (promo.expiresAt && new Date(promo.expiresAt) < promoNow) {
+          return NextResponse.json({ error: 'Promo code has expired.' }, { status: 400 });
+        }
+        if (promo.maxUses && (promo.usedCount ?? 0) >= promo.maxUses) {
+          return NextResponse.json({ error: 'Promo code usage limit reached.' }, { status: 400 });
+        }
+        if (promo.eventIds?.length && !promo.eventIds.includes(eventId)) {
+          return NextResponse.json({ error: 'Promo code is not valid for this event.' }, { status: 400 });
+        }
+        if (promo.type === 'percentage') {
+          finalPriceCents = Math.round(priceCents * (1 - (promo.amount || 0) / 100));
+        } else {
+          finalPriceCents = Math.max(0, priceCents - (promo.amount || 0));
+        }
+        if (finalPriceCents < 50) finalPriceCents = 50; // Stripe minimum
+        promoApplied = true;
+        promoUsedId = promosSnapshot.docs[0].id;
+        // Increment after successful Stripe session creation (prevents leaked usage on failure)
+      }
+    }
+
+    // Hold a ref for post-Stripe increment
+    const promoDocRef = promoUsedId
+      ? adminDb.collection('promoCodes').doc(promoUsedId)
+      : null;
 
     // Create Stripe checkout session
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -201,10 +278,10 @@ export async function POST(request: NextRequest) {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `${event.title} — ${priceLabel} Ticket`,
+            name: `${event.title} — ${priceLabel} Ticket${promoApplied ? ' (Promo Applied)' : ''}`,
             description: `${event.date ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''} · ${event.location || ''}`,
           },
-          unit_amount: priceCents,
+          unit_amount: finalPriceCents,
         },
         quantity,
       },
@@ -213,31 +290,33 @@ export async function POST(request: NextRequest) {
     const metadata = {
       type: 'event_ticket',
       eventId,
-      memberId: uid || '',
+      memberId: uid,
       ticketType: priceLabel.toLowerCase(),
       tierId: resolvedTierId || '',
+      tierReservationId: tierReservationId || '',
       quantity: String(quantity),
-      amountCents: String(priceCents * quantity),
+      amountCents: String(finalPriceCents * quantity),
+      originalAmountCents: String(priceCents * quantity),
       eventTitle: event.title,
+      promoCode: promoApplied ? promoCode : '',
     };
 
     if (embedded) {
       let receiptEmail: string | undefined;
-      if (uid) {
-        try {
-          const userRecord = await adminAuth.getUser(uid);
-          receiptEmail = userRecord.email ?? undefined;
-        } catch {
-          // proceed without email
-        }
+      try {
+        const userRecord = await adminAuth.getUser(uid);
+        receiptEmail = userRecord.email ?? undefined;
+      } catch {
+        // proceed without email
       }
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: priceCents * quantity,
+        amount: finalPriceCents * quantity,
         currency: 'usd',
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         metadata,
       });
+      if (promoDocRef) await promoDocRef.update({ usedCount: FieldValue.increment(1) });
       return NextResponse.json({ clientSecret: paymentIntent.client_secret });
     }
 
@@ -250,6 +329,7 @@ export async function POST(request: NextRequest) {
       metadata,
     });
 
+    if (promoDocRef) await promoDocRef.update({ usedCount: FieldValue.increment(1) });
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error('Event checkout error:', error);

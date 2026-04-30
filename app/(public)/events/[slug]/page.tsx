@@ -101,26 +101,28 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         ) : null}
 
         <div className="container-page relative z-10 py-10 sm:py-14">
-          <Link href="/events" className="inline-flex items-center gap-1 text-white/70 hover:text-white text-sm mb-6 transition-colors">
-            <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            Back to Events
-          </Link>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Badge variant={event.type === 'service' ? 'azure' : event.type === 'paid' ? 'gold' : event.type === 'hybrid' ? 'cranberry' : 'green'}>
-              {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
-            </Badge>
-            {event.type !== 'free' && (!event.pricing || event.pricing.guestPrice === 0) && (
-              <Badge variant="green">✓ Free</Badge>
-            )}
-            {event.pricing && event.pricing.guestPrice > 0 && event.type !== 'paid' && (
-              <Badge variant="gold">🎟️ {formatCurrency(event.pricing.guestPrice)}</Badge>
-            )}
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold">{event.title}</h1>
+          <div className="max-w-3xl">
+            <Link href="/events" className="inline-flex items-center gap-1 text-white/70 hover:text-white text-sm mb-6 transition-colors">
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              Back to Events
+            </Link>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <Badge variant={event.type === 'service' ? 'azure' : event.type === 'paid' ? 'gold' : event.type === 'hybrid' ? 'cranberry' : 'green'}>
+                {event.type === 'service' ? '🤝 Service' : event.type === 'paid' ? '🎟️ Ticketed' : event.type === 'hybrid' ? '⭐ Hybrid' : '✓ Free'}
+              </Badge>
+              {event.type !== 'free' && (!event.pricing || event.pricing.guestPrice === 0) && (
+                <Badge variant="green">✓ Free</Badge>
+              )}
+              {event.pricing && event.pricing.guestPrice > 0 && event.type !== 'paid' && (
+                <Badge variant="gold">🎟️ {formatCurrency(event.pricing.guestPrice)}</Badge>
+              )}
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold">{event.title}</h1>
 
-          {/* Action buttons: Calendar, Share, Directions */}
-          <div className="mt-6">
-            <PublicEventActions event={event} />
+            {/* Action buttons: Calendar, Share, Directions */}
+            <div className="mt-6">
+              <PublicEventActions event={event} />
+            </div>
           </div>
         </div>
       </section>
@@ -163,8 +165,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             {(() => {
               const now = new Date();
               const allTiersSoldOrExpired =
-                event.pricing?.tiers?.length > 0 &&
-                event.pricing.tiers.every(
+                (event.pricing?.tiers?.length ?? 0) > 0 &&
+                (event.pricing?.tiers ?? []).every(
                   (t: any) =>
                     (t.deadline && new Date(t.deadline) < now) ||
                     (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
@@ -328,8 +330,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             {(() => {
               const now = new Date();
               const allTiersSoldOrExpired =
-                event.pricing?.tiers?.length > 0 &&
-                event.pricing.tiers.every(
+                (event.pricing?.tiers?.length ?? 0) > 0 &&
+                (event.pricing?.tiers ?? []).every(
                   (t: any) =>
                     (t.deadline && new Date(t.deadline) < now) ||
                     (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),

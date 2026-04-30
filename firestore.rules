@@ -348,6 +348,17 @@ service cloud.firestore {
     }
 
     // ───────────────────────────────────────
+    // Event Waitlist (managed server-side only)
+    // ───────────────────────────────────────
+    match /event_waitlist/{entryId} {
+      // Board+ can read waitlist entries (for event management)
+      allow read: if isBoard();
+
+      // All writes go through Admin SDK (/api/events/waitlist route)
+      allow write: if false;
+    }
+
+    // ───────────────────────────────────────
     // Deny everything else
     // ───────────────────────────────────────
     match /{document=**} {

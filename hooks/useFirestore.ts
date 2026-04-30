@@ -29,8 +29,9 @@ import { Timestamp } from 'firebase/firestore';
 function serialiseTimestamps<T>(obj: T): T {
   if (obj == null) return obj;
   if (obj instanceof Timestamp) return obj.toDate().toISOString() as T;
-  if ((obj as Record<string, unknown>).toDate && typeof (obj as Record<string, unknown>).toDate === 'function') {
-    return ((obj as Record<string, unknown>).toDate() as Date).toISOString() as T;
+  const objRecord = obj as Record<string, unknown>;
+  if (objRecord.toDate && typeof objRecord.toDate === 'function') {
+    return (objRecord.toDate() as Date).toISOString() as T;
   }
   if (Array.isArray(obj)) return obj.map(serialiseTimestamps) as T;
   if (typeof obj === 'object') {
@@ -60,7 +61,7 @@ export function useCollection<T = DocumentData>(
   const constraintKey = useMemo(() => {
     return constraints
       .map((c) => {
-        const constraint = c as Record<string, unknown>;
+        const constraint = c as unknown as Record<string, unknown>;
         return `${String(constraint.type)}:${String(constraint._field ?? '')}:${JSON.stringify(constraint._value ?? constraint._direction ?? constraint._limit ?? '')}`;
       })
       .join('||');

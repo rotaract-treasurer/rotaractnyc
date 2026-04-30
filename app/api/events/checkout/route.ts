@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getStripe } from '@/lib/stripe/client';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 import { adminDb } from '@/lib/firebase/admin';
@@ -31,7 +32,6 @@ export async function POST(request: NextRequest) {
       quantity: rawQuantity = 1,
       promoCode,
       customFields,
-      guestName,
     } = await request.json();
     const quantity = Math.max(1, Math.min(10, parseInt(String(rawQuantity), 10) || 1));
 
@@ -75,16 +75,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // P0 #4: Check event-level capacity before allowing checkout
+    // P0 #3: Check event-level capacity before allowing checkout.
+    // This is a non-authoritative pre-check — the real atomic guard happens
+    // inside tryReserveTierSpot for tier-capacity events. For events that
+    // use event-level capacity without tiers, this is best-effort.
+    // A production hardening would move this into an atomic counter on
+    // the event doc itself.
     if (event.capacity) {
       const [memberRsvpSnap, guestRsvpSnap] = await Promise.all([
         adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
         adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
       ]);
       const totalGoing = memberRsvpSnap.data().count + guestRsvpSnap.data().count;
-      if (totalGoing >= event.capacity) {
+      if (totalGoing + quantity > event.capacity) {
         return NextResponse.json(
-          { error: 'This event has reached full capacity. No tickets are available.' },
+          { error: 'This event does not have enough remaining capacity for the requested quantity.' },
           { status: 409 },
         );
       }
@@ -112,6 +117,7 @@ export async function POST(request: NextRequest) {
     // ── Promo code validation ──
     let discountPercent = 0;
     let discountCode: string | null = null;
+    let promoDocRef: FirebaseFirestore.DocumentReference | null = null;
 
     if (promoCode) {
       const promoSnap = await adminDb
@@ -146,12 +152,11 @@ export async function POST(request: NextRequest) {
 
       discountPercent = promo.discountPercent ?? 0;
       discountCode = promo.code;
-
-      // Increment usage count atomically
-      await promoSnap.docs[0].ref.update({
-        usedCount: adminDb.FieldValue.increment(1),
-      });
+      promoDocRef = promoSnap.docs[0].ref;
+      // Increment after successful Stripe session creation (prevents leaked usage on failure)
     }
+
+    // (promoDocRef set above if promo was applied)
 
     // Determine price: check tiers first, then early bird, then guestPrice
     let priceCents: number;
@@ -183,7 +188,7 @@ export async function POST(request: NextRequest) {
 
       // 🔒 Atomic reservation — prevents oversell race condition
       if (tier.capacity != null) {
-        const reserved = await tryReserveTierSpot(eventId, tier.id);
+        const reserved = await tryReserveTierSpot(eventId, tier.id, tier.capacity, quantity);
         if (!reserved) {
           return NextResponse.json(
             { error: `The "${tier.label}" tier sold out while you were checking out.` },
@@ -224,31 +229,36 @@ export async function POST(request: NextRequest) {
 
     // Free event: create RSVP directly
     if (finalPriceCents === 0) {
-      // For free events without tier capacity, atomically reserve the spot.
-      // If the tier has no capacity set, skip (unlimited).
-      if (resolvedTierId && pricing.tiers?.find((t: any) => t.id === resolvedTierId)?.capacity == null) {
-        // No capacity set — skip atomic reservation, just track sold count
-      }
+      const actualQuantity = quantity || 1;
+      const now = new Date().toISOString();
 
-      await adminDb.collection('guest_rsvps').add({
-        eventId,
-        name,
-        email: email.toLowerCase(),
-        phone: phone || null,
-        status: 'going',
-        ticketType: 'guest',
-        tierId: resolvedTierId || null,
-        paidAmount: 0,
-        paymentStatus: 'free',
-        promoCode: discountCode,
-        discountPercent,
-        customFields: customFields || null,
-        createdAt: new Date().toISOString(),
-      });
+      // Create one RSVP record per guest if quantity > 1, otherwise just one
+      const rsvpPromises: Promise<any>[] = [];
+      for (let i = 0; i < actualQuantity; i++) {
+        rsvpPromises.push(
+          adminDb.collection('guest_rsvps').add({
+            eventId,
+            name,
+            email: email.toLowerCase(),
+            phone: phone || null,
+            status: 'going',
+            ticketType: 'guest',
+            tierId: resolvedTierId || null,
+            paidAmount: 0,
+            paymentStatus: 'free',
+            promoCode: discountCode,
+            discountPercent,
+            customFields: customFields || null,
+            quantity: actualQuantity,
+            createdAt: now,
+          })
+        );
+      }
+      await Promise.all(rsvpPromises);
 
       // Track tier capacity (for free tiers without atomic reservation)
       if (resolvedTierId && !pricing.tiers?.find((t: any) => t.id === resolvedTierId)?.capacity) {
-        await incrementTierSoldCount(eventId, resolvedTierId);
+        await incrementTierSoldCount(eventId, resolvedTierId, actualQuantity);
       }
 
       // Send confirmation email for free ticket
@@ -259,7 +269,8 @@ export async function POST(request: NextRequest) {
           time: event.time || '',
           location: event.location || '',
           slug: event.slug || eventId,
-        }, 0);
+          quantity: actualQuantity,
+        } as any, 0);
 
         await sendEmail({
           to: email,
@@ -295,7 +306,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // If the Stripe session creation fails, release the reserved spot
-    let spotReserved = resolvedTierId != null;
+    const spotReserved = resolvedTierId != null;
 
     const metadata: Record<string, string> = {
       type: 'guest_event_ticket',
@@ -321,6 +332,7 @@ export async function POST(request: NextRequest) {
           receipt_email: email,
           metadata,
         });
+        if (promoDocRef) await promoDocRef.update({ usedCount: FieldValue.increment(1) });
         return NextResponse.json({ clientSecret: paymentIntent.client_secret });
       }
 
@@ -334,6 +346,7 @@ export async function POST(request: NextRequest) {
         metadata,
       });
 
+      if (promoDocRef) await promoDocRef.update({ usedCount: FieldValue.increment(1) });
       return NextResponse.json({ url: session.url });
     } catch (stripeError: any) {
       // Release the reserved spot if Stripe session creation fails

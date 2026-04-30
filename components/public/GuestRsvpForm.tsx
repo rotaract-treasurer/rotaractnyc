@@ -10,6 +10,66 @@ import Modal from '@/components/ui/Modal';
 import CardPaymentForm from '@/components/ui/CardPaymentForm';
 import type { TicketTier } from '@/types';
 
+// ── Inline waitlist widget ─────────────────────────────────────
+function WaitlistForm({ eventId }: { eventId: string }) {
+  const [wlEmail, setWlEmail] = useState('');
+  const [wlStatus, setWlStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [wlMsg, setWlMsg] = useState('');
+
+  async function handleWaitlist(e: FormEvent) {
+    e.preventDefault();
+    if (!wlEmail) return;
+    setWlStatus('loading');
+    try {
+      const res = await fetch('/api/events/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, email: wlEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+      setWlStatus('done');
+      setWlMsg(data.message || "You're on the waitlist! We'll notify you if a spot opens.");
+    } catch (err: any) {
+      setWlStatus('error');
+      setWlMsg(err.message || 'Something went wrong. Please try again.');
+    }
+  }
+
+  if (wlStatus === 'done') {
+    return (
+      <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-center">
+        <p className="text-sm font-medium text-green-700 dark:text-green-300">✓ {wlMsg}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-4">
+      <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">🎟️ Sold Out</p>
+      <p className="text-xs text-red-600 dark:text-red-400 mb-3">All ticket tiers have been claimed. Join the waitlist and we&apos;ll notify you if a spot opens up.</p>
+      <form onSubmit={handleWaitlist} className="flex gap-2">
+        <input
+          type="email"
+          required
+          value={wlEmail}
+          onChange={(e) => setWlEmail(e.target.value)}
+          placeholder="your@email.com"
+          className="flex-1 min-w-0 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-cranberry focus:ring-2 focus:ring-cranberry/20 outline-none transition"
+        />
+        <button
+          type="submit"
+          disabled={wlStatus === 'loading'}
+          className="shrink-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+        >
+          {wlStatus === 'loading' ? '…' : 'Join Waitlist'}
+        </button>
+      </form>
+      {wlStatus === 'error' && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{wlMsg}</p>}
+    </div>
+  );
+}
+
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const stripeAppearance = {
@@ -195,7 +255,7 @@ export default function GuestRsvpForm({
         <div className="mb-5 space-y-2">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Select your ticket tier:</p>
           {availableTiers.length === 0 ? (
-            <p className="text-sm text-red-500 font-medium">All ticket tiers are sold out or expired.</p>
+            <WaitlistForm eventId={eventId} />
           ) : (
             availableTiers.map((tier) => {
               const selected = selectedTierId === tier.id;
@@ -237,11 +297,10 @@ export default function GuestRsvpForm({
         </p>
       )}
 
-      {/* Quantity selector — only for paid events */}
-      {isPaid && unitPrice != null && unitPrice > 0 && (
-        <div className="mb-5">
+      {/* Quantity selector — available for all event types */}
+      <div className="mb-5">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Number of Tickets
+            {isPaid ? 'Number of Tickets' : 'Number of Guests'}
           </label>
           <div className="flex items-center gap-3">
             <button
@@ -261,14 +320,13 @@ export default function GuestRsvpForm({
             >
               +
             </button>
-            {quantity > 1 && (
+            {quantity > 1 && unitPrice != null && (
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 = <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(unitPrice * quantity)}</span> total
               </span>
             )}
           </div>
         </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -337,7 +395,9 @@ export default function GuestRsvpForm({
             ? quantity > 1
               ? `Get ${quantity} Tickets`
               : 'Get Your Ticket'
-            : 'Register as Guest'}
+            : quantity > 1
+              ? `Register ${quantity} Guests`
+              : 'Register as Guest'}
         </button>
       </form>
 

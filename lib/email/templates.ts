@@ -299,7 +299,7 @@ export function guestRsvpConfirmationEmail(
 
 export function guestTicketConfirmationEmail(
   name: string,
-  event: { title: string; date: string; time: string; location: string; slug: string },
+  event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number },
   amountCents: number,
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);

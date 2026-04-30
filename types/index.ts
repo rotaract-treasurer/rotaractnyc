@@ -96,6 +96,8 @@ export interface RotaractEvent {
   tags?: string[];
   capacity?: number;
   attendeeCount?: number;
+  totalGoing?: number;
+  waitlistEnabled?: boolean;
   isPublic: boolean;
   status: 'draft' | 'published' | 'cancelled';
   // Recurrence fields

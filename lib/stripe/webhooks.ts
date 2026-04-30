@@ -56,6 +56,8 @@ interface DonorRecord {
   totalDonatedCents: number;
   totalDonationCount: number;
   stripeSessionIds: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 async function upsertDonorRecord(params: {
