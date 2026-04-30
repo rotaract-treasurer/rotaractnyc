@@ -130,7 +130,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       {/* Details */}
       <section className="section-padding bg-white dark:bg-gray-950">
         <div className="container-page">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl">
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
               <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Date & Time</p>
