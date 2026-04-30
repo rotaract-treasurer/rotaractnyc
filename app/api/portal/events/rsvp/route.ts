@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { sendEmail } from '@/lib/email/send';
+import { memberRsvpConfirmationEmail } from '@/lib/email/templates';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
@@ -99,6 +101,33 @@ export async function POST(request: NextRequest) {
       } else if (wasGoing && !nowGoing) {
         // Cancelling → decrement to free up the spot
         await decrementTierSoldCount(eventId, prevTierId);
+      }
+    }
+
+    // Send RSVP confirmation email when a member RSVPs as 'going' for the first time
+    if (nowGoing && !wasGoing) {
+      try {
+        const [userRecord, eventDoc] = await Promise.all([
+          adminAuth.getUser(uid),
+          adminDb.collection('events').doc(eventId).get(),
+        ]);
+        if (userRecord.email && eventDoc.exists) {
+          const ev = eventDoc.data()!;
+          const content = memberRsvpConfirmationEmail(
+            userRecord.displayName || 'Member',
+            {
+              title: ev.title || 'Event',
+              date: ev.date || '',
+              time: ev.time || '',
+              location: ev.location || '',
+              slug: ev.slug || eventId,
+            },
+          );
+          await sendEmail({ to: userRecord.email, subject: content.subject, html: content.html, text: content.text });
+        }
+      } catch (emailErr) {
+        // Non-blocking — log but don't fail the RSVP
+        console.error('RSVP confirmation email failed (non-blocking):', emailErr);
       }
     }
 

@@ -17,7 +17,7 @@ import { createTransaction } from '@/lib/services/finance';
 import { adjustTierSoldCount, releaseTierSpot } from '@/lib/services/tierTracking';
 import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
-import { guestTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
+import { guestTicketConfirmationEmail, memberTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
 
 /**
  * Idempotency: check if we already processed a Stripe event.
@@ -115,34 +115,67 @@ async function isSessionProcessed(sessionId: string): Promise<boolean> {
   return !snap.empty;
 }
 
-/** Fetch event and send a ticket confirmation email. P1 #10: includes tier info. */
+/** Fetch event data from Firestore. Returns null if not found. */
+async function fetchEventData(eventId: string) {
+  const doc = await adminDb.collection('events').doc(eventId).get();
+  if (!doc.exists) return null;
+  const d = doc.data()!;
+  return {
+    title: d.title || 'Event',
+    date: d.date || '',
+    time: d.time || '',
+    location: d.location || '',
+    slug: d.slug || eventId,
+    pricing: d.pricing,
+  };
+}
+
+/** Send a member ticket confirmation email (branded, no membership upsell). */
+async function sendMemberTicketConfirmationEmail(
+  name: string,
+  email: string,
+  eventId: string,
+  amountCents: number,
+  tierId?: string,
+  quantity = 1,
+): Promise<void> {
+  try {
+    if (!email) return;
+    const event = await fetchEventData(eventId);
+    if (!event) return;
+    const tier = tierId ? event.pricing?.tiers?.find((t: any) => t.id === tierId) : undefined;
+    const content = memberTicketConfirmationEmail(
+      name,
+      { ...event, tierLabel: tier?.label, quantity },
+      amountCents,
+    );
+    await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
+  } catch (err) {
+    console.error('Failed to send member ticket confirmation email:', err);
+  }
+}
+
+/** Send a guest ticket confirmation email. P1 #10: includes tier info. */
 async function sendTicketConfirmationEmail(
   name: string,
   email: string,
   eventId: string,
   amountCents: number,
   tierLabel?: string,
+  quantity = 1,
 ): Promise<void> {
   try {
     if (!email) return;
-    const eventDoc = await adminDb.collection('events').doc(eventId).get();
-    if (!eventDoc.exists) return;
-    const event = eventDoc.data()!;
+    const event = await fetchEventData(eventId);
+    if (!event) return;
     const content = guestTicketConfirmationEmail(
       name,
-      {
-        title: event.title || 'Event',
-        date: event.date || '',
-        time: event.time || '',
-        location: event.location || '',
-        slug: event.slug || eventId,
-        tierLabel: tierLabel || undefined,
-      },
+      { ...event, tierLabel, quantity },
       amountCents,
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {
-    console.error('Failed to send ticket confirmation email:', err);
+    console.error('Failed to send guest ticket confirmation email:', err);
   }
 }
 
@@ -213,23 +246,17 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
     quantity,
   });
 
-  // Send confirmation email to member (P1 #10: tier info included)
+  // Send branded member confirmation email (P1 #10: tier + quantity included)
   try {
     const userRecord = await adminAuth.getUser(memberId);
     if (userRecord.email) {
-      // Fetch tier label for the email
-      let tierLabel: string | undefined;
-      if (tierId) {
-        const eventDoc = await adminDb.collection('events').doc(eventId).get();
-        const tier = eventDoc.data()?.pricing?.tiers?.find((t: any) => t.id === tierId);
-        tierLabel = tier?.label;
-      }
-      await sendTicketConfirmationEmail(
+      await sendMemberTicketConfirmationEmail(
         userRecord.displayName || 'Member',
         userRecord.email,
         eventId,
         session.amount_total || 0,
-        tierLabel,
+        tierId || undefined,
+        quantity,
       );
     }
   } catch (err) {
@@ -318,6 +345,7 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
     eventId,
     session.amount_total || 0,
     tierLabel,
+    quantity,
   );
 }
 
