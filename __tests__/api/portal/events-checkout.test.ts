@@ -1,5 +1,7 @@
 const mockCreateSession = jest.fn();
+const mockCreatePaymentIntent = jest.fn();
 const mockVerifySessionCookie = jest.fn();
+const mockGetUser = jest.fn();
 const mockEventGet = jest.fn();
 
 jest.mock('stripe', () => {
@@ -8,6 +10,9 @@ jest.mock('stripe', () => {
       sessions: {
         create: mockCreateSession,
       },
+    },
+    paymentIntents: {
+      create: mockCreatePaymentIntent,
     },
   }));
 });
@@ -26,6 +31,7 @@ jest.mock('@/lib/rateLimit', () => ({
 jest.mock('@/lib/firebase/admin', () => ({
   adminAuth: {
     verifySessionCookie: (...args: any[]) => mockVerifySessionCookie(...args),
+    getUser: (...args: any[]) => mockGetUser(...args),
   },
   adminDb: {
     collection: (name: string) => {
@@ -36,8 +42,11 @@ jest.mock('@/lib/firebase/admin', () => ({
       }
 
       return {
-        doc: jest.fn(),
-        where: jest.fn(),
+        doc: jest.fn().mockReturnValue({ get: jest.fn().mockResolvedValue({ exists: false }), set: jest.fn(), update: jest.fn() }),
+        where: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        count: jest.fn().mockReturnThis(),
+        get: jest.fn().mockResolvedValue({ empty: true, docs: [], data: () => ({ count: 0 }) }),
       };
     },
   },
@@ -45,6 +54,8 @@ jest.mock('@/lib/firebase/admin', () => ({
 
 jest.mock('@/lib/services/tierTracking', () => ({
   incrementTierSoldCount: jest.fn(),
+  tryReserveTierSpot: jest.fn().mockResolvedValue(true),
+  releaseTierSpot: jest.fn(),
 }));
 
 import { POST } from '@/app/api/portal/events/checkout/route';
@@ -81,6 +92,7 @@ describe('POST /api/portal/events/checkout', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.NEXT_PUBLIC_SITE_URL = 'https://rotaractnyc.org';
     mockVerifySessionCookie.mockResolvedValue({ uid: 'member-123' });
+    mockGetUser.mockResolvedValue({ email: 'member@example.com' });
     mockCookies.mockResolvedValue({
       get: (name: string) =>
         name === 'rotaract_portal_session'
@@ -88,8 +100,11 @@ describe('POST /api/portal/events/checkout', () => {
           : undefined,
     } as any);
     mockCreateSession.mockResolvedValue({
-      client_secret: 'cs_secret_embedded',
+      client_secret: 'cs_secret_session',
       url: 'https://checkout.stripe.com/test',
+    });
+    mockCreatePaymentIntent.mockResolvedValue({
+      client_secret: 'pi_secret_embedded',
     });
     mockPaidPortalEvent();
   });
@@ -99,7 +114,7 @@ describe('POST /api/portal/events/checkout', () => {
     delete process.env.NEXT_PUBLIC_SITE_URL;
   });
 
-  it('creates an embedded Checkout Session that returns to the portal events page', async () => {
+  it('creates a PaymentIntent (not a session) for embedded mode', async () => {
     const res = await POST(makeRequest({
       eventId: 'evt-123',
       ticketType: 'member',
@@ -107,15 +122,15 @@ describe('POST /api/portal/events/checkout', () => {
     }) as any);
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ clientSecret: 'cs_secret_embedded' });
+    await expect(res.json()).resolves.toEqual({ clientSecret: 'pi_secret_embedded' });
 
-    expect(mockCreateSession).toHaveBeenCalledWith(
+    // Embedded path uses paymentIntents.create, NOT checkout.sessions.create
+    expect(mockCreatePaymentIntent).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: 'payment',
-        ui_mode: 'embedded',
-        redirect_on_completion: 'never',
+        currency: 'usd',
       }),
     );
+    expect(mockCreateSession).not.toHaveBeenCalled();
   });
 
   it('creates a hosted Checkout Session with a verifiable success URL', async () => {

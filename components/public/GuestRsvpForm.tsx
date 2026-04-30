@@ -11,7 +11,7 @@ import CardPaymentForm from '@/components/ui/CardPaymentForm';
 import type { TicketTier } from '@/types';
 
 // ── Inline waitlist widget ─────────────────────────────────────
-function WaitlistForm({ eventId }: { eventId: string }) {
+function WaitlistForm({ eventId, eventSlug }: { eventId: string; eventSlug: string }) {
   const [wlEmail, setWlEmail] = useState('');
   const [wlStatus, setWlStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [wlMsg, setWlMsg] = useState('');
@@ -39,7 +39,10 @@ function WaitlistForm({ eventId }: { eventId: string }) {
   if (wlStatus === 'done') {
     return (
       <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-center">
-        <p className="text-sm font-medium text-green-700 dark:text-green-300">✓ {wlMsg}</p>
+        <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-3">✓ {wlMsg}</p>
+        <Link href={`/events/${eventSlug}`} className="text-xs text-green-600 dark:text-green-400 underline hover:no-underline">
+          View event details
+        </Link>
       </div>
     );
   }
@@ -255,7 +258,7 @@ export default function GuestRsvpForm({
         <div className="mb-5 space-y-2">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Select your ticket tier:</p>
           {availableTiers.length === 0 ? (
-            <WaitlistForm eventId={eventId} />
+            <WaitlistForm eventId={eventId} eventSlug={eventSlug} />
           ) : (
             availableTiers.map((tier) => {
               const selected = selectedTierId === tier.id;

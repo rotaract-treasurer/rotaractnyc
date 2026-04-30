@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { isValidEmail } from '@/lib/utils/sanitize';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { sendEmail } from '@/lib/email/send';
+import { waitlistConfirmationEmail } from '@/lib/email/templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +36,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event not found.' }, { status: 404 });
     }
 
+    const eventData = eventDoc.data()!;
+    const eventTitle: string = eventData.title || 'Event';
+    const eventSlug: string = eventData.slug || eventId;
+
     // Check for duplicate waitlist entries
     const existingSnap = await adminDb
       .collection('event_waitlist')
@@ -56,6 +62,12 @@ export async function POST(request: NextRequest) {
       status: 'waiting',
       createdAt: new Date().toISOString(),
     });
+
+    // Send confirmation email (fire-and-forget — don't block the response)
+    sendEmail({
+      to: email,
+      ...waitlistConfirmationEmail(email, eventTitle, eventSlug),
+    }).catch((err) => console.error('[Waitlist] Confirmation email failed:', err));
 
     return NextResponse.json(
       { message: 'Successfully joined the waitlist.' },

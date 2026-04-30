@@ -14,7 +14,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { recordDuesPayment } from '@/lib/services/dues';
 import { upsertRSVP } from '@/lib/services/events';
 import { createTransaction } from '@/lib/services/finance';
-import { adjustTierSoldCount } from '@/lib/services/tierTracking';
+import { adjustTierSoldCount, releaseTierSpot } from '@/lib/services/tierTracking';
 import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
@@ -827,6 +827,16 @@ export async function handleCheckoutExpired(session: Stripe.Checkout.Session): P
       });
       console.log('[CheckoutExpired] Cleaned up expired member RSVP for:', memberId);
     }
+  }
+
+  // Release any atomically reserved tier spots so the capacity is accurate
+  const tierId = session.metadata?.tierId;
+  const qty = parseInt(session.metadata?.quantity || '1', 10);
+  if (tierId && eventId) {
+    await releaseTierSpot(eventId, tierId, qty).catch((err) =>
+      console.error('[CheckoutExpired] Failed to release tier spot:', err),
+    );
+    console.log('[CheckoutExpired] Released', qty, 'spot(s) for tier', tierId, 'on event', eventId);
   }
 }
 

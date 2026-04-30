@@ -53,44 +53,38 @@ describe('POST /api/donate', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.url).toBe('https://checkout.stripe.com/test');
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'payment',
-        line_items: expect.arrayContaining([
-          expect.objectContaining({
-            price_data: expect.objectContaining({ unit_amount: 2500 }),
-          }),
-        ]),
-      }),
-    );
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      mode: 'payment',
+      line_items: expect.arrayContaining([
+        expect.objectContaining({
+          price_data: expect.objectContaining({ unit_amount: 2500 }),
+        }),
+      ]),
+    });
   });
 
   it('creates checkout session for preset $100', async () => {
     const res = await POST(makeRequest({ ...DONOR, amount: '100' }));
     expect(res.status).toBe(200);
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        line_items: expect.arrayContaining([
-          expect.objectContaining({
-            price_data: expect.objectContaining({ unit_amount: 10000 }),
-          }),
-        ]),
-      }),
-    );
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      line_items: expect.arrayContaining([
+        expect.objectContaining({
+          price_data: expect.objectContaining({ unit_amount: 10000 }),
+        }),
+      ]),
+    });
   });
 
   it('creates checkout session for custom amount', async () => {
     const res = await POST(makeRequest({ ...DONOR, customAmount: '75' }));
     expect(res.status).toBe(200);
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        line_items: expect.arrayContaining([
-          expect.objectContaining({
-            price_data: expect.objectContaining({ unit_amount: 7500 }),
-          }),
-        ]),
-      }),
-    );
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      line_items: expect.arrayContaining([
+        expect.objectContaining({
+          price_data: expect.objectContaining({ unit_amount: 7500 }),
+        }),
+      ]),
+    });
   });
 
   it('rejects custom amount below $5', async () => {

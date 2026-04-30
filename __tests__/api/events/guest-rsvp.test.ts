@@ -193,7 +193,10 @@ describe('POST /api/events/rsvp (guest RSVP)', () => {
   /* ---------- Duplicate check ------------------------------------ */
 
   it('returns 409 if guest already registered for the event', async () => {
-    mockGuestQueryGet.mockResolvedValue({ empty: false });
+    mockGuestQueryGet.mockResolvedValue({
+      empty: false,
+      docs: [{ id: 'existing-rsvp', data: () => ({ status: 'going' }) }],
+    });
 
     const res = await POST(makeRequest(validBody) as any);
     expect(res.status).toBe(409);

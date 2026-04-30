@@ -333,6 +333,33 @@ export function guestTicketConfirmationEmail(
   };
 }
 
+export function waitlistConfirmationEmail(
+  email: string,
+  eventTitle: string,
+  eventSlug: string,
+): { subject: string; html: string; text: string } {
+  const safeEmail = escapeHtml(email);
+  const safeTitle = escapeHtml(eventTitle);
+
+  return {
+    subject: `You're on the waitlist: ${eventTitle}`,
+    html: wrapTemplate(`
+      <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px;">You're on the waitlist! 🎟️</h2>
+      <p style="color: #374151; margin: 0 0 12px;">Hi ${safeEmail},</p>
+      <p style="color: #374151; margin: 0 0 12px;">We've added you to the waitlist for <strong>${safeTitle}</strong>. If a spot opens up, we'll notify you right away — so keep an eye on your inbox.</p>
+      <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 16px 0;">
+        <p style="color: #6b7280; font-size: 13px; margin: 0;">📌 Event: <strong style="color: #111827;">${safeTitle}</strong></p>
+        <p style="color: #6b7280; font-size: 13px; margin: 8px 0 0;">📧 Waitlist email: <strong style="color: #111827;">${safeEmail}</strong></p>
+      </div>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${SITE.url}/events/${eventSlug}" style="display: inline-block; background-color: #9B1B30; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">View Event Details</a>
+      </div>
+      <p style="color: #6b7280; font-size: 12px; margin: 16px 0 0;">You'll only receive one notification if a spot becomes available. If you no longer wish to be on the waitlist, you can ignore this email.</p>
+    `),
+    text: `You're on the waitlist!\n\nHi ${email},\n\nWe've added you to the waitlist for ${eventTitle}. If a spot opens up, we'll notify you right away.\n\nEvent: ${eventTitle}\nWaitlist email: ${email}\n\nView event: ${SITE.url}/events/${eventSlug}\n\nYou'll only receive one notification if a spot becomes available.\n\n--\n${SITE.name}\n${SITE.address}`,
+  };
+}
+
 export function donationThankYouEmail(
   donorName: string,
   amountCents: number,

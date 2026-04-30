@@ -5,7 +5,8 @@
  */
 
 const mockSet = jest.fn().mockResolvedValue(undefined);
-const mockDoc = jest.fn().mockReturnValue({ set: mockSet });
+const mockGet = jest.fn().mockResolvedValue({ exists: false, data: () => null });
+const mockDoc = jest.fn().mockReturnValue({ set: mockSet, get: mockGet, id: 'test-rsvp-id' });
 const mockCollection = jest.fn().mockReturnValue({ doc: mockDoc });
 const mockVerify = jest.fn();
 
