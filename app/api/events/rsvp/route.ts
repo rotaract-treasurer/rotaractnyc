@@ -57,25 +57,32 @@ export async function POST(request: NextRequest) {
     }
 
     // P0 #3: Better dedup — only block if they have an active (going/maybe) RSVP
-    // Allow retry for cancelled, expired, payment_failed, or refunded RSVPs
-    const existingSnap = await adminDb
-      .collection('guest_rsvps')
-      .where('eventId', '==', eventId)
-      .where('email', '==', email.toLowerCase().trim())
-      .limit(1)
-      .get();
+    // Allow retry for cancelled, expired, payment_failed, or refunded RSVPs.
+    //
+    // For PAID events we skip this check entirely so that guests can buy
+    // additional tickets after a previous purchase. Each ticket purchase
+    // creates its own guest_rsvps record via the checkout flow, so dedup
+    // here would incorrectly block legitimate repeat customers.
+    if (!isPaid) {
+      const existingSnap = await adminDb
+        .collection('guest_rsvps')
+        .where('eventId', '==', eventId)
+        .where('email', '==', email.toLowerCase().trim())
+        .limit(1)
+        .get();
 
-    if (!existingSnap.empty) {
-      const existing = existingSnap.docs[0].data();
-      const activeStatuses = ['going', 'maybe', 'pending'];
-      if (activeStatuses.includes(existing.status)) {
-        return NextResponse.json(
-          { error: 'You have already registered for this event.'
-            + (existing.status === 'pending' ? ' Your payment is still being processed.' : '') },
-          { status: 409 },
-        );
+      if (!existingSnap.empty) {
+        const existing = existingSnap.docs[0].data();
+        const activeStatuses = ['going', 'maybe', 'pending'];
+        if (activeStatuses.includes(existing.status)) {
+          return NextResponse.json(
+            { error: 'You have already registered for this event.'
+              + (existing.status === 'pending' ? ' Your payment is still being processed.' : '') },
+            { status: 409 },
+          );
+        }
+        // If their previous RSVP was cancelled/expired/failed/refunded, allow re-registration
       }
-      // If their previous RSVP was cancelled/expired/failed/refunded, allow re-registration
     }
 
     // For paid events, redirect to checkout
