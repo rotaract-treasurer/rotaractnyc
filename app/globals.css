@@ -46,6 +46,16 @@
     @apply bg-cranberry-800 text-cranberry-100;
   }
 
+  /* Hide native browser calendar/time picker indicator — custom icon buttons are used instead */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+
   /* Consistent native select styling */
   select {
     appearance: none;

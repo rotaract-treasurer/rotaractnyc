@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -93,6 +93,70 @@ const selectClass =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm transition-colors duration-150 ' +
   'focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 focus:border-cranberry-500 ' +
   'dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+
+const dateTimeInputClass =
+  'w-full rounded-xl border border-gray-300 bg-white pl-4 pr-10 py-2.5 text-sm transition-colors duration-150 ' +
+  'focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 focus:border-cranberry-500 ' +
+  'dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+
+/** Date or time input with a visible icon button that opens the native picker. */
+function DateTimeInput({
+  label,
+  type,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  type: 'date' | 'time';
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const isDate = type === 'date';
+
+  return (
+    <div className="w-full">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          ref={ref}
+          type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className={dateTimeInputClass}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={isDate ? 'Open date picker' : 'Open time picker'}
+          onClick={() => {
+            try {
+              (ref.current as any)?.showPicker?.();
+            } catch {
+              ref.current?.click();
+            }
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cranberry transition-colors pointer-events-auto z-10"
+        >
+          {isDate ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function CreateEventModal({ open, onClose, onSaved, event }: CreateEventModalProps) {
   const isEdit = !!event;
@@ -618,28 +682,28 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Date &amp; Time
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Input
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-4">
+              <DateTimeInput
                 label="Start Date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
               />
-              <Input
+              <DateTimeInput
                 label="Start Time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 required
               />
-              <Input
+              <DateTimeInput
                 label="End Date (optional)"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
-              <Input
+              <DateTimeInput
                 label="End Time (optional)"
                 type="time"
                 value={endTime}
