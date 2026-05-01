@@ -278,6 +278,30 @@ describe('guestTicketConfirmationEmail', () => {
     expect(html).toContain('3');
   });
 
+  it('renders one QR code card per ticket when multiple QR URLs are provided', () => {
+    const qrUrls = [
+      'https://example.com/api/events/qr?e=evt&m=k&t=1&sig=a&tk=1',
+      'https://example.com/api/events/qr?e=evt&m=k&t=1&sig=a&tk=2',
+      'https://example.com/api/events/qr?e=evt&m=k&t=1&sig=a&tk=3',
+    ];
+    const { html } = guestTicketConfirmationEmail(
+      'Kate',
+      { ...SAMPLE_EVENT, quantity: 3 },
+      58500,
+      qrUrls,
+    );
+    // Heading reflects the count.
+    expect(html).toContain('Your 3 check-in QR codes');
+    // Each ticket gets its own labelled card.
+    expect(html).toContain('Ticket 1 of 3');
+    expect(html).toContain('Ticket 2 of 3');
+    expect(html).toContain('Ticket 3 of 3');
+    // Each QR URL is embedded as an <img src>.
+    for (const url of qrUrls) {
+      expect(html).toContain(`src="${url}"`);
+    }
+  });
+
   it('includes membership upsell', () => {
     const { html } = guestTicketConfirmationEmail('Kate', SAMPLE_EVENT, 2500);
     expect(html).toContain('/membership');

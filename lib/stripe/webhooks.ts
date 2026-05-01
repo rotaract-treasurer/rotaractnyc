@@ -651,7 +651,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
         const tier = eventDoc.data()?.pricing?.tiers?.find((t: any) => t.id === tierId);
         tierLabel = tier?.label;
       }
-      await sendTicketConfirmationEmail('Member', receiptEmail, eventId, amountCents, tierLabel);
+      await sendTicketConfirmationEmail('Member', receiptEmail, eventId, amountCents, tierLabel, quantity);
     }
   }
 
@@ -733,6 +733,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       eventId,
       amountCents,
       tierLabel,
+      quantity,
     );
   }
 
