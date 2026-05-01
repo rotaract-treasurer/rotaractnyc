@@ -78,6 +78,11 @@
       "name": "Member Portal",
       "url": "/portal/login",
       "description": "Access member portal"
+    },
+    {
+      "name": "Announcements",
+      "url": "/portal/announcements",
+      "description": "View club announcements"
     }
   ]
 }

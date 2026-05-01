@@ -10,6 +10,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import Avatar from '@/components/ui/Avatar';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
 import DuesBanner from '@/components/portal/DuesBanner';
+import AnnouncementBanner from '@/components/portal/AnnouncementBanner';
 import Spinner from '@/components/ui/Spinner';
 import { TutorialProvider } from '@/components/portal/tutorial';
 import { cn } from '@/lib/utils/cn';
@@ -42,6 +43,12 @@ const navSections = [
         href: '/portal/messages',
         tutorialId: 'nav-messages',
         icon: <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>,
+      },
+      {
+        label: 'Announcements',
+        href: '/portal/announcements',
+        tutorialId: 'nav-announcements',
+        icon: <svg aria-hidden="true" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.34 15.84c-.196-.175-.372-.368-.527-.576A6.765 6.765 0 018.25 11.25a6.75 6.75 0 0113.5 0 6.765 6.765 0 01-1.563 4.014c-.155.208-.331.401-.527.576M10.34 15.84L8.25 21m2.09-5.16l3.66 2.1m-3.66-2.1L8.25 21m0 0h7.5M10.5 6.75a.75.75 0 100-1.5.75.75 0 000 1.5z" /></svg>,
       },
       {
         label: 'Committees',
@@ -483,6 +490,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
             )}
           </div>
           {duesStatus === 'UNPAID' && <div className="mb-6"><DuesBanner status={duesStatus} memberType={member?.memberType} /></div>}
+          <AnnouncementBanner />
           {children}
         </main>
       </div>

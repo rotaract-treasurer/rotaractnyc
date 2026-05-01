@@ -579,6 +579,26 @@ export default function PortalEventDetailPage() {
             </div>
           )}
 
+          {/* Scan Tickets — board only */}
+          {canManageEvents && (
+            <div className="bg-cranberry/5 dark:bg-cranberry/10 rounded-2xl border border-cranberry/20 p-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-cranberry text-sm">Board: Scan Attendee Tickets</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Open camera scanner to check in attendees at the door</p>
+              </div>
+              <a
+                href={`/portal/events/${id}/scan`}
+                className="shrink-0 inline-flex items-center gap-2 bg-cranberry text-white text-sm font-semibold rounded-xl px-4 py-2 hover:bg-cranberry/90 transition-colors"
+              >
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Scan Tickets
+              </a>
+            </div>
+          )}
+
           {/* Ticket Purchasers — admin only */}
           {canManageEvents && (purchasers.length > 0 || purchaserSummary) && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
