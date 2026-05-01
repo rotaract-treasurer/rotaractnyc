@@ -181,6 +181,11 @@ async function sendTicketConfirmationEmail(
 
 // ── Decomposed checkout handlers (P1 #9) ─────────────────────────────────
 
+/** Returns true when running against Stripe test keys */
+function isStripeTestMode(): boolean {
+  return (process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_');
+}
+
 /** Handle dues payment checkout completion */
 async function handleDuesPayment(session: Stripe.Checkout.Session): Promise<void> {
   const { memberId, memberType, cycleId, cycleName } = session.metadata ?? {};
@@ -211,6 +216,7 @@ async function handleDuesPayment(session: Stripe.Checkout.Session): Promise<void
     paymentMethod: 'stripe',
     relatedMemberId: memberId,
     stripeSessionId: session.id,
+    ...(isStripeTestMode() && { isTest: true }),
   });
 }
 
@@ -244,6 +250,7 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
     stripeSessionId: session.id,
     eventId,
     quantity,
+    ...(isStripeTestMode() && { isTest: true }),
   });
 
   // Send branded member confirmation email (P1 #10: tier + quantity included)
@@ -337,6 +344,7 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
     email: guestEmail || undefined,
     eventId,
     quantity,
+    ...(isStripeTestMode() && { isTest: true }),
   });
 
   await sendTicketConfirmationEmail(
@@ -391,6 +399,7 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
     stripeSessionId: session.id,
     email: donorEmail || undefined,
     status: 'completed',
+    ...(isStripeTestMode() && { isTest: true }),
   });
 
   // Audit log
