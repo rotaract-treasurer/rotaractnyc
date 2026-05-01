@@ -233,12 +233,29 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
 
   const quantity = parseInt(session.metadata?.quantity || '1', 10) || 1;
 
+  // Resolve a friendly member display name (falls back to email/customer_email).
+  let memberName = session.customer_details?.name || session.customer_email || 'Member';
+  let memberPhoto: string | undefined;
+  try {
+    const userRecord = await adminAuth.getUser(memberId);
+    if (userRecord.displayName) memberName = userRecord.displayName;
+    if (userRecord.photoURL) memberPhoto = userRecord.photoURL;
+  } catch {
+    /* best effort — user may not exist in auth */
+  }
+
   await upsertRSVP({
     eventId,
     memberId,
-    memberName: session.customer_email || 'Member',
+    memberName,
+    memberPhoto,
     status: 'going',
     tierId: tierId || undefined,
+    paymentStatus: 'paid',
+    paidAmount: session.amount_total || 0,
+    quantity,
+    stripeSessionId: session.id,
+    ticketType: ticketType || 'member',
   });
 
   if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
@@ -515,12 +532,28 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
 
   // Member event ticket via PaymentIntent
   if ((type === 'event' || type === 'event_ticket') && eventId && memberId) {
+    let memberName = receiptEmail || 'Member';
+    let memberPhoto: string | undefined;
+    try {
+      const userRecord = await adminAuth.getUser(memberId);
+      if (userRecord.displayName) memberName = userRecord.displayName;
+      if (userRecord.photoURL) memberPhoto = userRecord.photoURL;
+    } catch {
+      /* best effort */
+    }
+
     await upsertRSVP({
       eventId,
       memberId,
-      memberName: receiptEmail || 'Member',
+      memberName,
+      memberPhoto,
       status: 'going',
       tierId: tierId || undefined,
+      paymentStatus: 'paid',
+      paidAmount: amountCents,
+      quantity,
+      stripeSessionId: pi.id,
+      ticketType: ticketType || 'member',
     });
 
     if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);

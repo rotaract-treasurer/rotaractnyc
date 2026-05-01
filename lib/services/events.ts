@@ -100,22 +100,43 @@ export async function upsertRSVP(data: {
   memberPhoto?: string;
   status: RSVPStatus;
   tierId?: string;
+  // Payment / ticket details (for paid member tickets via Stripe / offline)
+  paymentStatus?: 'free' | 'paid' | 'pending' | 'pending_offline' | 'refunded' | 'failed' | 'expired';
+  paidAmount?: number; // cents
+  quantity?: number;
+  stripeSessionId?: string;
+  ticketType?: string;
 }): Promise<string> {
-  const existing = await getMemberRSVP(data.eventId, data.memberId);
-  if (existing) {
-    await adminDb.collection(RSVPS).doc(existing.id).update({
-      status: data.status,
-      ...(data.tierId ? { tierId: data.tierId } : {}),
-      createdAt: new Date().toISOString(),
-    });
-    return existing.id;
-  }
-  const ref = await adminDb.collection(RSVPS).add({
-    ...data,
-    ...(data.tierId ? { tierId: data.tierId } : {}),
-    createdAt: new Date().toISOString(),
-  });
-  return ref.id;
+  // Deterministic doc ID — matches the convention used by
+  // /api/portal/events/rsvp and /api/portal/events/checkout. Using the same
+  // doc ID prevents duplicate RSVP records when a member buys a ticket via
+  // Stripe (handled by webhook) AFTER having previously RSVP'd via the portal,
+  // and ensures the Going badge / "Ticket Purchased" state shows up correctly
+  // throughout the app.
+  const docId = `${data.memberId}_${data.eventId}`;
+  const ref = adminDb.collection(RSVPS).doc(docId);
+  const snap = await ref.get();
+  const now = new Date().toISOString();
+
+  // Build payload: never overwrite an existing createdAt.
+  const payload: Record<string, unknown> = {
+    memberId: data.memberId,
+    eventId: data.eventId,
+    memberName: data.memberName,
+    status: data.status,
+    updatedAt: now,
+  };
+  if (data.memberPhoto) payload.memberPhoto = data.memberPhoto;
+  if (data.tierId) payload.tierId = data.tierId;
+  if (data.paymentStatus) payload.paymentStatus = data.paymentStatus;
+  if (data.paidAmount != null) payload.paidAmount = data.paidAmount;
+  if (data.quantity != null) payload.quantity = data.quantity;
+  if (data.stripeSessionId) payload.stripeSessionId = data.stripeSessionId;
+  if (data.ticketType) payload.ticketType = data.ticketType;
+  if (!snap.exists) payload.createdAt = now;
+
+  await ref.set(payload, { merge: true });
+  return docId;
 }
 
 export async function getAttendeeCount(eventId: string): Promise<number> {

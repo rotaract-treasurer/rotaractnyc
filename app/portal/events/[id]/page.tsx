@@ -211,6 +211,26 @@ export default function PortalEventDetailPage() {
     toast("Payment complete! You're in.");
   };
 
+  const handleCancelTicket = async () => {
+    try {
+      const res = await apiPost(`/api/portal/events/${id}/cancel-ticket`, {});
+      setCurrentRSVP('not_going');
+      toast(res?.message || 'Your ticket has been cancelled.');
+      // Refresh event-level counters & purchasers list so the UI reflects
+      // the released spot immediately.
+      fetchEvent();
+      if (canManageEvents) {
+        apiGet(`/api/portal/events/${id}/purchasers`).then((data) => {
+          if (data?.purchasers) setPurchasers(data.purchasers);
+          if (data?.summary) setPurchaserSummary(data.summary);
+        }).catch(() => { /* non-blocking */ });
+      }
+    } catch (err: any) {
+      toast(err.message || 'Failed to cancel ticket', 'error');
+      throw err;
+    }
+  };
+
   const handleOfflinePayment = async (method: string, proofUrl?: string) => {
     try {
       await apiPost('/api/portal/events/checkout', {
@@ -644,7 +664,7 @@ export default function PortalEventDetailPage() {
 
         {/* ── Sidebar ── */}
         <div className="lg:sticky lg:top-6 space-y-4">
-          <EventRegistration event={event} currentRSVP={currentRSVP} onRSVP={handleRSVP} onPurchaseTicket={handlePurchaseTicket} attendeeCount={goingCount} />
+          <EventRegistration event={event} currentRSVP={currentRSVP} onRSVP={handleRSVP} onPurchaseTicket={handlePurchaseTicket} onCancelTicket={handleCancelTicket} attendeeCount={goingCount} />
           
           {/* QR Code for check-in */}
           {!isPast && (

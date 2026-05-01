@@ -23,6 +23,7 @@ export type AuditAction =
   | 'event.created'
   | 'event.updated'
   | 'event.deleted'
+  | 'event.ticket_cancelled'
   | 'post.created'
   | 'post.deleted'
   | 'article.created'

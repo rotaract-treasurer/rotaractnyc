@@ -8,6 +8,7 @@ import { SITE } from '@/lib/constants';
 import Badge from '@/components/ui/Badge';
 import GuestRsvpForm from '@/components/public/GuestRsvpForm';
 import PublicEventActions from '@/components/public/PublicEventActions';
+import EventWaitlistForm from '@/components/public/EventWaitlistForm';
 
 export const revalidate = 120; // 2 min — event details change more frequently
 
@@ -172,7 +173,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
                 );
               const eventFull =
-                event.capacity != null && (event.totalGoing ?? 0) >= event.capacity;
+                event.capacity != null && ((event as any).attendeeCount ?? 0) >= event.capacity;
               const isSoldOut = allTiersSoldOrExpired || eventFull;
 
               if (!isSoldOut) return null;
@@ -188,46 +189,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   </p>
                   {/* Waitlist CTA */}
                   {event.waitlistEnabled !== false && (
-                    <div className="mt-4 pt-4 border-t border-red-300 dark:border-red-800">
-                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">
-                        Want to join the waitlist? Enter your email below to be notified if a spot opens up.
-                      </p>
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const form = e.currentTarget;
-                          const email = (form.querySelector('input') as HTMLInputElement).value;
-                          if (!email) return;
-                          try {
-                            const res = await fetch('/api/events/waitlist', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ eventId: event.id, email: email.toLowerCase() }),
-                            });
-                            if (res.ok) {
-                              const btn = form.querySelector('button') as HTMLButtonElement;
-                              btn.textContent = '✓ Joined Waitlist';
-                              btn.disabled = true;
-                              (form.querySelector('input') as HTMLInputElement).disabled = true;
-                            }
-                          } catch { /* silently ignore */ }
-                        }}
-                        className="mt-3 flex gap-2 max-w-sm mx-auto"
-                      >
-                        <input
-                          type="email"
-                          placeholder="Enter your email"
-                          required
-                          className="flex-1 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-sm"
-                        />
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Join Waitlist
-                        </button>
-                      </form>
-                    </div>
+                    <EventWaitlistForm eventId={event.id} />
                   )}
                 </div>
               );

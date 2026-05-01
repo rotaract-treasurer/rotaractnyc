@@ -79,6 +79,12 @@ export async function GET(
 
   const members = rsvpSnap.docs.map((doc) => {
     const d = doc.data();
+    // Prefer the RSVP doc's own paymentStatus / paidAmount (populated by the
+    // Stripe webhook & portal checkout). Fall back to legacy heuristics for
+    // RSVPs that pre-date those fields.
+    const inferredPaymentStatus =
+      d.paymentStatus
+        || (d.paidAmount && d.paidAmount > 0 ? 'paid' : 'free');
     return {
       id: doc.id,
       kind: 'member' as const,
@@ -86,9 +92,9 @@ export async function GET(
       email: memberEmailMap.get(d.memberId) || '',
       phone: null,
       status: d.status || 'going',
-      paymentStatus: 'paid' as const,
+      paymentStatus: inferredPaymentStatus,
       quantity: d.quantity || 1,
-      amountCents: 0, // retroactively unknown; new purchases will update via transactions
+      amountCents: typeof d.paidAmount === 'number' ? d.paidAmount : 0,
       tierId: d.tierId || null,
       createdAt: d.createdAt || '',
     };
@@ -106,7 +112,9 @@ export async function GET(
     totalRevenueCents += doc.data().amount || 0;
   });
 
-  // Fill in member amountCents from transactions where possible
+  // Fill in member amountCents from transactions where the RSVP doc didn't
+  // already capture the paid amount (legacy purchases pre-dating the
+  // paidAmount field on RSVPs).
   const memberTxMap = new Map<string, number>();
   txSnap.docs.forEach((doc) => {
     const d = doc.data();
@@ -115,7 +123,7 @@ export async function GET(
     }
   });
   members.forEach((m) => {
-    // find the RSVP doc's memberId
+    if (m.amountCents > 0) return; // already populated from RSVP.paidAmount
     const rsvpDoc = rsvpSnap.docs.find((doc) => doc.id === m.id);
     if (rsvpDoc) {
       const memberId = rsvpDoc.data().memberId;

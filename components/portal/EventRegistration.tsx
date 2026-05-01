@@ -13,6 +13,8 @@ interface EventRegistrationProps {
   currentRSVP?: 'going' | 'maybe' | 'not_going' | null;
   onRSVP: (status: 'going' | 'maybe' | 'not_going') => Promise<void>;
   onPurchaseTicket?: (ticketType: 'member' | 'guest', tierId?: string) => Promise<void>;
+  /** Self-serve ticket cancellation. Resolves on success, throws with a user-facing message on failure. */
+  onCancelTicket?: () => Promise<void>;
   attendeeCount?: number;
 }
 
@@ -21,10 +23,13 @@ export default function EventRegistration({
   currentRSVP,
   onRSVP,
   onPurchaseTicket,
+  onCancelTicket,
   attendeeCount = 0,
 }: EventRegistrationProps) {
   const [loading, setLoading] = useState(false);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const isPast = new Date(event.date) < new Date();
   const now = new Date();
   const isPaid = (event.type === 'paid' || event.type === 'hybrid') && event.pricing;
@@ -37,6 +42,32 @@ export default function EventRegistration({
   const tierPricing = isPaid && event.pricing && hasTiers(event.pricing);
   const allTiers = tierPricing ? getAllTiers(event.pricing!) : [];
   const availTiers = tierPricing ? getAvailableTiers(event.pricing!) : [];
+  // If the member already has a confirmed RSVP, treat their ticket as locked
+  // so they can't accidentally re-purchase by tapping the Buy Ticket button.
+  const alreadyGoing = currentRSVP === 'going';
+
+  // Self-serve cancellation rules: must be at least 7 days before event start.
+  const REFUND_CUTOFF_DAYS = 7;
+  const eventDate = event.date ? new Date(event.date) : null;
+  const daysUntilEvent =
+    eventDate && !isNaN(eventDate.getTime())
+      ? Math.floor((eventDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+      : null;
+  const canSelfCancel =
+    !!onCancelTicket && alreadyGoing && daysUntilEvent !== null && daysUntilEvent >= REFUND_CUTOFF_DAYS;
+  const cancelCutoffPassed =
+    alreadyGoing && daysUntilEvent !== null && daysUntilEvent < REFUND_CUTOFF_DAYS;
+
+  const handleCancelTicket = async () => {
+    if (!onCancelTicket) return;
+    setCancelLoading(true);
+    try {
+      await onCancelTicket();
+      setShowCancelConfirm(false);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   const handleAction = async (action: () => Promise<void>) => {
     setLoading(true);
@@ -197,11 +228,12 @@ export default function EventRegistration({
                 <div className="space-y-2">
                   <Button
                     className="w-full"
-                    variant={selectedTierId ? 'gold' : 'secondary'}
+                    variant={alreadyGoing ? 'secondary' : selectedTierId ? 'gold' : 'secondary'}
                     size="lg"
                     loading={loading}
-                    disabled={spotsLeft === 0 || (!selectedTierId && availTiers.length > 0)}
+                    disabled={alreadyGoing || spotsLeft === 0 || (!selectedTierId && availTiers.length > 0)}
                     onClick={() => {
+                      if (alreadyGoing) return;
                       if (selectedTierId) {
                         handleAction(() => onPurchaseTicket?.(
                           'member',
@@ -210,58 +242,73 @@ export default function EventRegistration({
                       }
                     }}
                   >
-                    {spotsLeft === 0
+                    {alreadyGoing
+                      ? '✓ Ticket Purchased'
+                      : spotsLeft === 0
                       ? 'Sold Out'
                       : !selectedTierId
                       ? '↑ Select a tier above'
                       : `Buy ${allTiers.find((t) => t.id === selectedTierId)?.label} Ticket`}
                   </Button>
-                  <Button variant="ghost" size="sm" className="w-full" onClick={() => handleAction(() => onRSVP('maybe'))}>
-                    Maybe
-                  </Button>
+                  {!alreadyGoing && (
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => handleAction(() => onRSVP('maybe'))}>
+                      Maybe
+                    </Button>
+                  )}
                 </div>
               ) : isPaid && event.pricing && event.pricing.memberPrice > 0 ? (
                 <div className="space-y-2">
                   <Button
                     className="w-full"
-                    variant="gold"
+                    variant={alreadyGoing ? 'secondary' : 'gold'}
                     size="lg"
                     loading={loading}
-                    disabled={spotsLeft === 0}
-                    onClick={() => handleAction(() => onPurchaseTicket?.('member') || Promise.resolve())}
+                    disabled={alreadyGoing || spotsLeft === 0}
+                    onClick={() => {
+                      if (alreadyGoing) return;
+                      handleAction(() => onPurchaseTicket?.('member') || Promise.resolve());
+                    }}
                   >
-                    {spotsLeft === 0 ? 'Sold Out' : 'Buy Member Ticket'}
+                    {alreadyGoing ? '✓ Ticket Purchased' : spotsLeft === 0 ? 'Sold Out' : 'Buy Member Ticket'}
                   </Button>
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      size="sm"
-                      loading={loading}
-                      disabled={spotsLeft === 0}
-                      onClick={() => handleAction(() => onPurchaseTicket?.('guest') || Promise.resolve())}
-                    >
-                      Buy Guest Ticket
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleAction(() => onRSVP('maybe'))}>
-                      Maybe
-                    </Button>
-                  </div>
+                  {!alreadyGoing && (
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1"
+                        variant="outline"
+                        size="sm"
+                        loading={loading}
+                        disabled={spotsLeft === 0}
+                        onClick={() => handleAction(() => onPurchaseTicket?.('guest') || Promise.resolve())}
+                      >
+                        Buy Guest Ticket
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleAction(() => onRSVP('maybe'))}>
+                        Maybe
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : isPaid && event.pricing && event.pricing.memberPrice === 0 ? (
                 <div className="flex gap-2">
                   <Button
                     className="flex-1"
-                    variant="primary"
+                    variant={alreadyGoing ? 'secondary' : 'primary'}
                     size="lg"
                     loading={loading}
-                    onClick={() => handleAction(() => onPurchaseTicket?.('member') || Promise.resolve())}
+                    disabled={alreadyGoing}
+                    onClick={() => {
+                      if (alreadyGoing) return;
+                      handleAction(() => onPurchaseTicket?.('member') || Promise.resolve());
+                    }}
                   >
-                    Get Free Ticket
+                    {alreadyGoing ? '✓ Registered' : 'Get Free Ticket'}
                   </Button>
-                  <Button variant="ghost" onClick={() => handleAction(() => onRSVP('maybe'))}>
-                    Maybe
-                  </Button>
+                  {!alreadyGoing && (
+                    <Button variant="ghost" onClick={() => handleAction(() => onRSVP('maybe'))}>
+                      Maybe
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -301,16 +348,70 @@ export default function EventRegistration({
                   </div>
                 )}
               </div>
+              {/* ── Self-serve ticket cancellation ── */}
+              {alreadyGoing && (canSelfCancel || cancelCutoffPassed) && (
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                  {canSelfCancel ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="w-full text-xs font-medium text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors py-2 underline-offset-2 hover:underline"
+                    >
+                      Cancel ticket &amp; request refund
+                    </button>
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">
+                      Self-serve cancellations close {REFUND_CUTOFF_DAYS} days before the event.
+                      <br />
+                      Email us if you need help.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
       </Card>
 
+      {/* Cancel confirmation modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !cancelLoading && setShowCancelConfirm(false)} />
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 max-w-sm w-full">
+            <h3 className="font-display font-semibold text-gray-900 dark:text-white mb-2">Cancel your ticket?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">
+              {`This will release your spot for ${event.title}.`}
+              <br />
+              <span className="text-gray-500 dark:text-gray-400">
+                If you paid online, a full refund will be issued to your original payment method (5–10 business days).
+              </span>
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button size="sm" variant="ghost" onClick={() => setShowCancelConfirm(false)} disabled={cancelLoading}>
+                Keep ticket
+              </Button>
+              <Button
+                size="sm"
+                loading={cancelLoading}
+                onClick={handleCancelTicket}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Cancel ticket
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile sticky CTA */}
       {!isPast && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800">
           <div className="max-w-lg mx-auto">
-            {tierPricing && selectedTierId ? (
+            {tierPricing && alreadyGoing ? (
+              <Button className="w-full" variant="secondary" size="lg" disabled>
+                ✓ Ticket Purchased
+              </Button>
+            ) : tierPricing && selectedTierId ? (
               <Button
                 className="w-full"
                 variant="gold"
@@ -325,28 +426,38 @@ export default function EventRegistration({
                 Select a tier above
               </Button>
             ) : isPaid && event.pricing && event.pricing.memberPrice > 0 ? (
-              <div className="flex gap-3">
-                <Button
-                  className="flex-1"
-                  variant="gold"
-                  size="lg"
-                  loading={loading}
-                  disabled={spotsLeft === 0}
-                  onClick={() => handleAction(() => onPurchaseTicket?.('member') || Promise.resolve())}
-                >
-                  {spotsLeft === 0 ? 'Sold Out' : `Buy Ticket · ${formatCurrency(event.pricing!.memberPrice)}`}
+              alreadyGoing ? (
+                <Button className="w-full" variant="secondary" size="lg" disabled>
+                  ✓ Ticket Purchased
                 </Button>
-                <Button variant="ghost" size="lg" onClick={() => handleAction(() => onRSVP('maybe'))}>Maybe</Button>
-              </div>
+              ) : (
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1"
+                    variant="gold"
+                    size="lg"
+                    loading={loading}
+                    disabled={spotsLeft === 0}
+                    onClick={() => handleAction(() => onPurchaseTicket?.('member') || Promise.resolve())}
+                  >
+                    {spotsLeft === 0 ? 'Sold Out' : `Buy Ticket · ${formatCurrency(event.pricing!.memberPrice)}`}
+                  </Button>
+                  <Button variant="ghost" size="lg" onClick={() => handleAction(() => onRSVP('maybe'))}>Maybe</Button>
+                </div>
+              )
             ) : isPaid && event.pricing && event.pricing.memberPrice === 0 ? (
               <Button
                 className="w-full"
-                variant="primary"
+                variant={alreadyGoing ? 'secondary' : 'primary'}
                 size="lg"
                 loading={loading}
-                onClick={() => handleAction(() => onPurchaseTicket?.('member') || Promise.resolve())}
+                disabled={alreadyGoing}
+                onClick={() => {
+                  if (alreadyGoing) return;
+                  handleAction(() => onPurchaseTicket?.('member') || Promise.resolve());
+                }}
               >
-                Get Free Ticket
+                {alreadyGoing ? '✓ Registered' : 'Get Free Ticket'}
               </Button>
             ) : (
               <div className="flex gap-3">

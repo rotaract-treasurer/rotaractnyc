@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/firebase/auth';
-import { usePortalEvents, apiGet, apiPost } from '@/hooks/useFirestore';
+import { usePortalEvents, useMemberRsvps, apiGet, apiPost } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -38,6 +38,7 @@ export default function PortalEventsPage() {
   const { user, member } = useAuth();
   const { toast } = useToast();
   const { data: firestoreEvents, loading } = usePortalEvents();
+  const { data: memberRsvps } = useMemberRsvps(user?.uid ?? null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('upcoming');
   const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all');
@@ -53,6 +54,35 @@ export default function PortalEventsPage() {
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
 
   const canManageEvents = member && ['board', 'president', 'treasurer'].includes(member.role);
+
+  // Map of eventId → RSVP loaded from Firestore (authoritative source of truth
+  // for whether the current member is already going / has bought a ticket).
+  // Used together with `optimisticRsvps` so newly-purchased tickets reflect
+  // immediately while older purchases survive page reloads.
+  const serverRsvps = (memberRsvps || []).reduce<Record<string, { status: RSVPStatus; paymentStatus?: string; paidAmount?: number }>>((acc, r: any) => {
+    if (r?.eventId && r?.status) {
+      acc[r.eventId] = {
+        status: r.status as RSVPStatus,
+        paymentStatus: r.paymentStatus,
+        paidAmount: r.paidAmount,
+      };
+    }
+    return acc;
+  }, {});
+
+  const getMyRsvp = (eventId: string): RSVPStatus | undefined =>
+    optimisticRsvps[eventId] ?? serverRsvps[eventId]?.status;
+
+  const isTicketLocked = (eventId: string): boolean => {
+    const r = serverRsvps[eventId];
+    if (!r) return false;
+    if (r.status !== 'going') return false;
+    // Treat any paid / pending-offline / completed payment as locked so the
+    // member can't accidentally cancel their ticket by tapping the button.
+    return ['paid', 'pending', 'pending_offline', 'free'].includes(
+      r.paymentStatus || '',
+    ) || (r.paidAmount ?? 0) > 0;
+  };
 
   const allEvents = ((firestoreEvents || []).length > 0 ? firestoreEvents : defaultEvents) as RotaractEvent[];
   const now = new Date();
@@ -294,7 +324,8 @@ export default function PortalEventsPage() {
               event.pricing?.earlyBirdPrice != null &&
               event.pricing?.earlyBirdDeadline &&
               new Date(event.pricing.earlyBirdDeadline) > now;
-            const myRsvp = optimisticRsvps[event.id];
+            const myRsvp = getMyRsvp(event.id);
+            const ticketLocked = isTicketLocked(event.id);
 
             return (
               <div
@@ -468,7 +499,17 @@ export default function PortalEventsPage() {
                                 size="sm"
                                 variant={myRsvp === 'going' ? 'secondary' : 'gold'}
                                 loading={rsvpLoading === event.id}
-                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event, 'member')}
+                                disabled={myRsvp === 'going' && ticketLocked}
+                                onClick={() => {
+                                  if (myRsvp === 'going') {
+                                    // Paid ticket: do NOT silently cancel on tap. Direct member to the
+                                    // event detail page where they can request a refund / cancellation.
+                                    if (ticketLocked) return;
+                                    handleRSVP(event.id, 'not_going');
+                                  } else {
+                                    handleTicketPurchase(event, 'member');
+                                  }
+                                }}
                                 className="flex-1 sm:flex-initial"
                               >
                                 {myRsvp === 'going' ? '✓ Ticket Purchased' : `Buy Ticket · ${formatCurrency(event.pricing.memberPrice)}`}
@@ -478,6 +519,14 @@ export default function PortalEventsPage() {
                                   {myRsvp === 'maybe' ? '? Maybe' : 'Maybe'}
                                 </Button>
                               )}
+                              {myRsvp === 'going' && ticketLocked && (
+                                <Link
+                                  href={`/portal/events/${event.id}`}
+                                  className="text-xs text-gray-500 hover:text-cranberry self-center underline-offset-2 hover:underline"
+                                >
+                                  Manage
+                                </Link>
+                              )}
                             </>
                           ) : paid && event.pricing && event.pricing.memberPrice === 0 ? (
                             <>
@@ -485,7 +534,15 @@ export default function PortalEventsPage() {
                                 size="sm"
                                 variant={myRsvp === 'going' ? 'secondary' : 'primary'}
                                 loading={rsvpLoading === event.id}
-                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event, 'member')}
+                                disabled={myRsvp === 'going' && ticketLocked}
+                                onClick={() => {
+                                  if (myRsvp === 'going') {
+                                    if (ticketLocked) return;
+                                    handleRSVP(event.id, 'not_going');
+                                  } else {
+                                    handleTicketPurchase(event, 'member');
+                                  }
+                                }}
                                 className="flex-1 sm:flex-initial"
                               >
                                 {myRsvp === 'going' ? '✓ Registered' : 'Get Free Ticket'}
