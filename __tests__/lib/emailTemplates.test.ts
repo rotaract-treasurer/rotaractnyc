@@ -60,7 +60,7 @@ const SAMPLE_EVENT = {
 
 function assertBaseStructure(html: string) {
   expect(html).toContain('<!DOCTYPE html>');
-  expect(html).toContain('rotaract-logo.png');     // header logo
+  expect(html).toContain('rotaract-logo-white.png'); // header logo (white variant)
   expect(html).toContain('Service Above Self');     // motto
   expect(html).toContain('rotaractnyc.org');        // footer domain
   expect(html).toContain('216 East 45th Street');   // footer address
@@ -319,14 +319,13 @@ describe('memberTicketConfirmationEmail', () => {
     expect(memberTicketConfirmationEmail('Leo', SAMPLE_EVENT, 3500).subject).toContain("You're going");
   });
 
-  it('shows quantity row only when > 1', () => {
+  it('shows ticket count in attendee names table', () => {
     const single = memberTicketConfirmationEmail('Leo', { ...SAMPLE_EVENT, quantity: 1 }, 3500);
     const multi  = memberTicketConfirmationEmail('Leo', { ...SAMPLE_EVENT, quantity: 4 }, 3500);
-    // quantity row rendered for multi
-    const quantityRegex = /Quantity.*4/s;
-    expect(multi.html).toMatch(quantityRegex);
-    // single ticket: no quantity row needed
-    expect(single.html).not.toMatch(/Quantity.*1/s);
+    // ticket count shown in attendee table header for multi
+    expect(multi.html).toContain('Tickets (4)');
+    // single ticket also shown
+    expect(single.html).toContain('Ticket (1)');
   });
 });
 

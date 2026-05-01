@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/firebase/auth';
-import { usePortalEvents, apiPost } from '@/hooks/useFirestore';
+import { usePortalEvents, apiGet, apiPost } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -13,9 +13,10 @@ import SearchInput from '@/components/ui/SearchInput';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import CreateEventModal from '@/components/portal/CreateEventModal';
+import EventCheckoutModal from '@/components/portal/EventCheckoutModal';
 import { defaultEvents } from '@/lib/defaults/data';
 import { formatCurrency } from '@/lib/utils/format';
-import type { RotaractEvent, RSVPStatus, EventType } from '@/types';
+import type { RotaractEvent, RSVPStatus, EventType, PaymentSettings } from '@/types';
 
 /* Gradient placeholder colours per event type */
 const typeGradients: Record<EventType, string> = {
@@ -44,6 +45,12 @@ export default function PortalEventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   // Optimistic RSVP state: eventId → status
   const [optimisticRsvps, setOptimisticRsvps] = useState<Record<string, RSVPStatus>>({});
+  // Checkout modal state
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutEvent, setCheckoutEvent] = useState<RotaractEvent | null>(null);
+  const [checkoutTicketType, setCheckoutTicketType] = useState<'member' | 'guest'>('member');
+  const [checkoutPriceCents, setCheckoutPriceCents] = useState(0);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
 
   const canManageEvents = member && ['board', 'president', 'treasurer'].includes(member.role);
 
@@ -92,20 +99,83 @@ export default function PortalEventsPage() {
     }
   };
 
-  const handleTicketPurchase = async (eventId: string, ticketType: 'member' | 'guest' = 'member') => {
+  const handleTicketPurchase = async (event: RotaractEvent, ticketType: 'member' | 'guest' = 'member') => {
     if (!user) return;
-    setRsvpLoading(eventId);
-    try {
-      const res = await apiPost('/api/portal/events/checkout', { eventId, ticketType });
-      if (res.free) {
-        toast(res.message || "You're in!");
-      } else if (res.url) {
-        window.location.href = res.url;
+    if (!event.pricing) return;
+
+    const priceCents = ticketType === 'member' ? event.pricing.memberPrice : (event.pricing.guestPrice ?? event.pricing.memberPrice);
+
+    // Free ticket — register directly
+    if (priceCents === 0) {
+      setRsvpLoading(event.id);
+      try {
+        await apiPost('/api/portal/events/checkout', { eventId: event.id, ticketType });
+        toast("You're in!");
+        setOptimisticRsvps((prev) => ({ ...prev, [event.id]: 'going' }));
+      } catch (err: any) {
+        toast(err.message || 'Ticket purchase failed', 'error');
+      } finally {
+        setRsvpLoading(null);
       }
+      return;
+    }
+
+    // Paid ticket — open checkout modal
+    if (!paymentSettings) {
+      // Fetch settings lazily on first open
+      try {
+        const settingsData = await apiGet('/api/settings').catch(() => null);
+        setPaymentSettings(settingsData?.paymentSettings ?? { zelleEnabled: true, venmoEnabled: true });
+      } catch {
+        setPaymentSettings({ zelleEnabled: true, venmoEnabled: true });
+      }
+    }
+    setCheckoutEvent(event);
+    setCheckoutTicketType(ticketType);
+    setCheckoutPriceCents(priceCents);
+    setShowCheckoutModal(true);
+  };
+
+  const handleStripeCheckout = async (embedded?: boolean, quantity?: number) => {
+    if (!checkoutEvent) return null;
+    try {
+      const canUseEmbeddedCheckout = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) && embedded !== false;
+      const res = await apiPost('/api/portal/events/checkout', {
+        eventId: checkoutEvent.id,
+        ticketType: checkoutTicketType,
+        paymentMethod: 'stripe',
+        embedded: canUseEmbeddedCheckout,
+        quantity: quantity || 1,
+      });
+      return res;
     } catch (err: any) {
-      toast(err.message || 'Ticket purchase failed', 'error');
-    } finally {
-      setRsvpLoading(null);
+      toast(err.message || 'Checkout failed', 'error');
+      return null;
+    }
+  };
+
+  const handleOfflinePayment = async (method: string, proofUrl?: string) => {
+    if (!checkoutEvent) return;
+    try {
+      await apiPost('/api/portal/events/checkout', {
+        eventId: checkoutEvent.id,
+        ticketType: checkoutTicketType,
+        paymentMethod: method,
+        proofUrl,
+      });
+      toast(`Payment pending for ${method}. Our treasurer will confirm receipt.`);
+      setShowCheckoutModal(false);
+      setOptimisticRsvps((prev) => ({ ...prev, [checkoutEvent.id]: 'going' }));
+    } catch (err: any) {
+      toast(err.message || 'Payment registration failed', 'error');
+    }
+  };
+
+  const handleCheckoutComplete = () => {
+    setShowCheckoutModal(false);
+    if (checkoutEvent) {
+      setOptimisticRsvps((prev) => ({ ...prev, [checkoutEvent.id]: 'going' }));
+      toast("Payment complete! You're in.");
     }
   };
 
@@ -398,7 +468,7 @@ export default function PortalEventsPage() {
                                 size="sm"
                                 variant={myRsvp === 'going' ? 'secondary' : 'gold'}
                                 loading={rsvpLoading === event.id}
-                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event.id, 'member')}
+                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event, 'member')}
                                 className="flex-1 sm:flex-initial"
                               >
                                 {myRsvp === 'going' ? '✓ Ticket Purchased' : `Buy Ticket · ${formatCurrency(event.pricing.memberPrice)}`}
@@ -415,7 +485,7 @@ export default function PortalEventsPage() {
                                 size="sm"
                                 variant={myRsvp === 'going' ? 'secondary' : 'primary'}
                                 loading={rsvpLoading === event.id}
-                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event.id, 'member')}
+                                onClick={() => myRsvp === 'going' ? handleRSVP(event.id, 'not_going') : handleTicketPurchase(event, 'member')}
                                 className="flex-1 sm:flex-initial"
                               >
                                 {myRsvp === 'going' ? '✓ Registered' : 'Get Free Ticket'}
@@ -458,6 +528,22 @@ export default function PortalEventsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Ticket Checkout Modal */}
+      {checkoutEvent && (
+        <EventCheckoutModal
+          open={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          eventId={checkoutEvent.id}
+          eventTitle={checkoutEvent.title}
+          ticketType={checkoutTicketType}
+          priceCents={checkoutPriceCents}
+          paymentSettings={paymentSettings ?? { zelleEnabled: true, venmoEnabled: true }}
+          onStripeCheckout={handleStripeCheckout}
+          onOfflinePayment={handleOfflinePayment}
+          onCheckoutComplete={handleCheckoutComplete}
+        />
       )}
 
       {/* Create/Edit Event Modal */}

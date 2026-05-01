@@ -83,7 +83,7 @@ const headerHtml = `
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
     <tr>
       <td style="background-color: ${CRIMSON}; padding: 32px 40px; text-align: center;">
-        <img src="${SITE.url}/rotaract-logo.png" alt="${SITE.shortName}" width="180" style="height: auto; display: block; margin: 0 auto; filter: brightness(0) invert(1);" />
+        <img src="${SITE.url}/rotaract-logo-white.png" alt="${SITE.shortName}" width="180" style="height: auto; display: block; margin: 0 auto;" />
         <p style="color: ${GOLD}; font-size: 11px; font-weight: 600; margin: 12px 0 0; letter-spacing: 2px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${SITE.motto}</p>
       </td>
     </tr>
@@ -531,8 +531,9 @@ export function guestRsvpConfirmationEmail(
 
 export function guestTicketConfirmationEmail(
   name: string,
-  event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number },
+  event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number; attendeeNames?: string[] },
   amountCents: number,
+  qrCodeDataUrl?: string,
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
@@ -542,6 +543,35 @@ export function guestTicketConfirmationEmail(
   const tierLabel = event.tierLabel ? escapeHtml(event.tierLabel) : '';
   const quantity = event.quantity ?? 1;
   const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
+  const attendeeNames = event.attendeeNames ?? [name];
+
+  const attendeeNamesHtml = `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-radius: 8px; border: 1px solid ${GRAY_BORDER}; overflow: hidden;">
+      <tr>
+        <td style="background-color: ${CRIMSON}; padding: 10px 20px;">
+          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">🎟️ Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
+        </td>
+      </tr>
+      ${attendeeNames.map((n, i) => `
+      <tr>
+        <td style="background-color: ${i % 2 === 0 ? '#FAFAFA' : '#FFFFFF'}; padding: 12px 20px; border-top: 1px solid ${GRAY_BORDER}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+          <p style="color: ${TEXT_DARK}; font-size: 14px; font-weight: 600; margin: 0;"><span style="color: ${TEXT_MUTED}; font-weight: 400; margin-right: 8px;">#${i + 1}</span>${escapeHtml(n)}</p>
+        </td>
+      </tr>`).join('')}
+    </table>`;
+
+  const qrCodeHtml = qrCodeDataUrl ? `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
+      <tr>
+        <td style="text-align: center;">
+          <p style="color: ${TEXT_MUTED}; font-size: 12px; font-weight: 600; margin: 0 0 12px; letter-spacing: 1px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Present at entry</p>
+          <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 12px; border: 2px solid ${GRAY_BORDER}; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <img src="${qrCodeDataUrl}" alt="Check-in QR Code" width="180" height="180" style="display: block; border-radius: 4px;" />
+          </div>
+          <p style="color: ${TEXT_SUBTLE}; font-size: 11px; margin: 10px 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Screenshot or print this QR code for quick check-in</p>
+        </td>
+      </tr>
+    </table>` : '';
 
   return {
     subject: `Your ticket is confirmed: ${event.title}`,
@@ -554,10 +584,11 @@ export function guestTicketConfirmationEmail(
           ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
           ${listItem('📍', 'Location:', safeLocation)}
           ${tierLabel ? listItem('🎟️', 'Ticket type:', tierLabel) : ''}
-          ${quantity > 1 ? listItem('#️⃣', 'Quantity:', String(quantity)) : ''}
           ${listItem('💳', 'Amount paid:', amountFormatted)}
         </table>
       `)}
+      ${attendeeNamesHtml}
+      ${qrCodeHtml}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
         <tr>
           <td style="text-align: center;">
@@ -572,7 +603,7 @@ export function guestTicketConfirmationEmail(
         ${ctaButton('Learn About Membership', `${SITE.url}/membership`, true)}
       `)}
     `, `Ticket confirmed — you're going to ${event.title}!`),
-    text: `Your ticket is confirmed, ${name}!\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}${quantity > 1 ? `\nQuantity: ${quantity}` : ''}\nAmount paid: ${amountFormatted}\n\nView event details: ${SITE.url}/events/${event.slug}\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `Your ticket is confirmed, ${name}!\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView event details: ${SITE.url}/events/${event.slug}\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
@@ -584,8 +615,9 @@ export function guestTicketConfirmationEmail(
 
 export function memberTicketConfirmationEmail(
   name: string,
-  event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number },
+  event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number; attendeeNames?: string[] },
   amountCents: number,
+  qrCodeDataUrl?: string,
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
@@ -595,6 +627,35 @@ export function memberTicketConfirmationEmail(
   const tierLabel = event.tierLabel ? escapeHtml(event.tierLabel) : '';
   const quantity = event.quantity ?? 1;
   const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
+  const attendeeNames = event.attendeeNames ?? [name];
+
+  const attendeeNamesHtml = `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-radius: 8px; border: 1px solid ${GRAY_BORDER}; overflow: hidden;">
+      <tr>
+        <td style="background-color: ${CRIMSON}; padding: 10px 20px;">
+          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">🎟️ Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
+        </td>
+      </tr>
+      ${attendeeNames.map((n, i) => `
+      <tr>
+        <td style="background-color: ${i % 2 === 0 ? '#FAFAFA' : '#FFFFFF'}; padding: 12px 20px; border-top: 1px solid ${GRAY_BORDER}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+          <p style="color: ${TEXT_DARK}; font-size: 14px; font-weight: 600; margin: 0;"><span style="color: ${TEXT_MUTED}; font-weight: 400; margin-right: 8px;">#${i + 1}</span>${escapeHtml(n)}</p>
+        </td>
+      </tr>`).join('')}
+    </table>`;
+
+  const qrCodeHtml = qrCodeDataUrl ? `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
+      <tr>
+        <td style="text-align: center;">
+          <p style="color: ${TEXT_MUTED}; font-size: 12px; font-weight: 600; margin: 0 0 12px; letter-spacing: 1px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Present at entry</p>
+          <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 12px; border: 2px solid ${GRAY_BORDER}; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <img src="${qrCodeDataUrl}" alt="Check-in QR Code" width="180" height="180" style="display: block; border-radius: 4px;" />
+          </div>
+          <p style="color: ${TEXT_SUBTLE}; font-size: 11px; margin: 10px 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Screenshot or print this QR code for quick check-in</p>
+        </td>
+      </tr>
+    </table>` : '';
 
   return {
     subject: `You're going: ${event.title}`,
@@ -607,10 +668,11 @@ export function memberTicketConfirmationEmail(
           ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
           ${listItem('📍', 'Location:', safeLocation)}
           ${tierLabel ? listItem('🎟️', 'Ticket type:', tierLabel) : ''}
-          ${quantity > 1 ? listItem('#️⃣', 'Quantity:', String(quantity)) : ''}
           ${listItem('💳', 'Amount paid:', amountFormatted)}
         </table>
       `)}
+      ${attendeeNamesHtml}
+      ${qrCodeHtml}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
         <tr>
           <td style="text-align: center;">
@@ -626,7 +688,7 @@ export function memberTicketConfirmationEmail(
       `)}
       ${muted('Questions about this event? Reply to this email or reach us at <a href="mailto:' + SITE.email + '" style="color: ' + CRIMSON + ';">' + SITE.email + '</a>.')}
     `, `Ticket confirmed — see you at ${event.title}!`),
-    text: `You're going, ${name}!\n\nYour ticket is confirmed:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}${quantity > 1 ? `\nQuantity: ${quantity}` : ''}\nAmount paid: ${amountFormatted}\n\nView in portal: ${SITE.url}/portal/events\n\nKnow someone who'd love this? Share: ${SITE.url}/events/${event.slug}\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `You're going, ${name}!\n\nYour ticket is confirmed:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView in portal: ${SITE.url}/portal/events\n\nKnow someone who'd love this? Share: ${SITE.url}/events/${event.slug}\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
