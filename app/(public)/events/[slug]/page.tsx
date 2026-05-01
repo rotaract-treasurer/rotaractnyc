@@ -80,14 +80,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       />
       {/* Hero */}
       <section
-        className={`relative text-white overflow-hidden flex items-end ${
+        className={`relative text-white flex items-end ${
           heroImage
             ? 'min-h-[300px] sm:min-h-[420px]'
             : 'py-28 sm:py-36 bg-gradient-to-br from-cranberry-900 via-cranberry to-cranberry-800'
         }`}
       >
         {heroImage ? (
-          <>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <Image
               src={heroImage}
               alt={event.title}
@@ -98,7 +98,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             />
             {/* Gradient: dark at the bottom so text stays legible, lighter at top */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/5" />
-          </>
+          </div>
         ) : null}
 
         <div className="container-page relative z-10 py-10 sm:py-14">
