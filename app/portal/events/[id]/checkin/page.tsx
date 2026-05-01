@@ -12,6 +12,7 @@ type CheckinStatus = 'loading' | 'success' | 'already' | 'expired' | 'error';
 interface CheckinResult {
   eventName?: string;
   checkedInAt?: string;
+  ticketNumber?: number;
   message?: string;
 }
 
@@ -113,6 +114,7 @@ export default function EventCheckinPage() {
     const m = searchParams.get('m') ?? '';
     const t = searchParams.get('t') ?? '';
     const sig = searchParams.get('sig') ?? '';
+    const tk = searchParams.get('tk') ?? undefined;
 
     async function doCheckin() {
       try {
@@ -120,6 +122,7 @@ export default function EventCheckinPage() {
           success: boolean;
           eventName?: string;
           checkedInAt?: string;
+          ticketNumber?: number;
           alreadyCheckedIn?: boolean;
           expired?: boolean;
           message?: string;
@@ -127,11 +130,12 @@ export default function EventCheckinPage() {
           memberId: m,
           timestamp: t,
           signature: sig,
+          ...(tk ? { tk } : {}),
         });
 
         if (data.alreadyCheckedIn) {
           setStatus('already');
-          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt });
+          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt, ticketNumber: data.ticketNumber });
         } else if (data.expired) {
           setStatus('expired');
         } else {
@@ -139,6 +143,7 @@ export default function EventCheckinPage() {
           setResult({
             eventName: data.eventName,
             checkedInAt: data.checkedInAt,
+            ticketNumber: data.ticketNumber,
           });
         }
       } catch (err: any) {
@@ -166,19 +171,21 @@ export default function EventCheckinPage() {
     const m = searchParams.get('m') ?? '';
     const t = searchParams.get('t') ?? '';
     const sig = searchParams.get('sig') ?? '';
+    const tk = searchParams.get('tk') ?? undefined;
 
     apiPost(`/api/portal/events/${eventId}/checkin`, {
       memberId: m,
       timestamp: t,
       signature: sig,
+      ...(tk ? { tk } : {}),
     })
       .then((data: any) => {
         if (data.alreadyCheckedIn) {
           setStatus('already');
-          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt });
+          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt, ticketNumber: data.ticketNumber });
         } else {
           setStatus('success');
-          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt });
+          setResult({ eventName: data.eventName, checkedInAt: data.checkedInAt, ticketNumber: data.ticketNumber });
         }
       })
       .catch((err: any) => {
@@ -225,6 +232,11 @@ export default function EventCheckinPage() {
             <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white">
               You&apos;re checked in! 🎉
             </h1>
+            {result.ticketNumber && (
+              <p className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-semibold">
+                Ticket #{result.ticketNumber}
+              </p>
+            )}
             {result.eventName && (
               <p className="text-lg text-gray-700 dark:text-gray-300">{result.eventName}</p>
             )}
@@ -260,7 +272,9 @@ export default function EventCheckinPage() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              You&apos;ve already checked in
+              {result.ticketNumber
+                ? `Ticket #${result.ticketNumber} was already scanned`
+                : 'You\'ve already checked in'}
             </h1>
             {result.eventName && (
               <p className="text-lg text-gray-700 dark:text-gray-300">{result.eventName}</p>

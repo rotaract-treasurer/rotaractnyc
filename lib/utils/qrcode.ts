@@ -20,10 +20,13 @@ function hmac(data: string): string {
 /**
  * Generate a signed check-in URL for a specific event + member.
  *
- * Optionally include a ticket number (e.g. 1 of 3) so multi-ticket purchases
- * yield visually distinct QR codes. The ticket number is *not* part of the
- * HMAC payload — the same signed (eventId, memberId, timestamp) tuple is
- * reused for all N tickets so any one of them can be scanned for check-in.
+ * When a ticket number is supplied the HMAC payload includes it
+ * (`eventId:memberId:timestamp:ticketNumber`), making each QR
+ * cryptographically distinct. A forged QR for ticket 2 cannot be
+ * validated as ticket 1 or vice versa.
+ *
+ * Omitting ticketNumber produces the legacy payload (`eventId:memberId:timestamp`)
+ * for backward compatibility with existing single-ticket QR codes.
  */
 export function generateCheckInUrl(
   eventId: string,
@@ -31,21 +34,36 @@ export function generateCheckInUrl(
   ticketNumber?: number,
 ): string {
   const timestamp = Date.now().toString();
-  const signature = hmac(`${eventId}:${memberId}:${timestamp}`);
+  const payload = ticketNumber && ticketNumber > 0
+    ? `${eventId}:${memberId}:${timestamp}:${ticketNumber}`
+    : `${eventId}:${memberId}:${timestamp}`;
+  const signature = hmac(payload);
   const tk = ticketNumber && ticketNumber > 0 ? `&tk=${ticketNumber}` : '';
   return `${SITE.url}/portal/events/${eventId}/checkin?m=${memberId}&t=${timestamp}&sig=${signature}${tk}`;
 }
 
 /**
  * Verify that a check-in signature is valid and not expired (24-hour window).
+ *
+ * When `ticketNumber` is supplied the verification uses the ticket-specific
+ * HMAC payload (`eventId:memberId:timestamp:ticketNumber`), matching the
+ * signature produced by generateCheckInUrl. Omit it to verify legacy
+ * single-ticket codes signed without a ticket number.
  */
 export function verifyCheckInSignature(
   eventId: string,
   memberId: string,
   timestamp: string,
   signature: string,
+  ticketNumber?: number,
 ): boolean {
-  const expected = hmac(`${eventId}:${memberId}:${timestamp}`);
+  const payload = ticketNumber && ticketNumber > 0
+    ? `${eventId}:${memberId}:${timestamp}:${ticketNumber}`
+    : `${eventId}:${memberId}:${timestamp}`;
+  const expected = hmac(payload);
+  // Signatures must be 64-char hex (SHA-256). Reject anything else to avoid
+  // a crash inside timingSafeEqual on a length mismatch.
+  if (signature.length !== 64) return false;
   if (!crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'))) {
     return false;
   }
@@ -98,19 +116,25 @@ export function generateTicketQRCodeUrls(
   quantity: number,
 ): string[] {
   const n = Math.max(1, Math.floor(quantity));
-  const timestamp = Date.now().toString();
-  const signature = hmac(`${eventId}:${memberId}:${timestamp}`);
-  const base =
-    `${SITE.url}/api/events/qr` +
-    `?e=${encodeURIComponent(eventId)}` +
-    `&m=${encodeURIComponent(memberId)}` +
-    `&t=${timestamp}` +
-    `&sig=${signature}`;
+  // Each ticket gets its own HMAC — signatures are not interchangeable
+  // across ticket numbers. generateCheckInUrl handles the per-ticket payload.
   const urls: string[] = [];
   for (let i = 1; i <= n; i++) {
-    // tot=N gives the QR endpoint the total ticket count so it can render
-    // "ticket-2-of-3" in the downloaded filename. Cosmetic only — not signed.
-    urls.push(`${base}&tk=${i}&tot=${n}`);
+    const checkInUrl = generateCheckInUrl(eventId, memberId, i);
+    // Parse out the signed params so we can forward them to /api/events/qr,
+    // which will verify the signature before rendering the PNG.
+    const parsed = new URL(checkInUrl);
+    const t = parsed.searchParams.get('t')!;
+    const sig = parsed.searchParams.get('sig')!;
+    const base =
+      `${SITE.url}/api/events/qr` +
+      `?e=${encodeURIComponent(eventId)}` +
+      `&m=${encodeURIComponent(memberId)}` +
+      `&t=${t}` +
+      `&sig=${sig}` +
+      `&tk=${i}` +
+      `&tot=${n}`;
+    urls.push(base);
   }
   return urls;
 }

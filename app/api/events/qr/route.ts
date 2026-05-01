@@ -30,12 +30,18 @@ export async function GET(request: NextRequest) {
   const timestamp = url.searchParams.get('t') || '';
   const signature = url.searchParams.get('sig') || '';
   const tk = url.searchParams.get('tk');
+  // Parse ticket number so it can be included in per-ticket HMAC verification.
+  const ticketNumber = tk && /^\d+$/.test(tk) ? parseInt(tk, 10) : undefined;
 
   if (!eventId || !memberId || !timestamp || !signature) {
     return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
   }
 
-  if (!verifyCheckInSignature(eventId, memberId, timestamp, signature)) {
+  // Verify the per-ticket signature. Passing ticketNumber causes
+  // verifyCheckInSignature to use the ticket-specific HMAC payload
+  // (eventId:memberId:timestamp:ticketNumber) so each QR is independently
+  // validated — a stolen/forwarded ticket number cannot be spoofed.
+  if (!verifyCheckInSignature(eventId, memberId, timestamp, signature, ticketNumber)) {
     return NextResponse.json({ error: 'Invalid or expired signature' }, { status: 403 });
   }
 

@@ -48,6 +48,15 @@ describe('QR Code utilities', () => {
       expect(ts).toBeTruthy();
       expect(Number(ts)).toBeGreaterThan(0);
     });
+
+    it('produces different signatures for different ticket numbers', () => {
+      // Same event/member/timestamp must yield distinct sigs per ticket
+      const url1 = generateCheckInUrl('event-1', 'member-1', 1);
+      const url2 = generateCheckInUrl('event-1', 'member-1', 2);
+      const sig1 = new URL(url1).searchParams.get('sig');
+      const sig2 = new URL(url2).searchParams.get('sig');
+      expect(sig1).not.toBe(sig2);
+    });
   });
 
   // ── verifyCheckInSignature ─────────────────────────────────────────────
@@ -60,13 +69,33 @@ describe('QR Code utilities', () => {
         m: parsed.searchParams.get('m')!,
         t: parsed.searchParams.get('t')!,
         sig: parsed.searchParams.get('sig')!,
+        tk: parsed.searchParams.get('tk'),
       };
     }
 
-    it('returns true for a valid, recently generated signature', () => {
+    it('returns true for a valid, recently generated signature (no ticket number)', () => {
       const url = generateCheckInUrl('event-1', 'member-1');
       const { m, t, sig } = paramsFrom(url);
       expect(verifyCheckInSignature('event-1', m, t, sig)).toBe(true);
+    });
+
+    it('returns true for a valid per-ticket signature', () => {
+      const url = generateCheckInUrl('event-1', 'member-1', 2);
+      const { m, t, sig } = paramsFrom(url);
+      expect(verifyCheckInSignature('event-1', m, t, sig, 2)).toBe(true);
+    });
+
+    it('returns false when verifying ticket 2 sig as ticket 1 (cross-ticket spoofing)', () => {
+      const url = generateCheckInUrl('event-1', 'member-1', 2);
+      const { m, t, sig } = paramsFrom(url);
+      expect(verifyCheckInSignature('event-1', m, t, sig, 1)).toBe(false);
+    });
+
+    it('returns false when verifying a numbered sig without providing the ticket number', () => {
+      const url = generateCheckInUrl('event-1', 'member-1', 1);
+      const { m, t, sig } = paramsFrom(url);
+      // sig was produced with tk=1 in payload; verifying without tk must fail.
+      expect(verifyCheckInSignature('event-1', m, t, sig)).toBe(false);
     });
 
     it('returns false when the eventId has been tampered with', () => {
@@ -111,6 +140,10 @@ describe('QR Code utilities', () => {
 
       expect(verifyCheckInSignature('event-1', 'member-1', recentTs, recentSig)).toBe(true);
     });
+
+    it('returns false for a signature with wrong length (prevents timingSafeEqual crash)', () => {
+      expect(verifyCheckInSignature('event-1', 'member-1', String(Date.now()), 'tooshort')).toBe(false);
+    });
   });
 
   // ── generateTicketQRCodeUrls ───────────────────────────────────────────
@@ -127,7 +160,7 @@ describe('QR Code utilities', () => {
       expect(url).toContain('/api/events/qr');
     });
 
-    it('embeds eventId, memberId, ticket number and a valid signature', () => {
+    it('embeds eventId, memberId, ticket number and a valid per-ticket signature', () => {
       const urls = generateTicketQRCodeUrls('event-1', 'member-1', 2);
       const parsed = new URL(urls[0]);
       expect(parsed.searchParams.get('e')).toBe('event-1');
@@ -135,7 +168,10 @@ describe('QR Code utilities', () => {
       expect(parsed.searchParams.get('tk')).toBe('1');
       const t = parsed.searchParams.get('t')!;
       const sig = parsed.searchParams.get('sig')!;
-      expect(verifyCheckInSignature('event-1', 'member-1', t, sig)).toBe(true);
+      // Must verify with the ticket number included in the payload.
+      expect(verifyCheckInSignature('event-1', 'member-1', t, sig, 1)).toBe(true);
+      // Verifying without the ticket number must fail (different HMAC payload).
+      expect(verifyCheckInSignature('event-1', 'member-1', t, sig)).toBe(false);
     });
 
     it('numbers tickets sequentially starting at 1', () => {
@@ -150,6 +186,27 @@ describe('QR Code utilities', () => {
       for (const url of urls) {
         expect(new URL(url).searchParams.get('tot')).toBe('3');
       }
+    });
+
+    it('each URL carries a unique signature (per-ticket HMAC)', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 3);
+      const sigs = urls.map(u => new URL(u).searchParams.get('sig'));
+      const unique = new Set(sigs);
+      expect(unique.size).toBe(3);
+    });
+
+    it('each URL signature verifies against its own ticket number', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 3);
+      urls.forEach((url, idx) => {
+        const p = new URL(url);
+        const t = p.searchParams.get('t')!;
+        const sig = p.searchParams.get('sig')!;
+        const tk = parseInt(p.searchParams.get('tk')!, 10);
+        expect(verifyCheckInSignature('event-1', 'member-1', t, sig, tk)).toBe(true);
+        // Trying to use it as a different ticket number must fail.
+        const wrongTk = tk === 1 ? 2 : 1;
+        expect(verifyCheckInSignature('event-1', 'member-1', t, sig, wrongTk)).toBe(false);
+      });
     });
   });
 });
