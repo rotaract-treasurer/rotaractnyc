@@ -107,15 +107,15 @@ export default function DirectoryPage() {
 
   return (
     <>
-    <div className="max-w-6xl mx-auto space-y-8 page-enter">
+    <div className="max-w-7xl mx-auto space-y-8 page-enter">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-display font-extrabold text-cranberry tracking-tight">
             Member Directory
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Find and connect with fellow Rotaractors.
+          <p className="text-gray-500 dark:text-gray-400 mt-1.5 max-w-xl">
+            Connect with fellow leaders and change-makers in the NYC community.
           </p>
         </div>
         {isAdmin && (
@@ -210,16 +210,21 @@ export default function DirectoryPage() {
         />
       ) : viewMode === 'grid' ? (
         /* ── Grid view ── */
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((m) => (
-            <MemberCard
-              key={m.id}
-              member={m}
-              viewerRole={currentMember?.role}
-              onMessage={() => (window.location.href = `/portal/messages?to=${m.id}`)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map((m) => (
+              <MemberCard
+                key={m.id}
+                member={m}
+                viewerRole={currentMember?.role}
+                onMessage={() => (window.location.href = `/portal/messages?to=${m.id}`)}
+              />
+            ))}
+          </div>
+          <p className="text-center text-sm text-gray-400 dark:text-gray-500 pt-2">
+            Showing {filtered.length} member{filtered.length !== 1 ? 's' : ''}
+          </p>
+        </>
       ) : (
         /* ── Table view ── */
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 overflow-hidden">

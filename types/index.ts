@@ -38,6 +38,8 @@ export interface Member {
   address?: string;
   whatsAppPhone?: string;
   whatsAppSameAsPhone?: boolean;
+  /** Org role-alias email (e.g. treasurer@rotaractnyc.org). Never shown in the public directory — separate from the personal login email. */
+  roleEmail?: string;
   onboardingComplete?: boolean;
   invitedAt?: string;
   joinedAt: string;

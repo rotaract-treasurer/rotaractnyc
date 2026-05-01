@@ -28,6 +28,7 @@ export default function PortalMemberDetailPage() {
   const [msgOpen, setMsgOpen] = useState(false);
   const { member: currentMember } = useAuth();
   const isBoard = ['president', 'board', 'treasurer'].includes(currentMember?.role || '');
+  const isSelf = currentMember?.id === id;
 
   const fetchMember = useCallback(async () => {
     try {
@@ -104,8 +105,17 @@ export default function PortalMemberDetailPage() {
           <dl className="space-y-3 text-sm">
             {member.email && (
               <div>
-                <dt className="text-gray-500">Email</dt>
+                <dt className="text-gray-500">Personal Email</dt>
                 <dd className="text-gray-900 dark:text-white">{member.email}</dd>
+              </div>
+            )}
+            {member.roleEmail && (isBoard || isSelf) && (
+              <div>
+                <dt className="text-gray-500 flex items-center gap-1.5">
+                  Role Email
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gold-100 text-gold-700 dark:bg-gold-900/30 dark:text-gold-400 uppercase tracking-wide">Admin</span>
+                </dt>
+                <dd className="text-gray-900 dark:text-white">{member.roleEmail}</dd>
               </div>
             )}
             {member.committee && (
