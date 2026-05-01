@@ -295,7 +295,11 @@ export default function PortalEventDetailPage() {
     </div>
   );
 
-  const goingCount = rsvps?.filter((r) => r.status === 'going').length || 0;
+  const memberGoingCount = rsvps?.filter((r) => r.status === 'going').length || 0;
+  const guestGoingCount = guestRsvps
+    .filter((r) => r.status === 'going')
+    .reduce((sum: number, r: any) => sum + (r.quantity || 1), 0);
+  const goingCount = memberGoingCount + guestGoingCount;
   const isPast = new Date(event.date) < new Date();
 
   return (
@@ -521,14 +525,14 @@ export default function PortalEventDetailPage() {
           )}
 
           {/* Attendees */}
-          {rsvps && rsvps.length > 0 && (
+          {(goingCount > 0) && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
               <h3 className="font-display font-semibold text-gray-900 dark:text-white mb-4 text-lg">
                 Attendees <span className="text-gray-400 dark:text-gray-500 font-normal text-base">({goingCount})</span>
               </h3>
               <div className="flex flex-wrap gap-2">
                 {rsvps
-                  .filter((r) => r.status === 'going')
+                  ?.filter((r) => r.status === 'going')
                   .map((r) => (
                     <div key={r.id} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-full pl-1 pr-3 py-1 border border-gray-100 dark:border-gray-700 group/attendee relative">
                       <Avatar src={r.memberPhoto} alt={r.memberName} size="sm" />
@@ -540,6 +544,15 @@ export default function PortalEventDetailPage() {
                           </svg>
                         </span>
                       )}
+                    </div>
+                  ))}
+                {guestRsvps
+                  .filter((r) => r.status === 'going')
+                  .map((r) => (
+                    <div key={r.id} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-full pl-1 pr-3 py-1 border border-gray-100 dark:border-gray-700">
+                      <Avatar src={undefined} alt={r.name} size="sm" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md text-azure-700 bg-azure-50 dark:bg-azure-900/20">guest</span>
                     </div>
                   ))}
               </div>

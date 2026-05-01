@@ -10,6 +10,7 @@
  *   tier info in confirmation emails (P1 #10)
  */
 import type Stripe from 'stripe';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { recordDuesPayment } from '@/lib/services/dues';
 import { upsertRSVP } from '@/lib/services/events';
@@ -18,6 +19,7 @@ import { adjustTierSoldCount, releaseTierSpot } from '@/lib/services/tierTrackin
 import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail, memberTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
+import { generateCheckInQRCode } from '@/lib/utils/qrcode';
 
 /**
  * Idempotency: check if we already processed a Stripe event.
@@ -144,10 +146,15 @@ async function sendMemberTicketConfirmationEmail(
     const event = await fetchEventData(eventId);
     if (!event) return;
     const tier = tierId ? event.pricing?.tiers?.find((t: any) => t.id === tierId) : undefined;
+    let qrCodeDataUrl: string | undefined;
+    try {
+      if (eventId && tierId) qrCodeDataUrl = await generateCheckInQRCode(eventId, tierId);
+    } catch { /* QR generation is best-effort */ }
     const content = memberTicketConfirmationEmail(
       name,
       { ...event, tierLabel: tier?.label, quantity },
       amountCents,
+      qrCodeDataUrl,
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {
@@ -168,10 +175,15 @@ async function sendTicketConfirmationEmail(
     if (!email) return;
     const event = await fetchEventData(eventId);
     if (!event) return;
+    let qrCodeDataUrl: string | undefined;
+    try {
+      qrCodeDataUrl = await generateCheckInQRCode(eventId, email);
+    } catch { /* QR generation is best-effort */ }
     const content = guestTicketConfirmationEmail(
       name,
       { ...event, tierLabel, quantity },
       amountCents,
+      qrCodeDataUrl,
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {
@@ -230,6 +242,15 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
   });
 
   if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
+
+  // Increment attendeeCount on the event document
+  try {
+    await adminDb.collection('events').doc(eventId).update({
+      attendeeCount: FieldValue.increment(quantity),
+    });
+  } catch (err) {
+    console.error('[MemberTicket] Failed to update attendeeCount:', err);
+  }
 
   await createTransaction({
     type: 'income',
@@ -323,6 +344,15 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
   }
 
   if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
+
+  // Increment attendeeCount on the event document
+  try {
+    await adminDb.collection('events').doc(eventId).update({
+      attendeeCount: FieldValue.increment(quantity),
+    });
+  } catch (err) {
+    console.error('[GuestTicket] Failed to update attendeeCount:', err);
+  }
 
   await createTransaction({
     type: 'income',
@@ -495,6 +525,15 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
 
     if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
+    // Increment attendeeCount on the event document
+    try {
+      await adminDb.collection('events').doc(eventId).update({
+        attendeeCount: FieldValue.increment(quantity),
+      });
+    } catch (err) {
+      console.error('[PI MemberTicket] Failed to update attendeeCount:', err);
+    }
+
     await createTransaction({
       type: 'income',
       category: 'Events',
@@ -569,6 +608,15 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
     }
 
     if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
+
+    // Increment attendeeCount on the event document
+    try {
+      await adminDb.collection('events').doc(eventId).update({
+        attendeeCount: FieldValue.increment(quantity),
+      });
+    } catch (err) {
+      console.error('[PI GuestTicket] Failed to update attendeeCount:', err);
+    }
 
     await createTransaction({
       type: 'income',
@@ -705,13 +753,22 @@ export async function handleChargeRefunded(charge: Stripe.Charge): Promise<void>
       refundedAt: new Date().toISOString(),
     });
 
-    // Decrement tier sold count
+    // Decrement tier sold count and attendeeCount
     const guest = guestSnap.docs[0].data()!;
     if (guest.tierId && guest.eventId) {
       try {
         await adjustTierSoldCount(guest.eventId, guest.tierId, -(guest.quantity || 1));
       } catch (err) {
         console.error('[Refund] Failed to adjust tier count for guest:', err);
+      }
+    }
+    if (guest.eventId) {
+      try {
+        await adminDb.collection('events').doc(guest.eventId).update({
+          attendeeCount: FieldValue.increment(-(guest.quantity || 1)),
+        });
+      } catch (err) {
+        console.error('[Refund] Failed to decrement attendeeCount for guest:', err);
       }
     }
   } else if (!guestSnap.empty && !isFullyRefunded) {
@@ -738,12 +795,21 @@ export async function handleChargeRefunded(charge: Stripe.Charge): Promise<void>
       paymentStatus: 'refunded',
     });
 
-    // Decrement tier sold count for member refund
+    // Decrement tier sold count and attendeeCount for member refund
     if (rsvp.tierId && rsvp.eventId) {
       try {
         await adjustTierSoldCount(rsvp.eventId, rsvp.tierId, -(rsvp.quantity || 1));
       } catch (err) {
         console.error('[Refund] Failed to adjust tier count for member:', err);
+      }
+    }
+    if (rsvp.eventId) {
+      try {
+        await adminDb.collection('events').doc(rsvp.eventId).update({
+          attendeeCount: FieldValue.increment(-(rsvp.quantity || 1)),
+        });
+      } catch (err) {
+        console.error('[Refund] Failed to decrement attendeeCount for member:', err);
       }
     }
   } else if (!memberSnap.empty && !isFullyRefunded) {

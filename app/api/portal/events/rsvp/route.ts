@@ -104,6 +104,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Update attendeeCount on the event document based on RSVP status change
+    if (!wasGoing && nowGoing) {
+      try {
+        await adminDb.collection('events').doc(eventId).update({
+          attendeeCount: FieldValue.increment(1),
+        });
+      } catch (err) {
+        console.error('Failed to increment attendeeCount:', err);
+      }
+    } else if (wasGoing && !nowGoing) {
+      try {
+        await adminDb.collection('events').doc(eventId).update({
+          attendeeCount: FieldValue.increment(-1),
+        });
+      } catch (err) {
+        console.error('Failed to decrement attendeeCount:', err);
+      }
+    }
+
     // Send RSVP confirmation email when a member RSVPs as 'going' for the first time
     if (nowGoing && !wasGoing) {
       try {
