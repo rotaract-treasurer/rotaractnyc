@@ -250,7 +250,7 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
     /* best effort — user may not exist in auth */
   }
 
-  await upsertRSVP({
+  const upsertResult = await upsertRSVP({
     eventId,
     memberId,
     memberName,
@@ -262,7 +262,16 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
     quantity,
     stripeSessionId: session.id,
     ticketType: ticketType || 'member',
+    additive: true,
   });
+
+  // Stripe sometimes redelivers webhook events. If we already processed
+  // this exact session for this RSVP, don't double-count tiers, attendee
+  // counts, transactions or confirmation emails.
+  if (upsertResult.skipped) {
+    console.log('[MemberTicket] Duplicate session; skipping side effects', session.id);
+    return;
+  }
 
   if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 
@@ -567,7 +576,7 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       /* best effort */
     }
 
-    await upsertRSVP({
+    const piUpsertResult = await upsertRSVP({
       eventId,
       memberId,
       memberName,
@@ -579,7 +588,14 @@ export async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Pr
       quantity,
       stripeSessionId: pi.id,
       ticketType: ticketType || 'member',
+      additive: true,
     });
+
+    // Idempotency guard for redelivered PaymentIntent webhooks.
+    if (piUpsertResult.skipped) {
+      console.log('[PI MemberTicket] Duplicate PaymentIntent; skipping side effects', pi.id);
+      return;
+    }
 
     if (tierId) await adjustTierSoldCount(eventId, tierId, quantity);
 

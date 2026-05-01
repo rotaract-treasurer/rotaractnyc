@@ -29,6 +29,12 @@ interface EventCheckoutModalProps {
   eventTitle: string;
   ticketType: 'member' | 'guest';
   priceCents: number;
+  /**
+   * Number of tickets the member already has for this event. When > 0 the
+   * modal shows a friendly notice that they're buying additional tickets
+   * (added to their existing total).
+   */
+  existingTicketCount?: number;
   paymentSettings: PaymentSettings;
   onStripeCheckout: (embedded?: boolean, quantity?: number) => Promise<{ clientSecret?: string; url?: string } | null | void>;
   onOfflinePayment: (method: string, proofUrl?: string) => Promise<void>;
@@ -45,6 +51,7 @@ export default function EventCheckoutModal({
   eventTitle,
   ticketType,
   priceCents,
+  existingTicketCount = 0,
   paymentSettings,
   onStripeCheckout,
   onOfflinePayment,
@@ -170,6 +177,17 @@ export default function EventCheckoutModal({
             </div>
           </div>
         </Card>
+
+        {/* Already-have-tickets notice */}
+        {existingTicketCount > 0 && !showingPaymentForm && (
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+            <span aria-hidden="true" className="text-base leading-none">✓</span>
+            <div>
+              You already have <strong>{existingTicketCount}</strong> ticket{existingTicketCount === 1 ? '' : 's'} for this event.
+              These {quantity === 1 ? 'will be added' : `${quantity} new tickets will be added`} to your total.
+            </div>
+          </div>
+        )}
 
         {/* Quantity selector — hidden once card form is open */}
         {!showingPaymentForm && (

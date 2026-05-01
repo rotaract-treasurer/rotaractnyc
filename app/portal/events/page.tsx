@@ -59,12 +59,13 @@ export default function PortalEventsPage() {
   // for whether the current member is already going / has bought a ticket).
   // Used together with `optimisticRsvps` so newly-purchased tickets reflect
   // immediately while older purchases survive page reloads.
-  const serverRsvps = (memberRsvps || []).reduce<Record<string, { status: RSVPStatus; paymentStatus?: string; paidAmount?: number }>>((acc, r: any) => {
+  const serverRsvps = (memberRsvps || []).reduce<Record<string, { status: RSVPStatus; paymentStatus?: string; paidAmount?: number; quantity?: number }>>((acc, r: any) => {
     if (r?.eventId && r?.status) {
       acc[r.eventId] = {
         status: r.status as RSVPStatus,
         paymentStatus: r.paymentStatus,
         paidAmount: r.paidAmount,
+        quantity: r.quantity,
       };
     }
     return acc;
@@ -506,12 +507,14 @@ export default function PortalEventsPage() {
                                 size="sm"
                                 variant={myRsvp === 'going' ? 'secondary' : 'gold'}
                                 loading={rsvpLoading === event.id}
-                                disabled={myRsvp === 'going' && ticketLocked}
                                 onClick={() => {
                                   if (myRsvp === 'going') {
-                                    // Paid ticket: do NOT silently cancel on tap. Direct member to the
-                                    // event detail page where they can request a refund / cancellation.
-                                    if (ticketLocked) return;
+                                    if (ticketLocked) {
+                                      // Already have a paid ticket — open
+                                      // checkout again so they can buy more.
+                                      handleTicketPurchase(event, 'member');
+                                      return;
+                                    }
                                     handleRSVP(event.id, 'not_going');
                                   } else {
                                     handleTicketPurchase(event, 'member');
@@ -519,7 +522,9 @@ export default function PortalEventsPage() {
                                 }}
                                 className="flex-1 sm:flex-initial"
                               >
-                                {myRsvp === 'going' ? '✓ Ticket Purchased' : `Buy Ticket · ${formatCurrency(event.pricing.memberPrice)}`}
+                                {myRsvp === 'going'
+                                  ? (ticketLocked ? '+ Buy Another Ticket' : '✓ Ticket Purchased')
+                                  : `Buy Ticket · ${formatCurrency(event.pricing.memberPrice)}`}
                               </Button>
                               {myRsvp !== 'going' && (
                                 <Button size="sm" variant={myRsvp === 'maybe' ? 'secondary' : 'ghost'} disabled={!!rsvpLoading} onClick={() => handleRSVP(event.id, myRsvp === 'maybe' ? 'not_going' : 'maybe')}>
@@ -603,6 +608,7 @@ export default function PortalEventsPage() {
           eventTitle={checkoutEvent.title}
           ticketType={checkoutTicketType}
           priceCents={checkoutPriceCents}
+          existingTicketCount={serverRsvps[checkoutEvent.id]?.status === 'going' ? (serverRsvps[checkoutEvent.id]?.quantity ?? 1) : 0}
           paymentSettings={paymentSettings ?? { zelleEnabled: true, venmoEnabled: true }}
           onStripeCheckout={handleStripeCheckout}
           onOfflinePayment={handleOfflinePayment}

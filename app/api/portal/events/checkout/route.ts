@@ -157,6 +157,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'You must be logged in to claim a free member ticket.' }, { status: 401 });
       }
       const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
+      const existingFreeSnap = await rsvpRef.get();
+      const existingFree = existingFreeSnap.exists ? (existingFreeSnap.data() as any) : null;
+      const isAdditiveFree = !!existingFree && existingFree.status === 'going';
       await rsvpRef.set(
         {
           memberId: uid,
@@ -164,8 +167,10 @@ export async function POST(request: NextRequest) {
           status: 'going',
           ticketType: priceLabel.toLowerCase(),
           tierId: resolvedTierId || null,
-          paidAmount: 0,
-          quantity,
+          // For additional free claims, increment quantity rather than overwrite
+          ...(isAdditiveFree
+            ? { quantity: FieldValue.increment(quantity) }
+            : { quantity, paidAmount: 0 }),
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -183,7 +188,9 @@ export async function POST(request: NextRequest) {
 
     // Handle offline payment methods
     if (paymentMethod !== 'stripe') {
-      // Create pending offline payment record
+      // Create pending offline payment record (one row per submission so the
+      // treasurer sees each pending payment separately when a member buys
+      // additional tickets after a previous purchase).
       const offlinePaymentRef = adminDb.collection('offlinePayments').doc();
       await offlinePaymentRef.set({
         type: 'event',
@@ -192,7 +199,8 @@ export async function POST(request: NextRequest) {
         memberId: uid,
         memberName: null,
         memberEmail: null,
-        amount: priceCents,
+        amount: priceCents * quantity,
+        quantity,
         method: paymentMethod,
         tierId: resolvedTierId || null,
         tierReservationId: tierReservationId,
@@ -204,6 +212,9 @@ export async function POST(request: NextRequest) {
       });
 
       const rsvpRef = adminDb.collection('rsvps').doc(`${uid}_${eventId}`);
+      const existingOfflineSnap = await rsvpRef.get();
+      const existingOffline = existingOfflineSnap.exists ? (existingOfflineSnap.data() as any) : null;
+      const isAdditiveOffline = !!existingOffline && existingOffline.status === 'going';
       await rsvpRef.set(
         {
           memberId: uid,
@@ -211,9 +222,22 @@ export async function POST(request: NextRequest) {
           status: 'going',
           ticketType: priceLabel.toLowerCase(),
           tierId: resolvedTierId || null,
-          paidAmount: 0,
-          quantity,
-          paymentStatus: 'pending_offline',
+          // Additional purchases: increment quantity, leave paidAmount alone
+          // (it'll be incremented when the treasurer confirms each offline
+          // payment separately). Don't downgrade an already-paid RSVP back
+          // to pending_offline.
+          ...(isAdditiveOffline
+            ? {
+                quantity: FieldValue.increment(quantity),
+                ...(existingOffline.paymentStatus !== 'paid'
+                  ? { paymentStatus: 'pending_offline' }
+                  : {}),
+              }
+            : {
+                quantity,
+                paidAmount: 0,
+                paymentStatus: 'pending_offline',
+              }),
           paymentMethod: paymentMethod,
           offlinePaymentId: offlinePaymentRef.id,
           updatedAt: new Date().toISOString(),

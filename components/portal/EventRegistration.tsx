@@ -225,9 +225,8 @@ export default function EventRegistration({
                     variant={alreadyGoing ? 'secondary' : selectedTierId ? 'gold' : 'secondary'}
                     size="lg"
                     loading={loading}
-                    disabled={alreadyGoing || spotsLeft === 0 || (!selectedTierId && availTiers.length > 0)}
+                    disabled={spotsLeft === 0 || (!selectedTierId && availTiers.length > 0)}
                     onClick={() => {
-                      if (alreadyGoing) return;
                       if (selectedTierId) {
                         handleAction(() => onPurchaseTicket?.(
                           'member',
@@ -236,12 +235,12 @@ export default function EventRegistration({
                       }
                     }}
                   >
-                    {alreadyGoing
-                      ? '✓ Ticket Purchased'
-                      : spotsLeft === 0
+                    {spotsLeft === 0
                       ? 'Sold Out'
                       : !selectedTierId
-                      ? '↑ Select a tier above'
+                      ? (alreadyGoing ? '↑ Select a tier to buy more' : '↑ Select a tier above')
+                      : alreadyGoing
+                      ? `+ Buy Another ${allTiers.find((t) => t.id === selectedTierId)?.label} Ticket`
                       : `Buy ${allTiers.find((t) => t.id === selectedTierId)?.label} Ticket`}
                   </Button>
                   {!alreadyGoing && (
@@ -257,31 +256,34 @@ export default function EventRegistration({
                     variant={alreadyGoing ? 'secondary' : 'gold'}
                     size="lg"
                     loading={loading}
-                    disabled={alreadyGoing || spotsLeft === 0}
+                    disabled={spotsLeft === 0}
                     onClick={() => {
-                      if (alreadyGoing) return;
                       handleAction(() => onPurchaseTicket?.('member') || Promise.resolve());
                     }}
                   >
-                    {alreadyGoing ? '✓ Ticket Purchased' : spotsLeft === 0 ? 'Sold Out' : 'Buy Member Ticket'}
+                    {spotsLeft === 0
+                      ? 'Sold Out'
+                      : alreadyGoing
+                      ? '+ Buy Another Member Ticket'
+                      : 'Buy Member Ticket'}
                   </Button>
-                  {!alreadyGoing && (
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1"
-                        variant="outline"
-                        size="sm"
-                        loading={loading}
-                        disabled={spotsLeft === 0}
-                        onClick={() => handleAction(() => onPurchaseTicket?.('guest') || Promise.resolve())}
-                      >
-                        Buy Guest Ticket
-                      </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      size="sm"
+                      loading={loading}
+                      disabled={spotsLeft === 0}
+                      onClick={() => handleAction(() => onPurchaseTicket?.('guest') || Promise.resolve())}
+                    >
+                      {alreadyGoing ? '+ Buy Guest Ticket' : 'Buy Guest Ticket'}
+                    </Button>
+                    {!alreadyGoing && (
                       <Button variant="ghost" size="sm" onClick={() => handleAction(() => onRSVP('maybe'))}>
                         Maybe
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ) : isPaid && event.pricing && event.pricing.memberPrice === 0 ? (
                 <div className="flex gap-2">
