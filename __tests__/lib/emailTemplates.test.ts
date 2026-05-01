@@ -355,6 +355,20 @@ describe('guestTicketConfirmationEmail', () => {
   it('subject contains event title', () => {
     expect(guestTicketConfirmationEmail('Kate', SAMPLE_EVENT, 2500).subject).toContain('Spring Gala');
   });
+
+  it('uses inline Lucide SVG icons (not emojis) for detail rows', () => {
+    const { html } = guestTicketConfirmationEmail('Kate', { ...SAMPLE_EVENT, tierLabel: 'General', quantity: 2 }, 4000);
+    // No emoji codepoints in body
+    expect(html).not.toMatch(new RegExp('[\\u{1F4C5}\\u{1F4CD}\\u{1F522}\\u{1F4B3}\\u{1F39F}]', 'u'));
+    // SVG markup with the lucide attributes is present
+    expect(html).toContain('<svg');
+    expect(html).toContain('viewBox="0 0 24 24"');
+    expect(html).toContain('stroke-linecap="round"');
+    // calendar rect path is unique enough to confirm the calendar icon rendered
+    expect(html).toContain('<rect x="3" y="4" width="18" height="18"');
+    // map-pin path
+    expect(html).toContain('M20 10c0 6-8 12-8 12');
+  });
 });
 
 // ── memberTicketConfirmationEmail ────────────────────────────────────────────

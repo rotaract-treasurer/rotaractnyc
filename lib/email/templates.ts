@@ -206,12 +206,56 @@ function divider(): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding: 8px 0;"><div style="border-top: 1px solid ${GRAY_BORDER};"></div></td></tr></table>`;
 }
 
-function listItem(icon: string, title: string, detail: string): string {
+/**
+ * Lucide icon paths (MIT-licensed, https://lucide.dev) inlined as SVG.
+ *
+ * Why inline SVG instead of emoji?
+ *   - Consistent visual weight across operating systems (emoji renderings
+ *     differ wildly between Apple, Google, Microsoft, Samsung).
+ *   - Brand-tinted strokes match the crimson palette.
+ *   - SVG renders crisply on retina displays at any size.
+ *
+ * Compatibility: inline SVG renders in Apple Mail, iOS Mail, Gmail (web +
+ * mobile apps), Outlook.com, Outlook 365 web, Yahoo. Outlook for Windows
+ * desktop strips SVG — those users will simply see no icon (the label text
+ * still reads correctly), which we deemed an acceptable graceful degradation.
+ */
+const LUCIDE_ICON_PATHS: Record<string, string> = {
+  calendar:
+    '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  'map-pin':
+    '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  hash:
+    '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>',
+  'credit-card':
+    '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  ticket:
+    '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>',
+  user:
+    '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  phone:
+    '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  pin:
+    '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>',
+};
+
+export type LucideIconName = keyof typeof LUCIDE_ICON_PATHS;
+
+/**
+ * Render a Lucide icon as inline SVG sized to align with body copy.
+ * Defaults: 16px, current text color, 2px stroke (matches lucide default).
+ */
+function icon(name: LucideIconName, color: string = CRIMSON, size = 16): string {
+  const paths = LUCIDE_ICON_PATHS[name];
+  if (!paths) return '';
+  return `<span style="display: inline-block; vertical-align: -3px; line-height: 0; margin-right: 8px;"><svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-hidden="true">${paths}</svg></span>`;
+}
+
+function listItem(iconName: LucideIconName, title: string, detail: string): string {
   return `
     <tr>
       <td style="padding: 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-        <span style="color: ${TEXT_MUTED}; font-size: 14px;">${icon}&nbsp;&nbsp;</span>
-        <strong style="color: ${TEXT_DARK}; font-size: 14px;">${title}</strong>
+        ${icon(iconName)}<strong style="color: ${TEXT_DARK}; font-size: 14px;">${title}</strong>
         <span style="color: ${TEXT_BODY}; font-size: 14px;">&nbsp;${detail}</span>
       </td>
     </tr>`;
@@ -281,8 +325,8 @@ export function contactFormEmail(data: {
       ${divider()}
       ${infoCard(`
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('👤', 'From:', `${name} &lt;${email}&gt;`)}
-          ${listItem('📌', 'Subject:', subject)}
+          ${listItem('user', 'From:', `${name} &lt;${email}&gt;`)}
+          ${listItem('pin', 'Subject:', subject)}
         </table>
       `)}
       <p style="color: ${TEXT_MUTED}; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 20px 0 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Message</p>
@@ -313,9 +357,9 @@ export function membershipInterestEmail(data: {
       ${divider()}
       ${infoCard(`
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('👤', 'Name:', name)}
+          ${listItem('user', 'Name:', name)}
           ${listItem('✉️', 'Email:', email)}
-          ${phone ? listItem('📞', 'Phone:', phone) : ''}
+          ${phone ? listItem('phone', 'Phone:', phone) : ''}
         </table>
       `)}
       ${message ? `
@@ -424,8 +468,8 @@ export function duesReminderEmail(name: string, amount: string, cycleName: strin
       ${p(`Your membership dues of <strong>${safeAmount}</strong> for the <strong>${safeCycle}</strong> Rotary year are now due. Paying on time ensures you retain full access to all member benefits.`)}
       ${infoCard(`
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('💳', 'Amount due:', safeAmount)}
-          ${listItem('📅', 'Rotary year:', safeCycle)}
+          ${listItem('credit-card', 'Amount due:', safeAmount)}
+          ${listItem('calendar', 'Rotary year:', safeCycle)}
         </table>
       `)}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 0;">
@@ -461,8 +505,8 @@ export function eventReminderEmail(name: string, event: {
       ${infoCard(`
         <p style="color: ${CRIMSON}; font-size: 17px; font-weight: 700; margin: 0 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${safeTitle}</p>
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
-          ${listItem('📍', 'Location:', safeLocation)}
+          ${listItem('calendar', 'Date:', `${safeDate} at ${safeTime}`)}
+          ${listItem('map-pin', 'Location:', safeLocation)}
         </table>
       `)}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 0;">
@@ -581,8 +625,8 @@ export function guestRsvpConfirmationEmail(
       ${infoCard(`
         <p style="color: ${CRIMSON}; font-size: 17px; font-weight: 700; margin: 0 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${safeTitle}</p>
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
-          ${listItem('📍', 'Location:', safeLocation)}
+          ${listItem('calendar', 'Date:', `${safeDate} at ${safeTime}`)}
+          ${listItem('map-pin', 'Location:', safeLocation)}
         </table>
       `)}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
@@ -625,7 +669,7 @@ export function guestTicketConfirmationEmail(
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-radius: 8px; border: 1px solid ${GRAY_BORDER}; overflow: hidden;">
       <tr>
         <td style="background-color: ${CRIMSON}; padding: 10px 20px;">
-          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">🎟️ Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
+          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${icon('ticket', '#ffffff', 14)}Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
         </td>
       </tr>
       ${attendeeNames.map((n, i) => `
@@ -653,11 +697,11 @@ export function guestTicketConfirmationEmail(
       ${infoCard(`
         <p style="color: ${CRIMSON}; font-size: 17px; font-weight: 700; margin: 0 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${safeTitle}</p>
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
-          ${listItem('📍', 'Location:', safeLocation)}
-          ${tierLabel ? listItem('🎟️', 'Ticket type:', tierLabel) : ''}
-          ${listItem('🔢', 'Quantity:', String(quantity))}
-          ${listItem('💳', 'Amount paid:', amountFormatted)}
+          ${listItem('calendar', 'Date:', `${safeDate} at ${safeTime}`)}
+          ${listItem('map-pin', 'Location:', safeLocation)}
+          ${tierLabel ? listItem('ticket', 'Ticket type:', tierLabel) : ''}
+          ${listItem('hash', 'Quantity:', String(quantity))}
+          ${listItem('credit-card', 'Amount paid:', amountFormatted)}
         </table>
       `)}
       ${attendeeNamesHtml}
@@ -709,7 +753,7 @@ export function memberTicketConfirmationEmail(
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-radius: 8px; border: 1px solid ${GRAY_BORDER}; overflow: hidden;">
       <tr>
         <td style="background-color: ${CRIMSON}; padding: 10px 20px;">
-          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">🎟️ Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
+          <p style="color: #ffffff; font-size: 11px; font-weight: 700; margin: 0; letter-spacing: 1.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${icon('ticket', '#ffffff', 14)}Ticket${quantity > 1 ? 's' : ''} (${quantity})</p>
         </td>
       </tr>
       ${attendeeNames.map((n, i) => `
@@ -737,11 +781,11 @@ export function memberTicketConfirmationEmail(
       ${infoCard(`
         <p style="color: ${CRIMSON}; font-size: 17px; font-weight: 700; margin: 0 0 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${safeTitle}</p>
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
-          ${listItem('📍', 'Location:', safeLocation)}
-          ${tierLabel ? listItem('🎟️', 'Ticket type:', tierLabel) : ''}
-          ${listItem('🔢', 'Quantity:', String(quantity))}
-          ${listItem('💳', 'Amount paid:', amountFormatted)}
+          ${listItem('calendar', 'Date:', `${safeDate} at ${safeTime}`)}
+          ${listItem('map-pin', 'Location:', safeLocation)}
+          ${tierLabel ? listItem('ticket', 'Ticket type:', tierLabel) : ''}
+          ${listItem('hash', 'Quantity:', String(quantity))}
+          ${listItem('credit-card', 'Amount paid:', amountFormatted)}
         </table>
       `)}
       ${attendeeNamesHtml}
@@ -783,8 +827,8 @@ export function memberRsvpConfirmationEmail(
       ${infoCard(`
         <p style="color: ${CRIMSON}; font-size: 17px; font-weight: 700; margin: 0 0 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${safeTitle}</p>
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📅', 'Date:', `${safeDate} at ${safeTime}`)}
-          ${listItem('📍', 'Location:', safeLocation)}
+          ${listItem('calendar', 'Date:', `${safeDate} at ${safeTime}`)}
+          ${listItem('map-pin', 'Location:', safeLocation)}
         </table>
       `)}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
@@ -822,7 +866,7 @@ export function waitlistConfirmationEmail(
       ${p(`We've added you to the waitlist for <strong>${safeTitle}</strong>. If a spot opens up, we'll notify you right away — so keep an eye on your inbox.`)}
       ${infoCard(`
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('📌', 'Event:', safeTitle)}
+          ${listItem('pin', 'Event:', safeTitle)}
           ${listItem('✉️', 'Waitlist email:', safeEmail)}
         </table>
       `)}
