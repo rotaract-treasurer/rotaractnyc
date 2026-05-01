@@ -6,7 +6,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { isValidEmail } from '@/lib/utils/sanitize';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail } from '@/lib/email/templates';
-import { generateCheckInQRCode } from '@/lib/utils/qrcode';
+import { generateTicketQRCodes } from '@/lib/utils/qrcode';
 import { incrementTierSoldCount, tryReserveTierSpot, decrementTierSoldCount } from '@/lib/services/tierTracking';
 
 export const dynamic = 'force-dynamic';
@@ -273,8 +273,8 @@ export async function POST(request: NextRequest) {
 
       // Send confirmation email for free ticket
       try {
-        let qrCodeDataUrl: string | undefined;
-        try { qrCodeDataUrl = await generateCheckInQRCode(eventId, email); } catch { /* best-effort */ }
+        let qrCodes: string[] | undefined;
+        try { qrCodes = await generateTicketQRCodes(eventId, email, actualQuantity); } catch { /* best-effort */ }
         const emailContent = guestTicketConfirmationEmail(name, {
           title: event.title || 'Event',
           date: event.date || '',
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
           location: event.location || '',
           slug: event.slug || eventId,
           quantity: actualQuantity,
-        } as any, 0, qrCodeDataUrl);
+        } as any, 0, qrCodes);
 
         await sendEmail({
           to: email,

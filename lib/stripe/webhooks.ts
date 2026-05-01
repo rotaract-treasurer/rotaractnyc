@@ -19,7 +19,7 @@ import { adjustTierSoldCount, releaseTierSpot } from '@/lib/services/tierTrackin
 import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail, memberTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
-import { generateCheckInQRCode } from '@/lib/utils/qrcode';
+import { generateTicketQRCodes } from '@/lib/utils/qrcode';
 
 /**
  * Idempotency: check if we already processed a Stripe event.
@@ -136,6 +136,7 @@ async function fetchEventData(eventId: string) {
 async function sendMemberTicketConfirmationEmail(
   name: string,
   email: string,
+  memberId: string,
   eventId: string,
   amountCents: number,
   tierId?: string,
@@ -146,15 +147,19 @@ async function sendMemberTicketConfirmationEmail(
     const event = await fetchEventData(eventId);
     if (!event) return;
     const tier = tierId ? event.pricing?.tiers?.find((t: any) => t.id === tierId) : undefined;
-    let qrCodeDataUrl: string | undefined;
+    let qrCodes: string[] | undefined;
     try {
-      if (eventId && tierId) qrCodeDataUrl = await generateCheckInQRCode(eventId, tierId);
+      // One QR code per ticket so a member who buys N tickets can hand each
+      // guest their own scannable code. Signed against the member id (not
+      // the tier id — that was the previous bug) so the check-in endpoint
+      // can validate the signature.
+      if (eventId && memberId) qrCodes = await generateTicketQRCodes(eventId, memberId, quantity);
     } catch { /* QR generation is best-effort */ }
     const content = memberTicketConfirmationEmail(
       name,
       { ...event, tierLabel: tier?.label, quantity },
       amountCents,
-      qrCodeDataUrl,
+      qrCodes,
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {
@@ -175,15 +180,16 @@ async function sendTicketConfirmationEmail(
     if (!email) return;
     const event = await fetchEventData(eventId);
     if (!event) return;
-    let qrCodeDataUrl: string | undefined;
+    let qrCodes: string[] | undefined;
     try {
-      qrCodeDataUrl = await generateCheckInQRCode(eventId, email);
+      // Use the lower-cased email as a stable holder id for guest tickets.
+      qrCodes = await generateTicketQRCodes(eventId, email, quantity);
     } catch { /* QR generation is best-effort */ }
     const content = guestTicketConfirmationEmail(
       name,
       { ...event, tierLabel, quantity },
       amountCents,
-      qrCodeDataUrl,
+      qrCodes,
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {
@@ -288,9 +294,28 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
   try {
     const userRecord = await adminAuth.getUser(memberId);
     if (userRecord.email) {
+      // Prefer the member's actual first name (from the members collection)
+      // over the auth display name so we don't fall back to "Member" when
+      // displayName isn't set, and so we don't greet them with their full name.
+      let greetingName = 'there';
+      try {
+        const memberDoc = await adminDb.collection('members').doc(memberId).get();
+        const m = memberDoc.data();
+        if (m?.firstName) {
+          greetingName = String(m.firstName).trim();
+        } else if (userRecord.displayName) {
+          greetingName = userRecord.displayName.split(' ')[0] || userRecord.displayName;
+        } else if (m?.displayName) {
+          greetingName = String(m.displayName).split(' ')[0];
+        }
+      } catch { /* fall back to userRecord.displayName below */ }
+      if (greetingName === 'there' && userRecord.displayName) {
+        greetingName = userRecord.displayName.split(' ')[0] || userRecord.displayName;
+      }
       await sendMemberTicketConfirmationEmail(
-        userRecord.displayName || 'Member',
+        greetingName,
         userRecord.email,
+        memberId,
         eventId,
         session.amount_total || 0,
         tierId || undefined,

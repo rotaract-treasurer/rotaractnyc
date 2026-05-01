@@ -77,8 +77,15 @@ export default function PortalEventsPage() {
     const r = serverRsvps[eventId];
     if (!r) return false;
     if (r.status !== 'going') return false;
-    // Treat any paid / pending-offline / completed payment as locked so the
-    // member can't accidentally cancel their ticket by tapping the button.
+    // For ANY confirmed-going RSVP on a paid event we treat the ticket as
+    // locked. Cancelling a paid ticket must go through the team (refund
+    // process) rather than a stray tap on the button. We intentionally do
+    // not rely on paymentStatus here — older RSVP rows may be missing it.
+    const ev = (firestoreEvents || []).find((e: any) => e.id === eventId) as any;
+    const isPaidEvent = ev && (ev.type === 'paid' || ev.type === 'hybrid')
+      && ev.pricing && (ev.pricing.memberPrice ?? 0) > 0;
+    if (isPaidEvent) return true;
+    // Free / pending / paid status fields also lock (defense in depth).
     return ['paid', 'pending', 'pending_offline', 'free'].includes(
       r.paymentStatus || '',
     ) || (r.paidAmount ?? 0) > 0;
