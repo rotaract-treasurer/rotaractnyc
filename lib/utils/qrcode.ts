@@ -81,3 +81,34 @@ export async function generateTicketQRCodes(
   }
   return codes;
 }
+
+/**
+ * Returns hosted HTTPS URLs to render each ticket's QR code as a PNG image.
+ *
+ * Prefer this over generateTicketQRCodes() for emails — many email clients
+ * (Gmail in particular) strip `data:` URIs from `<img src>` for security,
+ * so embedded data-URI QR codes appear as broken-image placeholders.
+ *
+ * The URL is signed with the same HMAC the check-in endpoint uses, so the
+ * /api/events/qr route can verify authenticity before rendering the PNG.
+ */
+export function generateTicketQRCodeUrls(
+  eventId: string,
+  memberId: string,
+  quantity: number,
+): string[] {
+  const n = Math.max(1, Math.floor(quantity));
+  const timestamp = Date.now().toString();
+  const signature = hmac(`${eventId}:${memberId}:${timestamp}`);
+  const base =
+    `${SITE.url}/api/events/qr` +
+    `?e=${encodeURIComponent(eventId)}` +
+    `&m=${encodeURIComponent(memberId)}` +
+    `&t=${timestamp}` +
+    `&sig=${signature}`;
+  const urls: string[] = [];
+  for (let i = 1; i <= n; i++) {
+    urls.push(`${base}&tk=${i}`);
+  }
+  return urls;
+}

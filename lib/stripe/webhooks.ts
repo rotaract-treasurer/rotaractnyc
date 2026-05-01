@@ -19,7 +19,7 @@ import { adjustTierSoldCount, releaseTierSpot } from '@/lib/services/tierTrackin
 import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail, memberTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
-import { generateTicketQRCodes } from '@/lib/utils/qrcode';
+import { generateTicketQRCodeUrls } from '@/lib/utils/qrcode';
 
 /**
  * Idempotency: check if we already processed a Stripe event.
@@ -153,7 +153,12 @@ async function sendMemberTicketConfirmationEmail(
       // guest their own scannable code. Signed against the member id (not
       // the tier id — that was the previous bug) so the check-in endpoint
       // can validate the signature.
-      if (eventId && memberId) qrCodes = await generateTicketQRCodes(eventId, memberId, quantity);
+      //
+      // Use HOSTED PNG URLs (not data URIs) because Gmail and several other
+      // email clients strip data: images and render a broken-image
+      // placeholder. The /api/events/qr route serves PNGs from the same
+      // signed parameters.
+      if (eventId && memberId) qrCodes = generateTicketQRCodeUrls(eventId, memberId, quantity);
     } catch { /* QR generation is best-effort */ }
     const content = memberTicketConfirmationEmail(
       name,
@@ -183,13 +188,28 @@ async function sendTicketConfirmationEmail(
     let qrCodes: string[] | undefined;
     try {
       // Use the lower-cased email as a stable holder id for guest tickets.
-      qrCodes = await generateTicketQRCodes(eventId, email, quantity);
+      // Hosted PNG URLs avoid Gmail's data-URI image stripping.
+      qrCodes = generateTicketQRCodeUrls(eventId, email, quantity);
     } catch { /* QR generation is best-effort */ }
+    // Suppress the "Consider joining Rotaract NYC" upsell when the buyer
+    // is already a member (e.g. a member who used the public guest flow
+    // instead of the portal). Best-effort lookup — falls back to the
+    // upsell if the query fails.
+    let isMember = false;
+    try {
+      const memberSnap = await adminDb
+        .collection('members')
+        .where('email', '==', email.toLowerCase())
+        .limit(1)
+        .get();
+      isMember = !memberSnap.empty;
+    } catch { /* default to non-member */ }
     const content = guestTicketConfirmationEmail(
       name,
       { ...event, tierLabel, quantity },
       amountCents,
       qrCodes,
+      { isMember },
     );
     await sendEmail({ to: email, subject: content.subject, html: content.html, text: content.text });
   } catch (err) {

@@ -2,7 +2,11 @@
  * Tests for lib/utils/qrcode.ts — generateCheckInUrl(), verifyCheckInSignature()
  */
 
-import { generateCheckInUrl, verifyCheckInSignature } from '@/lib/utils/qrcode';
+import {
+  generateCheckInUrl,
+  generateTicketQRCodeUrls,
+  verifyCheckInSignature,
+} from '@/lib/utils/qrcode';
 
 describe('QR Code utilities', () => {
   const ORIGINAL_ENV = process.env;
@@ -106,6 +110,39 @@ describe('QR Code utilities', () => {
         .digest('hex');
 
       expect(verifyCheckInSignature('event-1', 'member-1', recentTs, recentSig)).toBe(true);
+    });
+  });
+
+  // ── generateTicketQRCodeUrls ───────────────────────────────────────────
+
+  describe('generateTicketQRCodeUrls', () => {
+    it('returns one URL per ticket', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 3);
+      expect(urls).toHaveLength(3);
+    });
+
+    it('returns hosted /api/events/qr URLs (not data URIs)', () => {
+      const [url] = generateTicketQRCodeUrls('event-1', 'member-1', 1);
+      expect(url.startsWith('data:')).toBe(false);
+      expect(url).toContain('/api/events/qr');
+    });
+
+    it('embeds eventId, memberId, ticket number and a valid signature', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 2);
+      const parsed = new URL(urls[0]);
+      expect(parsed.searchParams.get('e')).toBe('event-1');
+      expect(parsed.searchParams.get('m')).toBe('member-1');
+      expect(parsed.searchParams.get('tk')).toBe('1');
+      const t = parsed.searchParams.get('t')!;
+      const sig = parsed.searchParams.get('sig')!;
+      expect(verifyCheckInSignature('event-1', 'member-1', t, sig)).toBe(true);
+    });
+
+    it('numbers tickets sequentially starting at 1', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 3);
+      expect(new URL(urls[0]).searchParams.get('tk')).toBe('1');
+      expect(new URL(urls[1]).searchParams.get('tk')).toBe('2');
+      expect(new URL(urls[2]).searchParams.get('tk')).toBe('3');
     });
   });
 });

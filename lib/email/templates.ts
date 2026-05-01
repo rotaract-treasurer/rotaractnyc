@@ -20,6 +20,36 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Format a date string for display in emails.
+ *
+ * Accepts:
+ *   - ISO 8601 datetime ("2026-06-06T21:00:00.000Z")
+ *   - ISO 8601 date ("2026-06-06")
+ *   - Already-formatted strings ("June 6, 2026") — passed through unchanged.
+ *
+ * Returns "Saturday, June 6, 2026" style. Pure-date inputs are formatted
+ * in UTC to avoid off-by-one shifts caused by the server's timezone.
+ */
+function formatEmailDate(value: string): string {
+  if (!value) return '';
+  // Bare YYYY-MM-DD: parse as UTC to avoid TZ rollover.
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const d = isDateOnly ? new Date(`${value}T00:00:00Z`) : new Date(value);
+  if (isNaN(d.getTime())) return value; // not a date — leave as-is.
+  try {
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      ...(isDateOnly ? { timeZone: 'UTC' } : {}),
+    });
+  } catch {
+    return value;
+  }
+}
+
 // ── Shared building blocks ──────────────────────────────────────────────────
 
 const CRIMSON = '#9B1B30';
@@ -419,7 +449,7 @@ export function eventReminderEmail(name: string, event: {
 }): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
-  const safeDate = escapeHtml(event.date);
+  const safeDate = escapeHtml(formatEmailDate(event.date));
   const safeTime = escapeHtml(event.time);
   const safeLocation = escapeHtml(event.location);
 
@@ -443,8 +473,8 @@ export function eventReminderEmail(name: string, event: {
         </tr>
       </table>
       ${muted('We look forward to seeing you there!')}
-    `, `Reminder: ${event.title} — ${event.date} at ${event.time}`),
-    text: `Event Reminder\n\nHi ${name}, just a heads-up — you have an upcoming event:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}\n\nView event: ${SITE.url}/portal/events\n\n--\n${SITE.name}\n${SITE.address}`,
+    `, `Reminder: ${event.title} — ${formatEmailDate(event.date)} at ${event.time}`),
+    text: `Event Reminder\n\nHi ${name}, just a heads-up — you have an upcoming event:\n\n${event.title}\n${formatEmailDate(event.date)} at ${event.time}\n${event.location}\n\nView event: ${SITE.url}/portal/events\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
@@ -539,7 +569,7 @@ export function guestRsvpConfirmationEmail(
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
-  const safeDate = escapeHtml(event.date);
+  const safeDate = escapeHtml(formatEmailDate(event.date));
   const safeTime = escapeHtml(event.time);
   const safeLocation = escapeHtml(event.location);
 
@@ -569,7 +599,7 @@ export function guestRsvpConfirmationEmail(
         ${ctaButton('Learn About Membership', `${SITE.url}/membership`, true)}
       `)}
     `, `Registration confirmed — see you at ${event.title}!`),
-    text: `You're all set, ${name}!\n\nYour registration has been confirmed:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}\n\nView event details: ${SITE.url}/events/${event.slug}\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\nMembers get access to exclusive events, service opportunities, and a network of young professionals.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `You're all set, ${name}!\n\nYour registration has been confirmed:\n\n${event.title}\n${formatEmailDate(event.date)} at ${event.time}\n${event.location}\n\nView event details: ${SITE.url}/events/${event.slug}\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\nMembers get access to exclusive events, service opportunities, and a network of young professionals.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
@@ -578,16 +608,18 @@ export function guestTicketConfirmationEmail(
   event: { title: string; date: string; time: string; location: string; slug: string; tierLabel?: string; quantity?: number; attendeeNames?: string[] },
   amountCents: number,
   qrCodes?: string | string[],
+  options?: { isMember?: boolean },
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
-  const safeDate = escapeHtml(event.date);
+  const safeDate = escapeHtml(formatEmailDate(event.date));
   const safeTime = escapeHtml(event.time);
   const safeLocation = escapeHtml(event.location);
   const tierLabel = event.tierLabel ? escapeHtml(event.tierLabel) : '';
   const quantity = event.quantity ?? 1;
   const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
   const attendeeNames = event.attendeeNames ?? [name];
+  const isMember = options?.isMember ?? false;
 
   const attendeeNamesHtml = `
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-radius: 8px; border: 1px solid ${GRAY_BORDER}; overflow: hidden;">
@@ -638,14 +670,16 @@ export function guestTicketConfirmationEmail(
         </tr>
       </table>
       ${muted(`Need to make a change or can't make it? Reply to this email or reach us at <a href="mailto:${SITE.email}" style="color: ${CRIMSON};">${SITE.email}</a> and we'll take care of it.`)}
-      ${divider()}
-      ${goldBox(`
-        <p style="color: ${TEXT_DARK}; font-size: 15px; font-weight: 700; margin: 0 0 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Enjoying the event? Consider joining Rotaract NYC.</p>
-        <p style="color: ${TEXT_BODY}; font-size: 14px; margin: 0 0 16px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Members get access to exclusive events, service opportunities, professional development, and a community of driven young professionals making a real difference in NYC.</p>
-        ${ctaButton('Learn About Membership', `${SITE.url}/membership`, true)}
-      `)}
+      ${isMember ? '' : `
+        ${divider()}
+        ${goldBox(`
+          <p style="color: ${TEXT_DARK}; font-size: 15px; font-weight: 700; margin: 0 0 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Enjoying the event? Consider joining Rotaract NYC.</p>
+          <p style="color: ${TEXT_BODY}; font-size: 14px; margin: 0 0 16px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Members get access to exclusive events, service opportunities, professional development, and a community of driven young professionals making a real difference in NYC.</p>
+          ${ctaButton('Learn About Membership', `${SITE.url}/membership`, true)}
+        `)}
+      `}
     `, `Ticket confirmed — you're going to ${event.title}!`),
-    text: `Your ticket is confirmed, ${name}!\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView event details: ${SITE.url}/events/${event.slug}\n\nNeed to make a change? Email ${SITE.email}.\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\n${SITE.url}/membership\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `Your ticket is confirmed, ${name}!\n\n${event.title}\n${formatEmailDate(event.date)} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView event details: ${SITE.url}/events/${event.slug}\n\nNeed to make a change? Email ${SITE.email}.${isMember ? '' : `\n\n---\n\nEnjoying the event? Consider joining Rotaract NYC.\n${SITE.url}/membership`}\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
@@ -663,7 +697,7 @@ export function memberTicketConfirmationEmail(
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
-  const safeDate = escapeHtml(event.date);
+  const safeDate = escapeHtml(formatEmailDate(event.date));
   const safeTime = escapeHtml(event.time);
   const safeLocation = escapeHtml(event.location);
   const tierLabel = event.tierLabel ? escapeHtml(event.tierLabel) : '';
@@ -727,7 +761,7 @@ export function memberTicketConfirmationEmail(
       `)}
       ${muted(`Need to cancel or change your ticket? Email us at <a href="mailto:${SITE.email}?subject=Ticket%20cancellation%20-%20${encodeURIComponent(event.title)}" style="color: ${CRIMSON};">${SITE.email}</a> and we'll handle the refund. Refund requests must be received at least 7 days before the event.`)}
     `, `Ticket confirmed — see you at ${event.title}!`),
-    text: `You're in, ${name}!\n\nYour ticket${quantity > 1 ? 's are' : ' is'} confirmed:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView in portal: ${SITE.url}/portal/events\n\nNeed to cancel? Email ${SITE.email} at least 7 days before the event for a full refund.\n\nKnow someone who'd love this? Share: ${SITE.url}/events/${event.slug}\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `You're in, ${name}!\n\nYour ticket${quantity > 1 ? 's are' : ' is'} confirmed:\n\n${event.title}\n${formatEmailDate(event.date)} at ${event.time}\n${event.location}${tierLabel ? `\nTicket type: ${event.tierLabel}` : ''}\nTickets (${quantity}): ${attendeeNames.join(', ')}\nAmount paid: ${amountFormatted}\n\nView in portal: ${SITE.url}/portal/events\n\nNeed to cancel? Email ${SITE.email} at least 7 days before the event for a full refund.\n\nKnow someone who'd love this? Share: ${SITE.url}/events/${event.slug}\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 
@@ -737,7 +771,7 @@ export function memberRsvpConfirmationEmail(
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeTitle = escapeHtml(event.title);
-  const safeDate = escapeHtml(event.date);
+  const safeDate = escapeHtml(formatEmailDate(event.date));
   const safeTime = escapeHtml(event.time);
   const safeLocation = escapeHtml(event.location);
 
@@ -768,7 +802,7 @@ export function memberRsvpConfirmationEmail(
       `)}
       ${muted('Need to change your RSVP? You can update it anytime from your <a href="' + SITE.url + '/portal/events" style="color: ' + CRIMSON + ';">events dashboard</a>.')}
     `, `RSVP confirmed — we'll see you at ${event.title}!`),
-    text: `See you there, ${name}!\n\nYour RSVP has been confirmed:\n\n${event.title}\n${event.date} at ${event.time}\n${event.location}\n\nView in portal: ${SITE.url}/portal/events\n\nBring a friend! Share: ${SITE.url}/events/${event.slug}\n\nNeed to change your RSVP? Update it anytime at ${SITE.url}/portal/events\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `See you there, ${name}!\n\nYour RSVP has been confirmed:\n\n${event.title}\n${formatEmailDate(event.date)} at ${event.time}\n${event.location}\n\nView in portal: ${SITE.url}/portal/events\n\nBring a friend! Share: ${SITE.url}/events/${event.slug}\n\nNeed to change your RSVP? Update it anytime at ${SITE.url}/portal/events\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 

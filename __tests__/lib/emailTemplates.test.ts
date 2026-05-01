@@ -283,6 +283,51 @@ describe('guestTicketConfirmationEmail', () => {
     expect(html).toContain('/membership');
   });
 
+  it('omits membership upsell when isMember is true', () => {
+    const { html, text } = guestTicketConfirmationEmail(
+      'Kate',
+      SAMPLE_EVENT,
+      2500,
+      undefined,
+      { isMember: true },
+    );
+    expect(html).not.toContain('Consider joining Rotaract NYC');
+    expect(html).not.toContain('Learn About Membership');
+    expect(text).not.toContain('Consider joining Rotaract NYC');
+  });
+
+  it('formats ISO datetime dates as a friendly weekday/month/day string', () => {
+    const { html, text } = guestTicketConfirmationEmail(
+      'Kate',
+      { ...SAMPLE_EVENT, date: '2026-06-06T21:00:00.000Z' },
+      2500,
+    );
+    // Should NOT render the raw ISO timestamp in the body.
+    expect(html).not.toContain('2026-06-06T21:00:00.000Z');
+    expect(text).not.toContain('2026-06-06T21:00:00.000Z');
+    // Should render a human-readable date.
+    expect(html).toMatch(/June 6, 2026/);
+    expect(text).toMatch(/June 6, 2026/);
+  });
+
+  it('formats date-only (YYYY-MM-DD) values without timezone shift', () => {
+    const { html } = guestTicketConfirmationEmail(
+      'Kate',
+      { ...SAMPLE_EVENT, date: '2026-06-06' },
+      2500,
+    );
+    expect(html).toMatch(/June 6, 2026/);
+  });
+
+  it('passes through pre-formatted date strings unchanged', () => {
+    const { html } = guestTicketConfirmationEmail(
+      'Kate',
+      { ...SAMPLE_EVENT, date: 'May 10, 2026' },
+      2500,
+    );
+    expect(html).toContain('May 10, 2026');
+  });
+
   it('subject contains event title', () => {
     expect(guestTicketConfirmationEmail('Kate', SAMPLE_EVENT, 2500).subject).toContain('Spring Gala');
   });

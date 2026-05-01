@@ -6,7 +6,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { isValidEmail } from '@/lib/utils/sanitize';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail } from '@/lib/email/templates';
-import { generateTicketQRCodes } from '@/lib/utils/qrcode';
+import { generateTicketQRCodeUrls } from '@/lib/utils/qrcode';
 import { incrementTierSoldCount, tryReserveTierSpot, decrementTierSoldCount } from '@/lib/services/tierTracking';
 
 export const dynamic = 'force-dynamic';
@@ -274,7 +274,20 @@ export async function POST(request: NextRequest) {
       // Send confirmation email for free ticket
       try {
         let qrCodes: string[] | undefined;
-        try { qrCodes = await generateTicketQRCodes(eventId, email, actualQuantity); } catch { /* best-effort */ }
+        // Hosted PNG URLs render reliably across email clients (Gmail strips data: URIs).
+        try { qrCodes = generateTicketQRCodeUrls(eventId, email, actualQuantity); } catch { /* best-effort */ }
+
+        // Suppress the membership upsell when the buyer is already a member.
+        let isMember = false;
+        try {
+          const memberSnap = await adminDb
+            .collection('members')
+            .where('email', '==', email.toLowerCase())
+            .limit(1)
+            .get();
+          isMember = !memberSnap.empty;
+        } catch { /* default to non-member */ }
+
         const emailContent = guestTicketConfirmationEmail(name, {
           title: event.title || 'Event',
           date: event.date || '',
@@ -282,7 +295,7 @@ export async function POST(request: NextRequest) {
           location: event.location || '',
           slug: event.slug || eventId,
           quantity: actualQuantity,
-        } as any, 0, qrCodes);
+        } as any, 0, qrCodes, { isMember });
 
         await sendEmail({
           to: email,
