@@ -336,9 +336,6 @@ export default function FinancePage() {
                               </svg>
                             </div>
                             <span className="font-medium text-gray-900 dark:text-white">{tx.description}</span>
-                            {tx.isTest && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300 dark:border-amber-700 flex-shrink-0">TEST</span>
-                            )}
                             {(tx as any).receiptUrl && (
                               <a href={(tx as any).receiptUrl} target="_blank" rel="noopener noreferrer" className="text-azure hover:underline text-xs flex-shrink-0">📎</a>
                             )}
@@ -391,12 +388,7 @@ export default function FinancePage() {
                         </svg>
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{tx.description}</p>
-                          {tx.isTest && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300 dark:border-amber-700 flex-shrink-0">TEST</span>
-                          )}
-                        </div>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{tx.description}</p>
                         <p className="text-xs text-gray-400">{tx.date} · <span className="capitalize">{tx.category}</span></p>
                       </div>
                     </div>

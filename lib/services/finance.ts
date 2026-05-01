@@ -65,16 +65,15 @@ export function invalidateFinanceCache(): void {
 
 // ─── Read operations ────────────────────────────────────────────────────────
 
-export async function getTransactions(limit = 50, includeTest = false): Promise<Transaction[]> {
-  const cacheKey = `transactions:${limit}:${includeTest}`;
+export async function getTransactions(limit = 50): Promise<Transaction[]> {
+  const cacheKey = `transactions:${limit}`;
   return getCached(cacheKey, LIST_TTL_MS, async () => {
     const snap = await adminDb
       .collection(COLLECTION)
       .orderBy('date', 'desc')
       .limit(limit)
       .get();
-    const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction));
-    return includeTest ? all : all.filter((t) => !t.isTest);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction));
   });
 }
 

@@ -260,7 +260,6 @@ export interface Transaction {
   status?: string;
   eventId?: string;
   quantity?: number;
-  isTest?: boolean;
 }
 
 export interface FinanceSummary {
