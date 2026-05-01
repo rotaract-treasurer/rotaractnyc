@@ -144,5 +144,12 @@ describe('QR Code utilities', () => {
       expect(new URL(urls[1]).searchParams.get('tk')).toBe('2');
       expect(new URL(urls[2]).searchParams.get('tk')).toBe('3');
     });
+
+    it('includes total ticket count (tot) so QR endpoint can name files "X-of-N"', () => {
+      const urls = generateTicketQRCodeUrls('event-1', 'member-1', 3);
+      for (const url of urls) {
+        expect(new URL(url).searchParams.get('tot')).toBe('3');
+      }
+    });
   });
 });

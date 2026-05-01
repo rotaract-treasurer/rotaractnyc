@@ -17,6 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { verifyCheckInSignature } from '@/lib/utils/qrcode';
+import { slugify } from '@/lib/utils/slugify';
+import { adminDb } from '@/lib/firebase/admin';
 import { SITE } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +50,32 @@ export async function GET(request: NextRequest) {
     `&sig=${encodeURIComponent(signature)}` +
     tkSuffix;
 
+  // Best-effort lookup of the event title so the downloaded file is named
+  // something meaningful (e.g. "gala-test-event-ticket-2-of-3.png") instead
+  // of the generic "qr.png" the URL path would produce. Falls back to a
+  // safe default if the lookup fails — never blocks PNG generation.
+  let titleSlug = 'event';
+  let totalTickets: string | undefined;
+  try {
+    const snap = await adminDb.collection('events').doc(eventId).get();
+    const title = snap.exists ? (snap.data()?.title as string | undefined) : undefined;
+    if (title) titleSlug = slugify(title) || 'event';
+  } catch {
+    /* ignore — filename is cosmetic */
+  }
+
+  // If the email passed `tot=N` in addition to `tk`, render "ticket-2-of-3"
+  // for clarity; otherwise just "ticket-2" or plain "ticket".
+  const tot = url.searchParams.get('tot');
+  if (tot && /^\d+$/.test(tot)) totalTickets = tot;
+
+  const ticketSuffix = tk
+    ? totalTickets
+      ? `-ticket-${tk}-of-${totalTickets}`
+      : `-ticket-${tk}`
+    : '-ticket';
+  const filename = `${titleSlug}${ticketSuffix}.png`;
+
   try {
     const png = await QRCode.toBuffer(checkInUrl, {
       type: 'png',
@@ -60,6 +88,9 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
+        // `inline` lets the email client display the image and lets the
+        // browser use the supplied filename when the user picks "Save image".
+        'Content-Disposition': `inline; filename="${filename}"`,
         // 24h public cache — matches the signature TTL.
         'Cache-Control': 'public, max-age=86400, immutable',
         'Content-Length': String(png.length),

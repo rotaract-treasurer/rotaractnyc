@@ -108,7 +108,9 @@ export function generateTicketQRCodeUrls(
     `&sig=${signature}`;
   const urls: string[] = [];
   for (let i = 1; i <= n; i++) {
-    urls.push(`${base}&tk=${i}`);
+    // tot=N gives the QR endpoint the total ticket count so it can render
+    // "ticket-2-of-3" in the downloaded filename. Cosmetic only — not signed.
+    urls.push(`${base}&tk=${i}&tot=${n}`);
   }
   return urls;
 }
