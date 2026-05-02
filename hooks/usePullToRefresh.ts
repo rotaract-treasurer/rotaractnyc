@@ -36,7 +36,7 @@ interface UsePullToRefreshReturn {
  *   onRefresh: () => mutate(),
  * });
  * return (
- *   <div {...bind()} style={{ touchAction: 'pan-x' }}>
+ *   <div {...bind()}>
  *     <div style={indicatorStyle} className="flex justify-center">
  *       {pullDistance > 0 || isRefreshing ? <Spinner /> : null}
  *     </div>
@@ -98,6 +98,7 @@ export function usePullToRefresh({
     {
       axis: 'y',
       filterTaps: true,
+      pointer: { touch: true },
     },
   );
 

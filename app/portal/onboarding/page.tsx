@@ -173,7 +173,8 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 py-4 page-enter">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-y-auto">
+    <div className="max-w-2xl mx-auto space-y-8 px-4 py-8 page-enter">
       <div className="text-center">
         <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-cranberry-50 dark:bg-cranberry-900/20 flex items-center justify-center">
           <svg aria-hidden="true" className="w-6 h-6 text-cranberry" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -376,6 +377,7 @@ export default function OnboardingPage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
