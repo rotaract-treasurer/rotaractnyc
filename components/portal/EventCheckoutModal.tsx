@@ -200,7 +200,7 @@ export default function EventCheckoutModal({
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
-                className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
               >
                 −
               </button>
@@ -209,7 +209,7 @@ export default function EventCheckoutModal({
                 type="button"
                 onClick={() => setQuantity((q) => Math.min(10, q + 1))}
                 disabled={quantity >= 10}
-                className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
               >
                 +
               </button>
@@ -223,7 +223,7 @@ export default function EventCheckoutModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Choose Payment Method
             </label>
-            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-2">
               {availableMethods.map((method) => (
                 <button
                   key={method.id}

@@ -376,7 +376,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
                       aria-current={isActive(item.href) ? 'page' : undefined}
                       {...((item as any).tutorialId ? { 'data-tutorial': (item as any).tutorialId } : {})}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
+                        'flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium transition-all duration-150',
                         isActive(item.href)
                           ? 'bg-cranberry-50 text-cranberry-700 dark:bg-cranberry-900/20 dark:text-cranberry-400 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800/60'
@@ -430,7 +430,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               <button
                 ref={signOutTriggerRef}
                 onClick={handleSignOut}
-                className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                 title="Sign out"
                 aria-label="Sign out"
                 aria-haspopup="dialog"

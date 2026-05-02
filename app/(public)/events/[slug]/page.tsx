@@ -235,7 +235,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                               )}
                             </div>
                             <div className="text-right shrink-0">
-                              <div className="flex gap-4">
+                              <div className="flex flex-wrap gap-4">
                                 <div>
                                   <p className="text-xs font-semibold text-cranberry uppercase mb-1">Member</p>
                                   <p className="text-xl font-display font-bold text-gray-900 dark:text-white">

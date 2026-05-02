@@ -277,7 +277,7 @@ export default function Navbar() {
           <button
             onClick={() => setSearchOpen(true)}
             className={cn(
-              'p-2 rounded-lg transition-colors',
+              'p-2 min-h-[44px] min-w-[44px] rounded-lg transition-colors',
               scrolled
                 ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                 : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -292,7 +292,7 @@ export default function Navbar() {
           <Link
             href="/portal/login"
             className={cn(
-              'hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+              'inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-colors',
               scrolled
                 ? 'text-gray-700 hover:text-cranberry hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
                 : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -315,7 +315,7 @@ export default function Navbar() {
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
             className={cn(
-              'lg:hidden p-2 rounded-lg transition-colors',
+              'lg:hidden p-3 min-h-[44px] min-w-[44px] rounded-lg transition-colors',
               scrolled
                 ? 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                 : 'text-white hover:bg-white/10'
@@ -363,7 +363,7 @@ export default function Navbar() {
                       <Link
                         key={child.href}
                         href={child.href}
-                        className="block px-4 py-2 rounded-lg text-sm text-gray-500 hover:text-cranberry hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
+                        className="block px-4 py-3 rounded-lg text-sm text-gray-500 hover:text-cranberry hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
                       >
                         {child.label}
                       </Link>

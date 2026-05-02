@@ -58,28 +58,6 @@ export default function DonateForm() {
   }, [verified, cancelled]);
 
   const openCheckoutPopup = (url: string) => {
-    const width = 520;
-    const height = 760;
-    const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
-    const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width;
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
-    const left = Math.max(0, dualScreenLeft + (viewportWidth - width) / 2);
-    const top = Math.max(0, dualScreenTop + (viewportHeight - height) / 2);
-
-    const popup = window.open(
-      url,
-      'rotaract-donation-checkout',
-      `popup=yes,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`
-    );
-
-    if (popup) {
-      popup.focus();
-      setShowCheckoutModal(false);
-      return;
-    }
-
-    // Fallback when popup blockers are enabled
     window.location.href = url;
   };
 
@@ -284,7 +262,7 @@ export default function DonateForm() {
         </Button>
 
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">
-          Secure payment powered by Stripe. We&apos;ll keep you on the site and open checkout in a pop-up window.
+          Secure payment powered by Stripe. You&apos;ll be redirected to Stripe&apos;s secure checkout page.
         </p>
       </div>
 
@@ -299,14 +277,8 @@ export default function DonateForm() {
       >
         <div className="space-y-4 text-left">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            You&apos;re still on our site. Click below to open Stripe checkout in a secure pop-up.
+            Click below to continue to Stripe&apos;s secure checkout page.
           </p>
-
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              If your browser blocks pop-ups, we&apos;ll automatically continue on the full Stripe page.
-            </p>
-          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
             <Button variant="outline" onClick={() => setShowCheckoutModal(false)}>

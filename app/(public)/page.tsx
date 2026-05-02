@@ -163,7 +163,7 @@ export default async function HomePage() {
       {/* Stats Strip */}
       <section aria-label="Impact statistics" className="relative -mt-16 z-20">
         <div className="container-page">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {impactStats.map((stat) => (
               <div
                 key={stat.label}
@@ -191,7 +191,7 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
               {upcomingEvents.map((event) => (
                 <Link
                   key={event.id}

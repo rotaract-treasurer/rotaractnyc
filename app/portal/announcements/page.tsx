@@ -182,7 +182,7 @@ export default function AnnouncementsPage() {
           </div>
 
           <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[180px]">
+            <div className="flex-1 min-w-0 w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Audience
               </label>
@@ -274,7 +274,7 @@ export default function AnnouncementsPage() {
                   <button
                     onClick={() => handleDelete(a.id)}
                     aria-label="Delete announcement"
-                    className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
+                    className="flex-shrink-0 p-2 min-h-[36px] min-w-[36px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
                   >
                     <TrashIcon className="w-4 h-4" />
                   </button>

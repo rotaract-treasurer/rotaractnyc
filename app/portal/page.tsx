@@ -144,7 +144,7 @@ export default function PortalDashboard() {
               role="tab"
               aria-selected={mobileView === view}
               onClick={() => setMobileView(view)}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${
+              className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${
                 mobileView === view
                   ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
                   : 'text-gray-600 dark:text-gray-400'
@@ -229,7 +229,7 @@ export default function PortalDashboard() {
 
       {/* ═══════ QUICK ACTIONS STRIP ═══════ */}
       {/* On mobile: only show in overview tab. On sm+: always show */}
-      <section className={`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 ${mobileView !== 'overview' ? 'hidden sm:block' : ''}`}>
+      <section className={`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 ${mobileView !== 'overview' ? 'hidden sm:grid' : ''}`}>
         {quickActions.filter((action) => !action.roles || (member?.role && action.roles.includes(member.role))).map((action) => (
           <Link
             key={action.href}
@@ -297,7 +297,7 @@ export default function PortalDashboard() {
                     onComment={(postId) => setExpandedComments((prev) => ({ ...prev, [postId]: !prev[postId] }))}
                   />
                   {expandedComments[post.id] && (
-                    <div className="mt-2 ml-14 flex gap-2 animate-slide-up">
+                    <div className="mt-2 ml-0 sm:ml-14 flex gap-2 animate-slide-up">
                       <input
                         type="text"
                         className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cranberry-500/20 focus:border-cranberry-300 dark:focus:border-cranberry-700 transition-all"
@@ -317,7 +317,7 @@ export default function PortalDashboard() {
 
         {/* ── RIGHT: Sidebar Widgets ── */}
         {/* On mobile: only show in widgets tab. On lg+: always show */}
-        <aside className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24 lg:self-start ${mobileView !== 'widgets' ? 'hidden sm:block' : ''}`}>
+        <aside className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24 lg:self-start ${mobileView !== 'widgets' ? 'hidden lg:block' : ''}`}>
 
           {/* Service Hours Progress */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 hover:shadow-md transition-shadow duration-300">

@@ -574,40 +574,42 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ── Step Progress Indicator ── */}
-          <div className="flex items-center justify-between px-1">
-            {STEPS.map((step, i) => (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => setActiveStep(i)}
-                className="flex flex-col items-center gap-1 group"
-              >
-                <div className={`relative flex items-center justify-center w-9 h-9 rounded-full text-sm font-medium transition-all duration-300 ${
-                  i === activeStep
-                    ? 'bg-cranberry text-white shadow-md shadow-cranberry/25 scale-110'
-                    : i < activeStep
-                    ? 'bg-cranberry/10 text-cranberry dark:bg-cranberry-900/30 dark:text-cranberry-400'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                }`}>
-                  {step.icon}
-                </div>
-                <span className={`text-[10px] font-medium transition-colors ${
-                  i === activeStep ? 'text-cranberry' : 'text-gray-400 dark:text-gray-500'
-                }`}>
-                  {step.label}
-                </span>
-                {i < STEPS.length - 1 && (
-                  <div className="absolute w-[calc(100%/4-2rem)] h-0.5 top-[18px] left-[calc(50%+1.25rem)]" />
-                )}
-              </button>
-            ))}
-          </div>
-          {/* Step progress bar */}
-          <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden -mt-2">
-            <div
-              className="h-full bg-gradient-to-r from-cranberry to-cranberry-600 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${((activeStep + 1) / STEPS.length) * 100}%` }}
-            />
+          <div className="sticky top-0 bg-white dark:bg-gray-900 z-10 pb-2">
+            <div className="flex overflow-x-auto gap-1 px-1 items-center justify-between">
+              {STEPS.map((step, i) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setActiveStep(i)}
+                  className="flex flex-col items-center gap-1 group px-2 sm:px-4 shrink-0"
+                >
+                  <div className={`relative flex items-center justify-center w-9 h-9 rounded-full text-sm font-medium transition-all duration-300 ${
+                    i === activeStep
+                      ? 'bg-cranberry text-white shadow-md shadow-cranberry/25 scale-110'
+                      : i < activeStep
+                      ? 'bg-cranberry/10 text-cranberry dark:bg-cranberry-900/30 dark:text-cranberry-400'
+                      : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                  }`}>
+                    {step.icon}
+                  </div>
+                  <span className={`text-xs sm:text-sm font-medium transition-colors ${
+                    i === activeStep ? 'text-cranberry' : 'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    {step.label}
+                  </span>
+                  {i < STEPS.length - 1 && (
+                    <div className="absolute w-[calc(100%/4-2rem)] h-0.5 top-[18px] left-[calc(50%+1.25rem)]" />
+                  )}
+                </button>
+              ))}
+            </div>
+            {/* Step progress bar */}
+            <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2">
+              <div
+                className="h-full bg-gradient-to-r from-cranberry to-cranberry-600 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${((activeStep + 1) / STEPS.length) * 100}%` }}
+              />
+            </div>
           </div>
 
           {/* Autosave indicator */}

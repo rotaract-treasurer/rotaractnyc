@@ -412,7 +412,7 @@ export default function DuesPage() {
           ) : (
             <>
               {/* Stats Strip */}
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[
                   { label: 'Total Members', value: stats.total + membersWithoutDues.length, color: 'text-gray-900 dark:text-white' },
                   { label: 'Paid', value: stats.paid, color: 'text-emerald-600' },
@@ -434,7 +434,7 @@ export default function DuesPage() {
                   <button
                     key={f}
                     onClick={() => setStatusFilter(f)}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                    className={`text-xs px-3 py-2.5 rounded-full font-medium transition-colors ${
                       statusFilter === f
                         ? 'bg-cranberry text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
@@ -742,7 +742,7 @@ export default function DuesPage() {
       <Modal open={showCycleModal} onClose={() => setShowCycleModal(false)} title={editingCycleId ? 'Edit Dues Cycle' : 'New Dues Cycle'} size="sm">
         <div className="space-y-4">
           <Input label="Cycle Name" value={cycleForm.name} onChange={(e) => setCycleForm((f) => ({ ...f, name: e.target.value }))} placeholder="2025-2026" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Start Date" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((f) => ({ ...f, startDate: e.target.value }))} />
             <Input label="End Date" type="date" value={cycleForm.endDate} onChange={(e) => setCycleForm((f) => ({ ...f, endDate: e.target.value }))} />
           </div>

@@ -152,7 +152,7 @@ export default function MessagesPage() {
 
       {/* Compose */}
       {showCompose && (
-        <div ref={composeRef} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
+        <div ref={composeRef} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 scroll-mt-4 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
           <h3 className="font-display font-bold text-gray-900 dark:text-white mb-4">New Message</h3>
           <form onSubmit={handleSend} className="space-y-4">
             <Select
