@@ -14,6 +14,7 @@ import EventCheckoutModal from '@/components/portal/EventCheckoutModal';
 import CreateEventModal from '@/components/portal/CreateEventModal';
 import EventActionBar from '@/components/portal/EventActionBar';
 import EventQRCode from '@/components/portal/EventQRCode';
+import EventDescription from '@/components/public/EventDescription';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 import type { RotaractEvent, RSVPStatus, PaymentSettings } from '@/types';
 
@@ -454,9 +455,10 @@ export default function PortalEventDetailPage() {
           {/* Description */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
             <h2 className="font-display font-semibold text-gray-900 dark:text-white mb-4 text-lg">About this event</h2>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed">{event.description}</p>
-            </div>
+            <EventDescription
+              text={event.description}
+              className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed"
+            />
             {event.tags && event.tags.length > 0 && (
               <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-1.5">
                 {event.tags.map((tag) => (

@@ -9,6 +9,7 @@ import Badge from '@/components/ui/Badge';
 import GuestRsvpForm from '@/components/public/GuestRsvpForm';
 import PublicEventActions from '@/components/public/PublicEventActions';
 import EventWaitlistForm from '@/components/public/EventWaitlistForm';
+import EventDescription from '@/components/public/EventDescription';
 
 export const revalidate = 120; // 2 min — event details change more frequently
 
@@ -158,9 +159,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               </div>
             </div>
 
-            <div className="prose prose-lg dark:prose-invert max-w-none">
-              <p>{event.description}</p>
-            </div>
+            <EventDescription text={event.description} />
 
             {/* ── Sold-out banner (event-level capacity + tier-level) ── */}
             {(() => {
