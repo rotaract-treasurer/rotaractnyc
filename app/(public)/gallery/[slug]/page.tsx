@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getAlbumBySlug, getAlbumPhotos } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
+import { ogImage } from '@/lib/utils/ogImage';
 import { SITE } from '@/lib/constants';
 import AlbumPreviewGrid from '@/components/public/AlbumPreviewGrid';
 
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: `${album.title} — ${SITE.shortName} Gallery`,
       description: album.description || `Browse photos from ${album.title}`,
       url: `${SITE.url}/gallery/${slug}`,
-      ...(album.coverPhotoUrl && { images: [{ url: album.coverPhotoUrl }] }),
+      images: ogImage(album.coverPhotoUrl, { alt: album.title }),
     },
     alternates: { canonical: `${SITE.url}/gallery/${slug}` },
   };

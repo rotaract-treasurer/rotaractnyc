@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getEventBySlug } from '@/lib/firebase/queries';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
+import { ogImage } from '@/lib/utils/ogImage';
 import { SITE } from '@/lib/constants';
 import Badge from '@/components/ui/Badge';
 import GuestRsvpForm from '@/components/public/GuestRsvpForm';
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `${SITE.url}/events/${slug}`,
       type: 'website',
       siteName: SITE.name,
-      ...(event.imageURL ? { images: [{ url: event.imageURL, width: 1200, height: 630, alt: event.title }] } : {}),
+      images: ogImage(event.imageURL, { alt: event.title }),
     },
     alternates: { canonical: `${SITE.url}/events/${slug}` },
   };

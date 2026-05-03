@@ -6,6 +6,7 @@ import { getArticleBySlug } from '@/lib/firebase/queries';
 import { formatDate } from '@/lib/utils/format';
 import SafeHtml from '@/components/ui/SafeHtml';
 import { SITE } from '@/lib/constants';
+import { ogImage } from '@/lib/utils/ogImage';
 import Badge from '@/components/ui/Badge';
 import ArticleViewTracker from '@/components/public/ArticleViewTracker';
 import ArticleLikeButton from '@/components/public/ArticleLikeButton';
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `${SITE.url}/news/${slug}`,
       type: 'article',
       siteName: SITE.name,
-      ...(article.coverImage && { images: [{ url: article.coverImage }] }),
+      images: ogImage(article.coverImage, { alt: article.title }),
       ...(article.publishedAt && {
         publishedTime: article.publishedAt,
         authors: [article.author.name],
