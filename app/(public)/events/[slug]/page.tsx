@@ -165,15 +165,29 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             {/* ── Sold-out banner (event-level capacity + tier-level) ── */}
             {(() => {
               const now = new Date();
+              const tiers = event.pricing?.tiers ?? [];
               const allTiersSoldOrExpired =
-                (event.pricing?.tiers?.length ?? 0) > 0 &&
-                (event.pricing?.tiers ?? []).every(
+                tiers.length > 0 &&
+                tiers.every(
                   (t: any) =>
                     (t.deadline && new Date(t.deadline) < now) ||
                     (t.capacity != null && (t.soldCount ?? 0) >= t.capacity),
                 );
+              // Use whichever counter is *higher* — `attendeeCount` is the
+              // event-level field maintained by the RSVP/checkout APIs and
+              // Stripe webhooks, but during high-volume sales it can briefly
+              // lag the tier `soldCount` totals. Comparing against both keeps
+              // the sold-out banner from flickering off when capacity is hit.
+              const tierSold = tiers.reduce(
+                (sum: number, t: any) => sum + (t.soldCount ?? 0),
+                0,
+              );
+              const goingTotal = Math.max(
+                (event as any).attendeeCount ?? 0,
+                tierSold,
+              );
               const eventFull =
-                event.capacity != null && ((event as any).attendeeCount ?? 0) >= event.capacity;
+                event.capacity != null && goingTotal >= event.capacity;
               const isSoldOut = allTiersSoldOrExpired || eventFull;
 
               if (!isSoldOut) return null;

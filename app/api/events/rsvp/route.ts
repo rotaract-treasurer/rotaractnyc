@@ -97,13 +97,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check capacity (combine member RSVPs + guest RSVPs)
+    // Check capacity (combine member RSVPs + guest RSVPs).
+    // Sum *tickets* (RSVP.quantity) rather than counting docs — multi-ticket
+    // RSVPs would otherwise be under-counted and let the event over-sell.
     if (event.capacity) {
       const [memberRsvpSnap, guestRsvpSnap] = await Promise.all([
-        adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
-        adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
+        adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').get(),
+        adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').get(),
       ]);
-      const totalGoing = memberRsvpSnap.data().count + guestRsvpSnap.data().count;
+      const sumQty = (snap: FirebaseFirestore.QuerySnapshot) =>
+        snap.docs.reduce((s, d) => s + (d.data().quantity || 1), 0);
+      const totalGoing = sumQty(memberRsvpSnap) + sumQty(guestRsvpSnap);
       if (totalGoing >= event.capacity) {
         return NextResponse.json(
           { error: 'This event is at full capacity.' },

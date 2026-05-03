@@ -75,6 +75,26 @@ export async function POST(
     const now = new Date().toISOString();
     const eventName = eventDoc.data()?.title || 'Event';
 
+    // Resolve a friendly display name for the scanner UI. Prefer the member's
+    // own profile, fall back to whatever the RSVP captured at booking time.
+    let memberDisplayName: string | undefined;
+    try {
+      const memberSnap = await adminDb.collection('members').doc(memberId).get();
+      if (memberSnap.exists) {
+        const md = memberSnap.data() as { displayName?: string; firstName?: string; lastName?: string };
+        memberDisplayName =
+          md.displayName ||
+          [md.firstName, md.lastName].filter(Boolean).join(' ').trim() ||
+          undefined;
+      }
+    } catch {
+      // Non-fatal — the scanner just won't show a name.
+    }
+    if (!memberDisplayName && rsvpDoc.exists) {
+      memberDisplayName = (rsvpDoc.data() as { memberName?: string }).memberName;
+    }
+    const memberPayload = memberDisplayName ? { displayName: memberDisplayName } : undefined;
+
     if (ticketNumber) {
       // ── Per-ticket check-in (numbered QR codes) ──────────────────────────
       // checkedInTickets is an array of ticket numbers that have already been
@@ -87,6 +107,7 @@ export async function POST(
           alreadyCheckedIn: true,
           ticketNumber,
           eventName,
+          member: memberPayload,
           checkedInAt: rsvpDoc.data()?.checkedInAt || now,
         });
       }
@@ -111,7 +132,7 @@ export async function POST(
         });
       }
 
-      return NextResponse.json({ success: true, ticketNumber, eventName, checkedInAt: now });
+      return NextResponse.json({ success: true, ticketNumber, eventName, member: memberPayload, checkedInAt: now });
     } else {
       // ── Legacy single-ticket check-in (no ticket number) ─────────────────
       if (rsvpDoc.exists && rsvpDoc.data()?.checkedIn) {
@@ -119,6 +140,7 @@ export async function POST(
           success: true,
           alreadyCheckedIn: true,
           eventName,
+          member: memberPayload,
           checkedInAt: rsvpDoc.data()?.checkedInAt || now,
         });
       }
@@ -129,7 +151,7 @@ export async function POST(
         await rsvpRef.set({ memberId, eventId, status: 'going', checkedIn: true, checkedInAt: now });
       }
 
-      return NextResponse.json({ success: true, eventName, checkedInAt: now });
+      return NextResponse.json({ success: true, eventName, member: memberPayload, checkedInAt: now });
     }
   } catch (error) {
     console.error('Error processing check-in:', error);

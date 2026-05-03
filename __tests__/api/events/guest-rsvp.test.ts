@@ -15,6 +15,14 @@ const mockEventGet = jest.fn();
 const mockGuestQueryGet = jest.fn();
 const mockMemberCountGet = jest.fn();
 const mockGuestCountGet = jest.fn();
+// Capacity check now sums RSVP.quantity across full snapshots (rather than
+// calling .count()), so tests provide a `docs` array. Helper below builds
+// snapshots from a head-count; default = empty event.
+const mockMemberSnapGet = jest.fn().mockResolvedValue({ docs: [] });
+const mockGuestSnapGet = jest.fn().mockResolvedValue({ docs: [] });
+function snapshotForCount(n: number) {
+  return { docs: Array.from({ length: n }, () => ({ data: () => ({ quantity: 1 }) })) };
+}
 
 // Firestore-style chaining helpers
 const mockCollection = jest.fn().mockImplementation((name: string) => {
@@ -28,11 +36,13 @@ const mockCollection = jest.fn().mockImplementation((name: string) => {
       // doc() — used for creating new RSVP
       doc: jest.fn().mockReturnValue({ set: mockSet, id: 'test-rsvp-id' }),
       // where().where().limit().get() — used for duplicate check
-      // where().where().count().get() — used for capacity guest count
+      // where().where().count().get() — legacy capacity guest count
+      // where().where().get() — current capacity guest snapshot (for quantity sum)
       where: jest.fn().mockImplementation((_field: string, _op: string, _val: unknown) => ({
         where: jest.fn().mockImplementation((_f2: string, _o2: string, _v2: unknown) => ({
           limit: jest.fn().mockReturnValue({ get: mockGuestQueryGet }),
           count: jest.fn().mockReturnValue({ get: mockGuestCountGet }),
+          get: mockGuestSnapGet,
         })),
       })),
     };
@@ -42,6 +52,7 @@ const mockCollection = jest.fn().mockImplementation((name: string) => {
       where: jest.fn().mockReturnValue({
         where: jest.fn().mockReturnValue({
           count: jest.fn().mockReturnValue({ get: mockMemberCountGet }),
+          get: mockMemberSnapGet,
         }),
       }),
     };
@@ -211,6 +222,9 @@ describe('POST /api/events/rsvp (guest RSVP)', () => {
     mockGuestQueryGet.mockResolvedValue({ empty: true });
     mockMemberCountGet.mockResolvedValue({ data: () => ({ count: 30 }) });
     mockGuestCountGet.mockResolvedValue({ data: () => ({ count: 20 }) });
+    // Quantity-sum path (current implementation): 30 member tickets + 20 guest tickets = 50
+    mockMemberSnapGet.mockResolvedValueOnce(snapshotForCount(30));
+    mockGuestSnapGet.mockResolvedValueOnce(snapshotForCount(20));
 
     const res = await POST(makeRequest(validBody) as any);
     expect(res.status).toBe(409);

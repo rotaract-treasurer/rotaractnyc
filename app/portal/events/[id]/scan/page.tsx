@@ -8,9 +8,17 @@ import { apiPost } from '@/hooks/useFirestore';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CheckinResult {
-  status: 'success' | 'already' | 'expired' | 'invalid';
-  member?: { displayName: string };
+  // The /api/portal/events/[id]/checkin route responds with these flags
+  // rather than a single `status` enum. We map them to a status in the UI.
+  success?: boolean;
+  alreadyCheckedIn?: boolean;
+  expired?: boolean;
+  member?: { displayName?: string; name?: string };
+  memberName?: string;
   ticketNumber?: number;
+  eventName?: string;
+  checkedInAt?: string;
+  error?: string;
 }
 
 interface LogEntry {
@@ -139,6 +147,13 @@ export default function ScanPage() {
   const [browserSupported, setBrowserSupported] = useState<boolean | null>(null);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [processing, setProcessing] = useState(false);
+  // Optional camera capabilities — populated after the stream starts.
+  // `torchSupported` is true on most Android Chrome devices with a flash;
+  // iOS Safari currently exposes no torch API and `focusMode: 'single-shot'`
+  // is also typically unavailable, so the controls hide themselves there.
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [focusSupported, setFocusSupported] = useState(false);
 
   // Check BarcodeDetector support
   useEffect(() => {
@@ -166,6 +181,9 @@ export default function ScanPage() {
       videoRef.current.srcObject = null;
     }
     setScanning(false);
+    setTorchOn(false);
+    setTorchSupported(false);
+    setFocusSupported(false);
   }, []);
 
   const addLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
@@ -180,16 +198,24 @@ export default function ScanPage() {
       if (lastScan && now - lastScan < 3000) return;
       recentScansRef.current.set(url, now);
 
-      // Parse URL params
+      // Parse URL params. The QR encodes a full check-in URL of the form:
+      //   /portal/events/{eventId}/checkin?m={memberId}&t={ts}&sig={hmac}&tk={n}
+      // We forward all four signed params (including `m`) to the JSON
+      // check-in endpoint. Forgetting to send `m` makes the API return
+      // "Missing required parameters" and every scan looks "Invalid".
       let parsedParams: Record<string, string | number> = {};
       try {
         const parsed = new URL(url);
         parsedParams = {
-          t: parsed.searchParams.get('t') ?? '',
-          sig: parsed.searchParams.get('sig') ?? '',
+          memberId: parsed.searchParams.get('m') ?? '',
+          timestamp: parsed.searchParams.get('t') ?? '',
+          signature: parsed.searchParams.get('sig') ?? '',
           tk: Number(parsed.searchParams.get('tk') ?? 0),
           tot: Number(parsed.searchParams.get('tot') ?? 0),
         };
+        if (!parsedParams.memberId || !parsedParams.timestamp || !parsedParams.signature) {
+          throw new Error('QR is missing required parameters');
+        }
       } catch {
         addLog({
           timestamp: new Date(),
@@ -206,42 +232,63 @@ export default function ScanPage() {
       try {
         const result: CheckinResult = await apiPost(`/api/portal/events/${eventId}/checkin`, parsedParams);
 
-        if (result.status === 'success') {
+        const memberName =
+          result.member?.displayName ||
+          result.member?.name ||
+          result.memberName ||
+          'Member';
+
+        if (result.alreadyCheckedIn) {
+          playBeep(500, 200);
+          addLog({
+            timestamp: new Date(),
+            memberName,
+            ticketNumber: result.ticketNumber ?? null,
+            status: 'already',
+            message: 'Already checked in',
+          });
+        } else if (result.success) {
           playBeep(800, 150);
           if (typeof navigator.vibrate === 'function') navigator.vibrate(100);
           addLog({
             timestamp: new Date(),
-            memberName: result.member?.displayName ?? 'Member',
+            memberName,
             ticketNumber: result.ticketNumber ?? null,
             status: 'success',
           });
-        } else if (result.status === 'already') {
-          playBeep(500, 200);
+        } else if (result.expired) {
+          playBeep(300, 300);
           addLog({
             timestamp: new Date(),
-            memberName: result.member?.displayName ?? 'Member',
+            memberName,
             ticketNumber: result.ticketNumber ?? null,
-            status: 'already',
-            message: 'Already checked in',
+            status: 'expired',
+            message: 'Ticket expired',
           });
         } else {
           playBeep(300, 300);
           addLog({
             timestamp: new Date(),
-            memberName: result.member?.displayName ?? 'Unknown',
+            memberName,
             ticketNumber: result.ticketNumber ?? null,
-            status: result.status,
-            message: result.status === 'expired' ? 'Ticket expired' : 'Invalid ticket',
+            status: 'invalid',
+            message: result.error || 'Invalid ticket',
           });
         }
       } catch (err: any) {
+        // Map common API errors to friendlier statuses for the log row.
+        const msg: string = err?.message ?? 'Check-in failed';
+        const lower = msg.toLowerCase();
+        let status: LogEntry['status'] = 'error';
+        if (lower.includes('expired')) status = 'expired';
+        else if (lower.includes('invalid')) status = 'invalid';
         playBeep(300, 300);
         addLog({
           timestamp: new Date(),
           memberName: 'Unknown',
           ticketNumber: null,
-          status: 'error',
-          message: err?.message ?? 'Check-in failed',
+          status,
+          message: msg,
         });
       } finally {
         setProcessing(false);
@@ -297,6 +344,23 @@ export default function ScanPage() {
 
       setScanning(true);
       startScanning(stream, detector);
+
+      // Probe the active video track for torch / focus capabilities so we can
+      // expose UI controls only when they'll actually do something. Wrapped
+      // in try/catch because `getCapabilities()` is non-standard and missing
+      // on iOS Safari.
+      try {
+        const [track] = stream.getVideoTracks();
+        const caps: any = track && typeof (track as any).getCapabilities === 'function'
+          ? (track as any).getCapabilities()
+          : {};
+        if (caps?.torch) setTorchSupported(true);
+        if (Array.isArray(caps?.focusMode) && caps.focusMode.length > 0) {
+          setFocusSupported(true);
+        }
+      } catch {
+        // Capability probing is best-effort.
+      }
     } catch (err: any) {
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
         setCameraError('Camera permission denied. Please allow camera access in your browser settings and try again.');
@@ -307,6 +371,44 @@ export default function ScanPage() {
       }
     }
   }, [startScanning]);
+
+  // Toggle the back-camera flashlight (Android Chrome only).
+  const toggleTorch = useCallback(async () => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    const [track] = stream.getVideoTracks();
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await (track as any).applyConstraints({ advanced: [{ torch: next }] });
+      setTorchOn(next);
+    } catch (err) {
+      console.warn('Torch toggle failed:', err);
+      setTorchSupported(false);
+    }
+  }, [torchOn]);
+
+  // Tap-to-focus: ask the camera for a one-shot autofocus pass when supported.
+  // Useful in low light or when a printed ticket sits flat against a table.
+  const handleVideoTap = useCallback(async () => {
+    if (!focusSupported) return;
+    const stream = streamRef.current;
+    if (!stream) return;
+    const [track] = stream.getVideoTracks();
+    if (!track) return;
+    try {
+      const caps: any = (track as any).getCapabilities?.() ?? {};
+      const modes: string[] = caps.focusMode || [];
+      const mode =
+        modes.find((m) => m === 'single-shot') ||
+        modes.find((m) => m === 'continuous') ||
+        modes[0];
+      if (!mode) return;
+      await (track as any).applyConstraints({ advanced: [{ focusMode: mode }] });
+    } catch {
+      // Non-fatal — most platforms keep continuous autofocus by default.
+    }
+  }, [focusSupported]);
 
   // ─── Role guard ───────────────────────────────────────────────────────────
 
@@ -362,11 +464,29 @@ export default function ScanPage() {
         {/* Video element */}
         <video
           ref={videoRef}
-          className="w-full aspect-[4/3] object-cover"
+          onClick={handleVideoTap}
+          className={`w-full aspect-[4/3] object-cover ${focusSupported ? 'cursor-pointer' : ''}`}
           playsInline
           muted
           style={{ display: scanning ? 'block' : 'none' }}
         />
+
+        {/* Torch toggle (Android Chrome only — hidden when unsupported) */}
+        {scanning && torchSupported && (
+          <button
+            type="button"
+            onClick={toggleTorch}
+            aria-pressed={torchOn}
+            aria-label={torchOn ? 'Turn flashlight off' : 'Turn flashlight on'}
+            className={`absolute top-3 left-3 rounded-full p-2.5 transition-colors ${
+              torchOn ? 'bg-yellow-400 text-gray-900' : 'bg-black/60 text-white hover:bg-black/80'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </button>
+        )}
 
         {/* Placeholder when not scanning */}
         {!scanning && (

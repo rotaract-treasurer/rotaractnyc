@@ -237,6 +237,19 @@ export function useRsvps(eventId: string | null) {
   );
 }
 
+/**
+ * Real-time subscription to guest RSVPs for an event. Reads are gated to
+ * board+ by Firestore rules, so callers should pass `enabled` only for
+ * authorised users (otherwise the snapshot listener will error out).
+ */
+export function useGuestRsvps(eventId: string | null, enabled = true) {
+  return useCollection(
+    'guest_rsvps',
+    eventId ? [where('eventId', '==', eventId), orderBy('createdAt', 'desc')] : [],
+    !!eventId && enabled,
+  );
+}
+
 export function useMemberRsvps(memberId: string | null) {
   return useCollection(
     'rsvps',

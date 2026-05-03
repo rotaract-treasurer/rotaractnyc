@@ -83,11 +83,16 @@ export async function POST(request: NextRequest) {
     // A production hardening would move this into an atomic counter on
     // the event doc itself.
     if (event.capacity) {
+      // Sum *tickets* (RSVP.quantity) rather than counting docs — a single
+      // member can hold multi-ticket RSVPs, so a doc-count under-reports
+      // demand and would let an event over-sell its capacity.
       const [memberRsvpSnap, guestRsvpSnap] = await Promise.all([
-        adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
-        adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').count().get(),
+        adminDb.collection('rsvps').where('eventId', '==', eventId).where('status', '==', 'going').get(),
+        adminDb.collection('guest_rsvps').where('eventId', '==', eventId).where('status', '==', 'going').get(),
       ]);
-      const totalGoing = memberRsvpSnap.data().count + guestRsvpSnap.data().count;
+      const sumQty = (snap: FirebaseFirestore.QuerySnapshot) =>
+        snap.docs.reduce((s, d) => s + (d.data().quantity || 1), 0);
+      const totalGoing = sumQty(memberRsvpSnap) + sumQty(guestRsvpSnap);
       if (totalGoing + quantity > event.capacity) {
         return NextResponse.json(
           { error: 'This event does not have enough remaining capacity for the requested quantity.' },

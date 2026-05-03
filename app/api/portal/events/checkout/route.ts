@@ -56,13 +56,24 @@ export async function POST(request: NextRequest) {
     const event = eventDoc.data()!;
 
     // ── P0-1: Capacity check ──
+    // Sum *tickets* (RSVP.quantity) rather than counting RSVP docs — a single
+    // member can hold multi-ticket RSVPs, so a doc-count under-reports demand
+    // and would let an event over-sell its capacity. Guest tickets are
+    // tracked in guest_rsvps; include them too.
     if (event.capacity) {
-      const goingSnapshot = await adminDb.collection('rsvps')
-        .where('eventId', '==', eventId)
-        .where('status', '==', 'going')
-        .count()
-        .get();
-      const currentGoing = goingSnapshot.data().count;
+      const [memberSnap, guestSnap] = await Promise.all([
+        adminDb.collection('rsvps')
+          .where('eventId', '==', eventId)
+          .where('status', '==', 'going')
+          .get(),
+        adminDb.collection('guest_rsvps')
+          .where('eventId', '==', eventId)
+          .where('status', '==', 'going')
+          .get(),
+      ]);
+      const sumQty = (snap: FirebaseFirestore.QuerySnapshot) =>
+        snap.docs.reduce((s, d) => s + (d.data().quantity || 1), 0);
+      const currentGoing = sumQty(memberSnap) + sumQty(guestSnap);
       if (currentGoing + quantity > event.capacity) {
         return NextResponse.json({ error: 'This event is sold out. No tickets remaining.' }, { status: 409 });
       }

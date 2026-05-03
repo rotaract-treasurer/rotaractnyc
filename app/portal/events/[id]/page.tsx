@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth';
-import { apiGet, apiPost, apiDelete, useRsvps } from '@/hooks/useFirestore';
+import { apiGet, apiPost, apiDelete, useRsvps, useGuestRsvps } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -67,6 +67,14 @@ export default function PortalEventDetailPage() {
 
   const canManageEvents = member && ['board', 'president', 'treasurer'].includes(member.role);
 
+  // Real-time guest RSVPs (board+ only — Firestore rules block other roles).
+  // Replaces a one-shot fetch so admins viewing the event page see new
+  // bookings appear immediately without a manual refresh.
+  const { data: liveGuestRsvps } = useGuestRsvps(id, !!canManageEvents);
+  useEffect(() => {
+    if (canManageEvents) setGuestRsvps(liveGuestRsvps as any);
+  }, [canManageEvents, liveGuestRsvps]);
+
   const fetchEvent = useCallback(async () => {
     try {
       const [eventData, settingsData] = await Promise.all([
@@ -102,9 +110,11 @@ export default function PortalEventDetailPage() {
 
   useEffect(() => {
     if (canManageEvents && id) {
-      apiGet(`/api/events/${id}/guest-rsvps`).then(setGuestRsvps).catch((err) => {
-        console.error('Failed to load guest RSVPs:', err);
-      });
+      // Refetch purchasers whenever the underlying RSVP/guest collections
+      // change so the admin "Ticket Purchasers" panel stays in sync with
+      // real-time bookings without requiring a manual page refresh. The
+      // dependency on rsvps/liveGuestRsvps lengths covers both adds and
+      // cancellations.
       apiGet(`/api/portal/events/${id}/purchasers`).then((data) => {
         if (data?.purchasers) setPurchasers(data.purchasers);
         if (data?.summary) setPurchaserSummary(data.summary);
@@ -112,7 +122,7 @@ export default function PortalEventDetailPage() {
         console.error('Failed to load purchasers:', err);
       });
     }
-  }, [canManageEvents, id]);
+  }, [canManageEvents, id, rsvps?.length, liveGuestRsvps?.length]);
 
   const handleRSVP = async (status: RSVPStatus) => {
     try {
@@ -315,11 +325,25 @@ export default function PortalEventDetailPage() {
     </div>
   );
 
-  const memberGoingCount = rsvps?.filter((r) => r.status === 'going').length || 0;
+  // Sum *tickets* per RSVP (a single member can buy multiple tickets, in
+  // which case `quantity` > 1). Falling back to 1 keeps legacy RSVPs that
+  // pre-date the `quantity` field counted correctly.
+  const memberGoingCount = rsvps
+    ?.filter((r) => r.status === 'going')
+    .reduce((sum: number, r: any) => sum + (r.quantity || 1), 0) || 0;
   const guestGoingCount = guestRsvps
     .filter((r) => r.status === 'going')
     .reduce((sum: number, r: any) => sum + (r.quantity || 1), 0);
-  const goingCount = memberGoingCount + guestGoingCount;
+  // Non-board members can't read the guest_rsvps collection, so guestGoingCount
+  // is 0 for them. The event document maintains `attendeeCount` as the
+  // source-of-truth (incremented by the RSVP/checkout APIs and Stripe webhooks
+  // for both members *and* guests, by quantity). Prefer it when it's larger
+  // so non-admins still see an accurate "people going" total.
+  const computedGoingCount = memberGoingCount + guestGoingCount;
+  const goingCount = Math.max(
+    computedGoingCount,
+    (event as RotaractEvent & { attendeeCount?: number }).attendeeCount ?? 0,
+  );
   const isPast = new Date(event.date) < new Date();
 
   return (
