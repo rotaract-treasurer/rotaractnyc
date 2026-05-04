@@ -51,6 +51,10 @@ export async function GET(
       amountCents: d.paidAmount || 0,
       tierId: d.tierId || null,
       createdAt: d.createdAt || '',
+      checkedIn: !!d.checkedIn,
+      checkedInAt: d.checkedInAt || null,
+      invitedBy: d.invitedByName || d.invitedBy || null,
+      notes: d.notes || null,
     };
   });
 
@@ -97,6 +101,9 @@ export async function GET(
       amountCents: typeof d.paidAmount === 'number' ? d.paidAmount : 0,
       tierId: d.tierId || null,
       createdAt: d.createdAt || '',
+      checkedIn: !!d.checkedIn,
+      checkedInAt: d.checkedInAt || null,
+      memberId: d.memberId || null,
     };
   });
 
@@ -151,6 +158,9 @@ export async function GET(
       totalTickets:
         guests.reduce((s, g) => s + g.quantity, 0) +
         members.reduce((s, m) => s + m.quantity, 0),
+      checkedInCount:
+        guests.filter((g) => g.checkedIn).length +
+        members.filter((m) => m.checkedIn).length,
     },
   });
 }
