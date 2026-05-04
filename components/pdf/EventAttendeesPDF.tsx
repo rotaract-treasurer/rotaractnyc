@@ -4,6 +4,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from '@react-pdf/renderer';
 
@@ -52,11 +53,10 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 40,
   },
-  brandTitle: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 14,
-    color: C.white,
-    letterSpacing: 1,
+  brandLogo: {
+    height: 30,
+    width: 30,
+    objectFit: 'contain' as const,
   },
   brandTag: {
     fontSize: 8,
@@ -83,22 +83,25 @@ const s = StyleSheet.create({
   /* Title block */
   reportLabel: {
     fontSize: 8,
-    color: C.gold,
+    color: C.cranberry,
     fontFamily: 'Helvetica-Bold',
     textTransform: 'uppercase' as const,
     letterSpacing: 2,
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 1,
   },
   eventTitle: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 22,
+    fontSize: 20,
     color: C.dark,
-    marginBottom: 4,
+    lineHeight: 1.2,
+    marginBottom: 6,
   },
   eventMeta: {
     fontSize: 10,
     color: C.gray500,
-    marginBottom: 14,
+    lineHeight: 1.3,
+    marginBottom: 16,
   },
 
   /* Stats */
@@ -239,9 +242,15 @@ function fmtCurrency(cents: number) {
 }
 
 function BrandBar() {
+  // Resolve absolute URL so @react-pdf can fetch the asset reliably.
+  const logoSrc =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/rotaract-logo-white.png`
+      : '/rotaract-logo-white.png';
   return (
     <View style={s.brandBar} fixed>
-      <Text style={s.brandTitle}>ROTARACT NYC</Text>
+      {/* eslint-disable-next-line jsx-a11y/alt-text */}
+      <Image style={s.brandLogo} src={logoSrc} />
       <Text style={s.brandTag}>Attendee Roster</Text>
     </View>
   );
