@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
-import { formatCurrency } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +29,12 @@ export async function GET(
 
   const { id: eventId } = await params;
 
-  // Fetch guest RSVPs
+  try {
+  // Fetch guest RSVPs (sorted in-memory below to avoid requiring a
+  // composite index on guest_rsvps[eventId + createdAt]).
   const guestSnap = await adminDb
     .collection('guest_rsvps')
     .where('eventId', '==', eventId)
-    .orderBy('createdAt', 'desc')
     .get();
 
   const guests = guestSnap.docs.map((doc) => {
@@ -58,12 +58,12 @@ export async function GET(
     };
   });
 
-  // Fetch member RSVPs
+  // Fetch member RSVPs (sorted in-memory below to avoid requiring a
+  // composite index on rsvps[eventId + status + createdAt]).
   const rsvpSnap = await adminDb
     .collection('rsvps')
     .where('eventId', '==', eventId)
     .where('status', '==', 'going')
-    .orderBy('createdAt', 'desc')
     .get();
 
   // Batch-fetch member emails from the members collection
@@ -145,7 +145,7 @@ export async function GET(
   if (totalRevenueCents === 0) totalRevenueCents = guestRevenueCents;
 
   const purchasers = [...guests, ...members].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
+    String(b.createdAt || '').localeCompare(String(a.createdAt || '')),
   );
 
   return NextResponse.json({
@@ -163,4 +163,11 @@ export async function GET(
         members.filter((m) => m.checkedIn).length,
     },
   });
+  } catch (err: any) {
+    console.error('[purchasers] failed for event', eventId, err);
+    return NextResponse.json(
+      { error: err?.message || 'Failed to load purchasers' },
+      { status: 500 },
+    );
+  }
 }
