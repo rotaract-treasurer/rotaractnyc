@@ -235,22 +235,26 @@ export interface EventAttendeesPDFProps {
     revenueCents: number;
     checkedIn: number;
   };
+  /** Absolute URL for the brand-bar logo. Required when rendering on the
+   *  server (no `window`); the client falls back to `window.location.origin`. */
+  logoSrc?: string;
 }
 
 function fmtCurrency(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function BrandBar() {
+function BrandBar({ logoSrc }: { logoSrc?: string }) {
   // Resolve absolute URL so @react-pdf can fetch the asset reliably.
-  const logoSrc =
-    typeof window !== 'undefined'
+  const src =
+    logoSrc ||
+    (typeof window !== 'undefined'
       ? `${window.location.origin}/rotaract-logo-white.png`
-      : '/rotaract-logo-white.png';
+      : '/rotaract-logo-white.png');
   return (
     <View style={s.brandBar} fixed>
       {/* eslint-disable-next-line jsx-a11y/alt-text */}
-      <Image style={s.brandLogo} src={logoSrc} />
+      <Image style={s.brandLogo} src={src} />
       <Text style={s.brandTag}>Attendee Roster</Text>
     </View>
   );
@@ -284,6 +288,7 @@ export default function EventAttendeesPDF({
   generatedAt,
   rows,
   totals,
+  logoSrc,
 }: EventAttendeesPDFProps) {
   return (
     <Document
@@ -292,7 +297,7 @@ export default function EventAttendeesPDF({
       subject="Event attendee roster"
     >
       <Page size="LETTER" orientation="landscape" style={s.page}>
-        <BrandBar />
+        <BrandBar logoSrc={logoSrc} />
 
         <Text style={s.reportLabel}>Event Attendee Roster</Text>
         <Text style={s.eventTitle}>{eventTitle}</Text>

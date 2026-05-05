@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
+import { getEventAttendees } from '@/lib/services/eventAttendees';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,139 +31,19 @@ export async function GET(
   const { id: eventId } = await params;
 
   try {
-  // Fetch guest RSVPs (sorted in-memory below to avoid requiring a
-  // composite index on guest_rsvps[eventId + createdAt]).
-  const guestSnap = await adminDb
-    .collection('guest_rsvps')
-    .where('eventId', '==', eventId)
-    .get();
+    const { rows, totals } = await getEventAttendees(eventId);
 
-  const guests = guestSnap.docs.map((doc) => {
-    const d = doc.data();
-    return {
-      id: doc.id,
-      kind: 'guest' as const,
-      name: d.name || 'Guest',
-      email: d.email || '',
-      phone: d.phone || null,
-      status: d.status || 'going',
-      paymentStatus: d.paymentStatus || 'free',
-      quantity: d.quantity || 1,
-      amountCents: d.paidAmount || 0,
-      tierId: d.tierId || null,
-      createdAt: d.createdAt || '',
-      checkedIn: !!d.checkedIn,
-      checkedInAt: d.checkedInAt || null,
-      invitedBy: d.invitedByName || d.invitedBy || null,
-      notes: d.notes || null,
-    };
-  });
-
-  // Fetch member RSVPs (sorted in-memory below to avoid requiring a
-  // composite index on rsvps[eventId + status + createdAt]).
-  const rsvpSnap = await adminDb
-    .collection('rsvps')
-    .where('eventId', '==', eventId)
-    .where('status', '==', 'going')
-    .get();
-
-  // Batch-fetch member emails from the members collection
-  const memberIds = rsvpSnap.docs.map((d) => d.data().memberId).filter(Boolean);
-  const memberEmailMap = new Map<string, string>();
-  if (memberIds.length > 0) {
-    // Firestore 'in' queries support up to 30 items per batch
-    for (let i = 0; i < memberIds.length; i += 30) {
-      const batch = memberIds.slice(i, i + 30);
-      const snap = await adminDb
-        .collection('members')
-        .where('__name__', 'in', batch)
-        .get();
-      snap.docs.forEach((doc) => memberEmailMap.set(doc.id, doc.data().email || ''));
-    }
-  }
-
-  const members = rsvpSnap.docs.map((doc) => {
-    const d = doc.data();
-    // Prefer the RSVP doc's own paymentStatus / paidAmount (populated by the
-    // Stripe webhook & portal checkout). Fall back to legacy heuristics for
-    // RSVPs that pre-date those fields.
-    const inferredPaymentStatus =
-      d.paymentStatus
-        || (d.paidAmount && d.paidAmount > 0 ? 'paid' : 'free');
-    return {
-      id: doc.id,
-      kind: 'member' as const,
-      name: d.memberName || 'Member',
-      email: memberEmailMap.get(d.memberId) || '',
-      phone: null,
-      status: d.status || 'going',
-      paymentStatus: inferredPaymentStatus,
-      quantity: d.quantity || 1,
-      amountCents: typeof d.paidAmount === 'number' ? d.paidAmount : 0,
-      tierId: d.tierId || null,
-      createdAt: d.createdAt || '',
-      checkedIn: !!d.checkedIn,
-      checkedInAt: d.checkedInAt || null,
-      memberId: d.memberId || null,
-    };
-  });
-
-  // Revenue from transactions linked to this event (going forward)
-  const txSnap = await adminDb
-    .collection('transactions')
-    .where('eventId', '==', eventId)
-    .where('type', '==', 'income')
-    .get();
-
-  let totalRevenueCents = 0;
-  txSnap.docs.forEach((doc) => {
-    totalRevenueCents += doc.data().amount || 0;
-  });
-
-  // Fill in member amountCents from transactions where the RSVP doc didn't
-  // already capture the paid amount (legacy purchases pre-dating the
-  // paidAmount field on RSVPs).
-  const memberTxMap = new Map<string, number>();
-  txSnap.docs.forEach((doc) => {
-    const d = doc.data();
-    if (d.relatedMemberId) {
-      memberTxMap.set(d.relatedMemberId, d.amount || 0);
-    }
-  });
-  members.forEach((m) => {
-    if (m.amountCents > 0) return; // already populated from RSVP.paidAmount
-    const rsvpDoc = rsvpSnap.docs.find((doc) => doc.id === m.id);
-    if (rsvpDoc) {
-      const memberId = rsvpDoc.data().memberId;
-      if (memberTxMap.has(memberId)) {
-        m.amountCents = memberTxMap.get(memberId)!;
-      }
-    }
-  });
-
-  // If no transaction-based revenue, fall back to sum of guest paidAmounts
-  const guestRevenueCents = guests.reduce((s, g) => s + g.amountCents, 0);
-  if (totalRevenueCents === 0) totalRevenueCents = guestRevenueCents;
-
-  const purchasers = [...guests, ...members].sort((a, b) =>
-    String(b.createdAt || '').localeCompare(String(a.createdAt || '')),
-  );
-
-  return NextResponse.json({
-    purchasers,
-    summary: {
-      totalRevenueCents,
-      totalRevenue: totalRevenueCents,
-      guestCount: guests.length,
-      memberCount: members.length,
-      totalTickets:
-        guests.reduce((s, g) => s + g.quantity, 0) +
-        members.reduce((s, m) => s + m.quantity, 0),
-      checkedInCount:
-        guests.filter((g) => g.checkedIn).length +
-        members.filter((m) => m.checkedIn).length,
-    },
-  });
+    return NextResponse.json({
+      purchasers: rows,
+      summary: {
+        totalRevenueCents: totals.revenueCents,
+        totalRevenue: totals.revenueCents,
+        guestCount: totals.guests,
+        memberCount: totals.members,
+        totalTickets: totals.tickets,
+        checkedInCount: totals.checkedIn,
+      },
+    });
   } catch (err: any) {
     console.error('[purchasers] failed for event', eventId, err);
     return NextResponse.json(

@@ -38,6 +38,7 @@ const DEFAULT_PREFERENCES = {
   welcomeSequence: true,
   announcements: true,
   weeklyDigest: false,
+  boardEventDigest: true,
 };
 
 function makePatchRequest(body: Record<string, any>): NextRequest {

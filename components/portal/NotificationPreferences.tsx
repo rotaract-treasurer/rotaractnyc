@@ -12,6 +12,7 @@ interface NotificationPreferences {
   welcomeSequence: boolean;
   announcements: boolean;
   weeklyDigest: boolean;
+  boardEventDigest: boolean;
 }
 
 interface PreferenceItem {
@@ -45,6 +46,12 @@ const PREFERENCE_ITEMS: PreferenceItem[] = [
     key: 'weeklyDigest',
     label: 'Weekly Digest',
     description: 'Receive a weekly summary of club activity',
+  },
+  {
+    key: 'boardEventDigest',
+    label: 'Weekly Event Digest (Board only)',
+    description:
+      'Mondays — upcoming events, RSVP deltas, and PDF attendee rosters. Only sent to board members.',
   },
 ];
 

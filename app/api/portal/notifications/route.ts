@@ -12,6 +12,7 @@ const VALID_KEYS = [
   'welcomeSequence',
   'announcements',
   'weeklyDigest',
+  'boardEventDigest',
 ] as const;
 
 type PreferenceKey = (typeof VALID_KEYS)[number];
@@ -22,6 +23,7 @@ const DEFAULT_PREFERENCES: Record<PreferenceKey, boolean> = {
   welcomeSequence: true,
   announcements: true,
   weeklyDigest: false,
+  boardEventDigest: true,
 };
 
 /** Authenticate the request and return the member's UID. */

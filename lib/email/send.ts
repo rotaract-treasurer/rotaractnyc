@@ -13,15 +13,23 @@ const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Rotaract NYC <noreply@rotaractnyc.org>';
 
+interface EmailAttachment {
+  filename: string;
+  /** Either a Node Buffer or a base64-encoded string. */
+  content: Buffer | string;
+  contentType?: string;
+}
+
 interface SendEmailOptions {
   to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
-export async function sendEmail({ to, subject, html, replyTo, text }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, replyTo, text, attachments }: SendEmailOptions) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY not set — email not sent:', subject);
     return { success: false, error: 'Email not configured' };
@@ -35,6 +43,13 @@ export async function sendEmail({ to, subject, html, replyTo, text }: SendEmailO
       html,
       ...(text && { text }),
       ...(replyTo && { replyTo }),
+      ...(attachments && attachments.length > 0 && {
+        attachments: attachments.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          ...(a.contentType && { contentType: a.contentType }),
+        })),
+      }),
     });
 
     if (error) {

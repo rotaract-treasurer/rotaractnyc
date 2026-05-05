@@ -913,3 +913,181 @@ export function donationThankYouEmail(
     text: `Thank you, ${donorName}!\n\nYour generous donation of ${amountFormatted} to the ${SITE.name} has been received.\n\nYour gift supports:\n- Food drives & meal distribution programs\n- Park cleanups & neighborhood beautification\n- Educational programs for underserved youth\n- International service initiatives & global partnerships\n\nThank you for being part of our mission.\n\nQuestions? Email us at ${SITE.email}.\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
+
+// ── Weekly Event Digest (board only) ───────────────────────────────────────
+
+export interface DigestEventRow {
+  id: string;
+  title: string;
+  slug: string;
+  /** Pre-formatted human date, e.g. "Saturday, June 6, 2026". */
+  dateLabel: string;
+  /** ISO date string for sorting. */
+  isoDate: string;
+  /** Days from now (negative for past, 0 for today). */
+  daysFromNow: number;
+  location?: string;
+  totals: {
+    members: number;
+    guests: number;
+    tickets: number;
+    revenueCents: number;
+    checkedIn: number;
+    totalAttendees: number;
+  };
+  /** Delta vs. last digest. Zero when first observed. */
+  delta: {
+    rsvps: number;
+    tickets: number;
+    revenueCents: number;
+  };
+  /** True if a PDF roster is attached for this event. */
+  pdfAttached: boolean;
+  /** True if the event has already ended (post-event recap). */
+  isPastRecap: boolean;
+}
+
+function fmtDelta(n: number): string {
+  if (n > 0) return `<span style="color:#065f46;font-weight:700;">▲ +${n}</span>`;
+  if (n < 0) return `<span style="color:#991b1b;font-weight:700;">▼ ${n}</span>`;
+  return `<span style="color:${TEXT_SUBTLE};">—</span>`;
+}
+
+function fmtMoneyDelta(cents: number): string {
+  const sign = cents >= 0 ? '+' : '−';
+  const abs = Math.abs(cents);
+  const display = `${sign}$${(abs / 100).toFixed(2)}`;
+  if (cents > 0) return `<span style="color:#065f46;font-weight:700;">▲ ${display}</span>`;
+  if (cents < 0) return `<span style="color:#991b1b;font-weight:700;">▼ ${display}</span>`;
+  return `<span style="color:${TEXT_SUBTLE};">—</span>`;
+}
+
+function fmtMoney(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function digestEventCard(row: DigestEventRow): string {
+  const tagBg = row.isPastRecap ? '#374151' : CRIMSON;
+  const tagLabel = row.isPastRecap
+    ? 'Post-event recap'
+    : row.daysFromNow <= 0
+      ? 'Today'
+      : row.daysFromNow === 1
+        ? 'Tomorrow'
+        : `In ${row.daysFromNow} days`;
+  const safeTitle = escapeHtml(row.title);
+  const safeLoc = row.location ? escapeHtml(row.location) : '';
+  const portalLink = `${SITE.url}/portal/events/${row.id}/attendees`;
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 18px; border: 1px solid ${GRAY_BORDER}; border-radius: 10px; overflow: hidden;">
+      <tr>
+        <td style="background:${tagBg}; color:#fff; padding: 6px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;">
+          ${tagLabel}${row.pdfAttached ? ' &nbsp;·&nbsp; PDF attached' : ''}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 16px 18px; background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+          <p style="margin:0 0 4px; font-size: 16px; font-weight: 700; color:${TEXT_DARK};">
+            <a href="${portalLink}" style="color:${TEXT_DARK}; text-decoration:none;">${safeTitle}</a>
+          </p>
+          <p style="margin:0 0 12px; font-size: 13px; color:${TEXT_MUTED};">
+            ${escapeHtml(row.dateLabel)}${safeLoc ? ` · ${safeLoc}` : ''}
+          </p>
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+            <tr>
+              <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
+                <strong style="color:${TEXT_DARK};">${row.totals.totalAttendees}</strong> RSVPs
+                (${row.totals.members} members · ${row.totals.guests} guests)
+                &nbsp; ${fmtDelta(row.delta.rsvps)}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
+                <strong style="color:${TEXT_DARK};">${row.totals.tickets}</strong> tickets
+                &nbsp; ${fmtDelta(row.delta.tickets)}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
+                <strong style="color:${TEXT_DARK};">${fmtMoney(row.totals.revenueCents)}</strong> revenue
+                &nbsp; ${fmtMoneyDelta(row.delta.revenueCents)}
+              </td>
+            </tr>
+            ${row.isPastRecap ? `
+            <tr>
+              <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
+                <strong style="color:${TEXT_DARK};">${row.totals.checkedIn}</strong> checked in
+                ${row.totals.totalAttendees > 0
+                  ? `(${Math.round((row.totals.checkedIn / row.totals.totalAttendees) * 100)}%)`
+                  : ''}
+              </td>
+            </tr>` : ''}
+          </table>
+          <p style="margin:12px 0 0; font-size:12px;">
+            <a href="${portalLink}" style="color:${CRIMSON}; font-weight:600; text-decoration:none;">Open roster →</a>
+          </p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+export function weeklyEventDigestEmail(params: {
+  recipientName: string;
+  weekLabel: string;          // e.g. "Week of May 4, 2026"
+  upcoming: DigestEventRow[];
+  past: DigestEventRow[];     // post-event recaps
+  attachmentCount: number;
+}): { subject: string; html: string; text: string } {
+  const { recipientName, weekLabel, upcoming, past, attachmentCount } = params;
+  const greeting = recipientName ? `Hi ${escapeHtml(recipientName.split(' ')[0])},` : 'Hi board,';
+
+  const upcomingHtml = upcoming.length > 0
+    ? upcoming.map(digestEventCard).join('')
+    : `<p style="color:${TEXT_MUTED}; font-size:14px; margin: 8px 0 24px;">No upcoming events in the next 30 days.</p>`;
+
+  const pastHtml = past.length > 0
+    ? `
+      <p style="color:${TEXT_MUTED}; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin:24px 0 8px;">Last 7 days</p>
+      ${past.map(digestEventCard).join('')}` : '';
+
+  const totalAttendees = upcoming.reduce((s, e) => s + e.totals.totalAttendees, 0);
+  const totalRevenue = upcoming.reduce((s, e) => s + e.totals.revenueCents, 0);
+
+  return {
+    subject: `${SITE.shortName} — Weekly Event Digest (${weekLabel})`,
+    html: wrapTemplate(`
+      ${h1('Weekly Event Digest')}
+      ${p(`${greeting} here's your Monday rundown of club events. ${attachmentCount > 0 ? `<strong>${attachmentCount}</strong> attendee roster${attachmentCount === 1 ? '' : 's'} attached.` : ''}`)}
+      ${infoCard(`
+        <p style="margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${TEXT_MUTED};">${escapeHtml(weekLabel)}</p>
+        <p style="margin:0; font-size:15px; color:${TEXT_DARK};">
+          <strong>${upcoming.length}</strong> upcoming event${upcoming.length === 1 ? '' : 's'}
+          &nbsp;·&nbsp; <strong>${totalAttendees}</strong> RSVPs
+          &nbsp;·&nbsp; <strong>${fmtMoney(totalRevenue)}</strong> projected revenue
+        </p>
+      `)}
+
+      <p style="color:${TEXT_MUTED}; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin:24px 0 8px;">Upcoming</p>
+      ${upcomingHtml}
+      ${pastHtml}
+
+      ${muted(`Deltas (▲ / ▼) compare to last Monday's digest. Manage which emails you receive in <a href="${SITE.url}/portal/settings" style="color:${CRIMSON};">portal settings</a>.`)}
+    `, `Weekly event digest — ${upcoming.length} upcoming event${upcoming.length === 1 ? '' : 's'}, ${totalAttendees} RSVPs.`),
+    text:
+      `Weekly Event Digest — ${weekLabel}\n\n` +
+      `${upcoming.length} upcoming event(s), ${totalAttendees} RSVPs, ${fmtMoney(totalRevenue)} projected revenue.\n\n` +
+      upcoming.map((e) => (
+        `• ${e.title} — ${e.dateLabel}\n` +
+        `  ${e.totals.totalAttendees} RSVPs (Δ ${e.delta.rsvps >= 0 ? '+' : ''}${e.delta.rsvps}) · ` +
+        `${e.totals.tickets} tickets · ${fmtMoney(e.totals.revenueCents)} revenue` +
+        (e.pdfAttached ? '  [PDF attached]' : '')
+      )).join('\n\n') +
+      (past.length > 0
+        ? `\n\nPost-event recaps:\n` + past.map((e) =>
+            `• ${e.title} — ${e.dateLabel}: ${e.totals.checkedIn}/${e.totals.totalAttendees} checked in, ${fmtMoney(e.totals.revenueCents)} revenue`
+          ).join('\n')
+        : '') +
+      `\n\nManage notifications: ${SITE.url}/portal/settings\n\n--\n${SITE.name}`,
+  };
+}
