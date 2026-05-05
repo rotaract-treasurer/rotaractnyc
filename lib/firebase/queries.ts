@@ -96,56 +96,52 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
 }
 
 // ---- Board / Leadership ----
+//
+// Single source of truth: the `members` collection. A member appears on the
+// public Leadership page when:
+//   - role ∈ {president, board, treasurer}
+//   - status === 'active'
+//
+// Display title is `boardTitle` (free-form, usually one of ROTARACT_BOARD_TITLES)
+// with a sensible fallback derived from the role. Display order comes from
+// `boardOrder` (lower = earlier; missing = end of list).
 
 export async function getBoardMembers(): Promise<BoardMember[]> {
   try {
-    const snap = await adminDb
-      .collection('settings')
-      .doc('board')
-      .get();
-
-    if (snap.exists) {
-      const data = snap.data();
-      if (data?.members && Array.isArray(data.members) && data.members.length > 0) {
-        return (data.members as BoardMember[]).map((m) => serializeDoc(m) as BoardMember);
-      }
-    }
-
-    // Alternative: members collection with board/president roles
     const membersSnap = await adminDb
       .collection('members')
       .where('role', 'in', ['board', 'president', 'treasurer'])
       .where('status', '==', 'active')
-      .orderBy('displayName')
       .get();
 
-    if (!membersSnap.empty) {
-      return membersSnap.docs
-        .map((d) => {
-          const m = d.data();
-          // boardTitle comes from the Rotaract charter predefined list;
-          // fall back to role-based label if not yet assigned.
-          const title =
-            m.boardTitle ||
-            (m.role === 'president'
-              ? 'President'
-              : m.role === 'treasurer'
-              ? 'Treasurer'
-              : m.committee || 'Board Member');
-          return {
-            id: d.id,
-            name: m.displayName || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
-            title,
-            photoURL: m.photoURL || '',
-            bio: m.bio || '',
-            linkedIn: m.linkedIn || '',
-            order: typeof m.boardOrder === 'number' ? m.boardOrder : 999,
-          } as BoardMember;
-        })
-        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-    }
+    if (membersSnap.empty) return defaultBoard;
 
-    return defaultBoard;
+    return membersSnap.docs
+      .map((d) => {
+        const m = d.data();
+        const title =
+          m.boardTitle ||
+          (m.role === 'president'
+            ? 'President'
+            : m.role === 'treasurer'
+            ? 'Treasurer'
+            : m.committee || 'Board Member');
+        return {
+          id: d.id,
+          name: m.displayName || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
+          title,
+          photoURL: m.photoURL || '',
+          bio: m.bio || '',
+          linkedIn: m.linkedIn || '',
+          order: typeof m.boardOrder === 'number' ? m.boardOrder : 999,
+        } as BoardMember;
+      })
+      .sort((a, b) => {
+        const ao = a.order ?? 999;
+        const bo = b.order ?? 999;
+        if (ao !== bo) return ao - bo;
+        return (a.name || '').localeCompare(b.name || '');
+      });
   } catch (e) {
     console.error('getBoardMembers error:', e);
     return defaultBoard;

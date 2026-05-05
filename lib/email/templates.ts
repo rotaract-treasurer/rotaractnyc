@@ -455,6 +455,44 @@ export function inviteEmail(name: string): { subject: string; html: string; text
   };
 }
 
+export function boardInviteEmail(
+  name: string,
+  title: string,
+  invitedBy?: string,
+): { subject: string; html: string; text: string } {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeInviter = invitedBy ? escapeHtml(invitedBy) : '';
+  const inviterLine = safeInviter
+    ? `<strong>${safeInviter}</strong> has added you to the board`
+    : `You've been added to the board`;
+
+  return {
+    subject: `You're on the board — ${safeTitle} of ${SITE.shortName} 🎉`,
+    html: wrapTemplate(`
+      ${h1(`Congratulations, ${safeName}!`)}
+      ${p(`${inviterLine} of <strong>${SITE.name}</strong> as <strong>${safeTitle}</strong>. Thank you for stepping up to lead.`)}
+      <p style="color: ${TEXT_MUTED}; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 24px 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">What changes for you</p>
+      ${infoCard(`
+        <table role="presentation" cellpadding="0" cellspacing="0">
+          ${listItem('1.', 'Admin access', '— you can now manage members, events, dues, posts, and more from the portal.')}
+          ${listItem('2.', 'Public Leadership page', `— your name and title (${safeTitle}) now appear at ${SITE.url}/leadership.`)}
+          ${listItem('3.', 'Board responsibilities', '— review pending members, approve service hours, and help shape the club.')}
+        </table>
+      `)}
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 0;">
+        <tr>
+          <td style="text-align: center;">
+            ${ctaButton('Open Board Tools', `${SITE.url}/portal`)}
+          </td>
+        </tr>
+      </table>
+      ${muted(`If you weren't expecting this, please reach out to the President or reply to this email.`)}
+    `, `You're now on the board of ${SITE.name}`),
+    text: `Congratulations, ${name}!\n\n${invitedBy ? `${invitedBy} has added you` : `You've been added`} to the board of ${SITE.name} as ${title}.\n\nWhat changes:\n1. Admin access — you can now manage members, events, dues, posts, and more from the portal.\n2. Your name and title (${title}) now appear on the public Leadership page: ${SITE.url}/leadership\n3. Board responsibilities — review pending members, approve service hours, and help shape the club.\n\nOpen the portal: ${SITE.url}/portal\n\nIf you weren't expecting this, please reach out to the President.\n\n--\n${SITE.name}\n${SITE.address}`,
+  };
+}
+
 export function duesReminderEmail(name: string, amount: string, cycleName: string): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(name);
   const safeAmount = escapeHtml(amount);

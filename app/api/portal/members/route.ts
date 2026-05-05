@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
+
+/** Revalidate any public pages that depend on the members collection. */
+function revalidateMemberPages() {
+  try {
+    revalidatePath('/leadership');
+    revalidatePath('/');
+  } catch {
+    /* best-effort */
+  }
+}
+
+const BOARD_ROLES = ['president', 'board', 'treasurer'] as const;
 
 // ─── helpers ───
 async function verifySession() {
@@ -137,6 +150,9 @@ export async function POST(request: NextRequest) {
       console.error('Invitation email failed (non-blocking):', emailErr);
     }
 
+    // If the new member is a board officer, refresh the public Leadership page
+    if (BOARD_ROLES.includes(memberRole as any)) revalidateMemberPages();
+
     return NextResponse.json(
       { id: docRef.id, ...memberData },
       { status: 201 },
@@ -153,7 +169,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── PATCH — update member status / role (board+ only) ───
+// ─── PATCH — update member status / role / board title / order (board+ only) ───
 export async function PATCH(request: NextRequest) {
   const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-members'), { max: 20, windowSec: 60 });
   if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
@@ -166,7 +182,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { memberId, status, role: newRole } = body;
+    const { memberId, status, role: newRole, boardTitle, boardOrder } = body;
 
     if (!memberId) {
       return NextResponse.json({ error: 'memberId required' }, { status: 400 });
@@ -183,12 +199,43 @@ export async function PATCH(request: NextRequest) {
     if (status && ['pending', 'active', 'inactive', 'alumni'].includes(status)) {
       updates.status = status;
     }
-    // Only president can change roles
-    if (newRole && role === 'president' && ['member', 'board', 'treasurer', 'president'].includes(newRole)) {
-      updates.role = newRole;
+
+    // Role-change permissions:
+    //   - President can change roles freely.
+    //   - Other board+ admins can ONLY promote a regular member to `board`
+    //     (so they can add board members without needing the President), but
+    //     cannot grant `president` / `treasurer` and cannot demote anyone.
+    const currentMemberRole = memberDoc.data()?.role as string | undefined;
+    if (newRole && ['member', 'board', 'treasurer', 'president'].includes(newRole)) {
+      if (role === 'president') {
+        updates.role = newRole;
+      } else if (newRole === 'board' && currentMemberRole === 'member') {
+        updates.role = 'board';
+      }
+      // else: silently ignore (insufficient permission for this transition)
+    }
+
+    // Board title (free-form, but only meaningful for board roles)
+    if (typeof boardTitle === 'string') {
+      updates.boardTitle = boardTitle.trim();
+    }
+    // Board display order on the public Leadership page
+    if (typeof boardOrder === 'number' && Number.isFinite(boardOrder)) {
+      updates.boardOrder = boardOrder;
+    } else if (boardOrder === null) {
+      const { FieldValue } = await import('firebase-admin/firestore');
+      updates.boardOrder = FieldValue.delete();
     }
 
     await memberRef.update(updates);
+
+    // Revalidate the public leadership page if anything that affects it changed
+    const affectsLeadership =
+      'role' in updates ||
+      'status' in updates ||
+      'boardTitle' in updates ||
+      'boardOrder' in updates;
+    if (affectsLeadership) revalidateMemberPages();
 
     // If approving a pending member, send welcome email
     if (status === 'active' && memberDoc.data()?.status === 'pending') {
@@ -205,6 +252,51 @@ export async function PATCH(request: NextRequest) {
         });
       } catch (emailErr) {
         console.error('Welcome email failed:', emailErr);
+      }
+    }
+
+    // If a member was newly promoted to a board role, send the board-invite email
+    const promotedToBoard =
+      'role' in updates &&
+      BOARD_ROLES.includes(updates.role as any) &&
+      !BOARD_ROLES.includes((currentMemberRole || '') as any);
+    if (promotedToBoard) {
+      try {
+        const { sendEmail } = await import('@/lib/email/send');
+        const { boardInviteEmail } = await import('@/lib/email/templates');
+        const memberData = memberDoc.data();
+        const recipientEmail = memberData?.email;
+        if (recipientEmail) {
+          // Resolve inviter name from current session
+          let inviterName: string | undefined;
+          try {
+            const inviterSnap = await adminDb.collection('members').doc(decoded.uid).get();
+            inviterName = inviterSnap.data()?.displayName || inviterSnap.data()?.firstName;
+          } catch {
+            /* non-blocking */
+          }
+          const titleForEmail =
+            (typeof boardTitle === 'string' && boardTitle.trim()) ||
+            memberData?.boardTitle ||
+            (updates.role === 'president'
+              ? 'President'
+              : updates.role === 'treasurer'
+              ? 'Treasurer'
+              : 'Board Member');
+          const template = boardInviteEmail(
+            memberData?.displayName || memberData?.firstName || 'there',
+            titleForEmail,
+            inviterName,
+          );
+          await sendEmail({
+            to: recipientEmail,
+            subject: template.subject,
+            html: template.html,
+            text: template.text,
+          });
+        }
+      } catch (emailErr) {
+        console.error('Board invite email failed:', emailErr);
       }
     }
 

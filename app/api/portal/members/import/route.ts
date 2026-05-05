@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,6 +128,19 @@ export async function POST(request: NextRequest) {
     }
 
     await batch.commit();
+  }
+
+  // If any imported member has a board role, refresh the public Leadership page
+  const importedAnyBoard = rows.some((r) =>
+    ['president', 'board', 'treasurer'].includes((r.role || '').trim()),
+  );
+  if (importedAnyBoard) {
+    try {
+      revalidatePath('/leadership');
+      revalidatePath('/');
+    } catch {
+      /* best-effort */
+    }
   }
 
   return NextResponse.json({
