@@ -32,7 +32,7 @@ const C = {
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 70,
+    paddingTop: 110,
     paddingBottom: 50,
     paddingHorizontal: 40,
     fontFamily: 'Helvetica',
@@ -46,7 +46,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 50,
+    height: 90,
     backgroundColor: C.cranberry,
     flexDirection: 'row',
     alignItems: 'center',
@@ -54,8 +54,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 40,
   },
   brandLogo: {
-    height: 30,
-    width: 30,
+    height: 70,
+    width: 140,
     objectFit: 'contain' as const,
   },
   brandTag: {
