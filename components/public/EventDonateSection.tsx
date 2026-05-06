@@ -59,13 +59,27 @@ export default function EventDonateSection({
   return (
     <>
       <div className={wrapperClass}>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cranberry/10 text-cranberry">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </div>
           <div className="min-w-0">
-            <h3 className="font-display font-semibold text-gray-900 dark:text-white text-base sm:text-lg">
-              💛 Support this event
+            <h3 className="font-display font-semibold text-gray-900 dark:text-white text-base sm:text-lg leading-tight">
+              Support this event
             </h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Make a donation in addition to (or instead of) buying a ticket.
+              Make a tax-deductible donation in addition to (or instead of) buying a ticket.
             </p>
           </div>
         </div>

@@ -32,8 +32,15 @@ export async function POST(request: NextRequest) {
       eventId,
       eventTitle,
       eventSlug,
+      message,
     } = await request.json();
     const useEmbeddedCheckout = embedded === true;
+
+    // Optional donor message — capped at 500 chars; stripped of control chars
+    const safeMessage =
+      typeof message === 'string'
+        ? message.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 500)
+        : '';
 
     const safeDonorName = donorName || 'Anonymous';
     const safeDonorEmail = donorEmail || '';
@@ -101,6 +108,8 @@ export async function POST(request: NextRequest) {
     if (safeEventId) metadata.eventId = safeEventId;
     if (safeEventTitle) metadata.eventTitle = safeEventTitle;
     if (safeEventSlug) metadata.eventSlug = safeEventSlug;
+    // Stripe metadata values are capped at 500 chars per key
+    if (safeMessage) metadata.message = safeMessage;
 
     // 30-minute expiry for donation checkout sessions
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;

@@ -925,9 +925,11 @@ export function donationThankYouEmail(
   donorName: string,
   amountCents: number,
   eventTitle?: string,
+  donorMessage?: string,
 ): { subject: string; html: string; text: string } {
   const safeName = escapeHtml(donorName);
   const safeEventTitle = eventTitle ? escapeHtml(eventTitle) : '';
+  const safeMessage = donorMessage ? escapeHtml(donorMessage.slice(0, 500)) : '';
   const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
   const subject = safeEventTitle
     ? `Thank you for supporting ${eventTitle} — ${SITE.shortName}`
@@ -939,27 +941,41 @@ export function donationThankYouEmail(
     ? `Your gift goes directly toward making <strong>${safeEventTitle}</strong> a success and amplifying the service projects this event supports — thank you for being part of it.`
     : `Your gift goes directly toward the service projects, community events, and partnerships that define Rotaract NYC. Every dollar amplifies our impact — locally and around the world.`;
 
+  // Optional "your note" block — quoted card so the donor sees what they sent.
+  const noteBlock = safeMessage
+    ? `
+      <p style="color: ${TEXT_MUTED}; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 24px 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Your note</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-left: 3px solid ${CRIMSON}; background: ${GRAY_BG}; border-radius: 6px;">
+        <tr>
+          <td style="padding: 14px 18px; color: ${TEXT_BODY}; font-size: 14px; line-height: 1.7; font-style: italic; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+            &ldquo;${safeMessage.replace(/\n/g, '<br/>')}&rdquo;
+          </td>
+        </tr>
+      </table>`
+    : '';
+
   return {
     subject,
     html: wrapTemplate(`
-      ${h1(`Thank you, ${safeName}!`)}
+      ${h1(`Thank you, ${safeName}.`)}
       ${p(intro)}
       ${goldBox(`
         <p style="color: ${TEXT_BODY}; font-size: 14px; line-height: 1.7; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">${goldBoxBody}</p>
       `)}
+      ${noteBlock}
       <p style="color: ${TEXT_MUTED}; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 24px 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">Your donation supports</p>
       ${infoCard(`
         <table role="presentation" cellpadding="0" cellspacing="0">
-          ${listItem('🥫', 'Food drives', '& meal distribution programs')}
-          ${listItem('🌿', 'Park cleanups', '& neighborhood beautification')}
-          ${listItem('📚', 'Educational programs', 'for underserved youth')}
-          ${listItem('🌍', 'International service', 'initiatives & global partnerships')}
+          ${listItem('•', 'Food drives', '& meal distribution programs')}
+          ${listItem('•', 'Park cleanups', '& neighborhood beautification')}
+          ${listItem('•', 'Educational programs', 'for underserved youth')}
+          ${listItem('•', 'International service', 'initiatives & global partnerships')}
         </table>
       `)}
       ${p(`Thank you for being part of our mission to create positive change in New York City and beyond.`)}
       ${muted(`Questions about your donation? Contact us at <a href="mailto:${SITE.email}" style="color: ${CRIMSON};">${SITE.email}</a>.`)}
     `, `Your ${amountFormatted} donation${eventTitle ? ` toward ${eventTitle}` : ''} to ${SITE.name} has been received — thank you!`),
-    text: `Thank you, ${donorName}!\n\nYour generous donation of ${amountFormatted}${eventTitle ? ` in support of ${eventTitle}` : ` to the ${SITE.name}`} has been received.\n\nYour gift supports:\n- Food drives & meal distribution programs\n- Park cleanups & neighborhood beautification\n- Educational programs for underserved youth\n- International service initiatives & global partnerships\n\nThank you for being part of our mission.\n\nQuestions? Email us at ${SITE.email}.\n\n--\n${SITE.name}\n${SITE.address}`,
+    text: `Thank you, ${donorName}.\n\nYour generous donation of ${amountFormatted}${eventTitle ? ` in support of ${eventTitle}` : ` to the ${SITE.name}`} has been received.\n${donorMessage ? `\nYour note: "${donorMessage.slice(0, 500)}"\n` : ''}\nYour gift supports:\n- Food drives & meal distribution programs\n- Park cleanups & neighborhood beautification\n- Educational programs for underserved youth\n- International service initiatives & global partnerships\n\nThank you for being part of our mission.\n\nQuestions? Email us at ${SITE.email}.\n\n--\n${SITE.name}\n${SITE.address}`,
   };
 }
 

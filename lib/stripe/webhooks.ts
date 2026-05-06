@@ -469,6 +469,7 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
   // Optional event attribution (set when donation came from an event page)
   const eventId = typeof session.metadata?.eventId === 'string' ? session.metadata.eventId : '';
   const eventTitle = typeof session.metadata?.eventTitle === 'string' ? session.metadata.eventTitle : '';
+  const donorMessage = typeof session.metadata?.message === 'string' ? session.metadata.message.slice(0, 500) : '';
 
   // Persist donor to `donors` collection (CRM)
   if (donorEmail) {
@@ -497,6 +498,7 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
           donorName,
           donorEmail: donorEmail || null,
           amountCents,
+          message: donorMessage || null,
           createdAt: new Date().toISOString(),
         });
         tx.update(eventRef, {
@@ -550,7 +552,7 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
   // Send thank-you email to donor
   if (donorEmail) {
     try {
-      const content = donationThankYouEmail(donorName, amountCents, eventTitle || undefined);
+      const content = donationThankYouEmail(donorName, amountCents, eventTitle || undefined, donorMessage || undefined);
       await sendEmail({ to: donorEmail, subject: content.subject, html: content.html, text: content.text });
     } catch (err) {
       console.error('Failed to send donation thank-you email:', err);
