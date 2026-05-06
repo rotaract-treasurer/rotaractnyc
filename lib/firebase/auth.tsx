@@ -50,65 +50,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let resolvedMember: Member | null = null;
         let idToken: string | null = null;
 
-        // Step 1: Fetch member profile and ID token
+        // Step 1: Get the ID token (we'll need it for the session cookie)
         try {
-          const memberRef = doc(getDb(), 'members', firebaseUser.uid);
-          const [memberSnap, token] = await Promise.all([
-            getDoc(memberRef),
-            firebaseUser.getIdToken(),
-          ]);
-          idToken = token;
-
-          if (memberSnap.exists()) {
-            resolvedMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
-          }
+          idToken = await firebaseUser.getIdToken();
         } catch (err) {
-          console.error('Auth: Failed to fetch member profile or ID token:', err);
+          console.error('Auth: Failed to fetch ID token:', err);
           setMember(null);
           setLoading(false);
           return;
         }
 
-        // Step 2: Handle invite migration or new member creation
-        if (!resolvedMember) {
+        // Step 2: Establish the session cookie FIRST. The server uses the
+        // Admin SDK to (a) auto-approve admin-allowlisted emails, and
+        // (b) migrate any board-created "invited" member doc — which lives
+        // under an auto-generated id keyed by email — to be keyed by the
+        // user's uid with status='active'. Firestore rules prevent the
+        // client from doing this migration itself, so it must happen here
+        // before we attempt to read or create the user's member doc.
+        let serverAutoApproved = false;
+        if (idToken) {
           try {
-            const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
-            const memberRef = doc(getDb(), 'members', firebaseUser.uid);
-            const inviteQuery = query(
-              collection(getDb(), 'members'),
-              where('email', '==', (firebaseUser.email || '').toLowerCase()),
-            );
-            const inviteSnap = await getDocs(inviteQuery);
-            const invitedDoc = inviteSnap.docs.find((d) => d.id !== firebaseUser.uid);
-
-            if (invitedDoc) {
-              // Migrate the invited member doc to the Firebase UID key
-              try {
-                const inviteData = invitedDoc.data();
-                const migratedMember: Record<string, any> = {
-                  ...inviteData,
-                  displayName: firebaseUser.displayName || inviteData.displayName || '',
-                  photoURL: firebaseUser.photoURL || inviteData.photoURL || '',
-                  status: 'active',
-                };
-                if (!inviteData.onboardingComplete) {
-                  migratedMember.onboardingComplete = false;
-                }
-                await setDoc(memberRef, migratedMember);
-                await deleteDoc(invitedDoc.ref);
-                resolvedMember = { id: firebaseUser.uid, ...migratedMember } as Member;
-              } catch (migrateErr) {
-                console.error('Auth: Invite migration failed, creating new member instead:', migrateErr);
-                // Fall through to new member creation below
-              }
+            const res = await fetch('/api/portal/auth/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            });
+            if (res.ok) {
+              setSessionReady(true);
+              const data = await res.json().catch(() => null);
+              serverAutoApproved = !!(data?.autoApproved || data?.migratedFromInvite);
+            } else {
+              console.error('Auth: Session cookie creation returned', res.status);
+              setSessionReady(false);
             }
           } catch (err) {
-            console.error('Auth: Failed to check for invited member:', err);
-            // Fall through to new member creation below
+            console.error('Auth: Session cookie creation failed:', err);
+            setSessionReady(false);
           }
         }
 
-        // Step 3: Create new member if still unresolved
+        // Step 3: Fetch the member profile (now that any invite migration
+        // has been applied server-side).
+        try {
+          const memberRef = doc(getDb(), 'members', firebaseUser.uid);
+          const memberSnap = await getDoc(memberRef);
+          if (memberSnap.exists()) {
+            resolvedMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+          }
+        } catch (err) {
+          console.error('Auth: Failed to fetch member profile:', err);
+        }
+
+        // Step 4: Create a brand-new pending member if no doc exists yet.
+        // (Only reached when the user has never been invited — the create
+        // rule allows status='pending' for self-owned docs.)
         if (!resolvedMember) {
           try {
             const memberRef = doc(getDb(), 'members', firebaseUser.uid);
@@ -130,37 +125,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Step 4: Set session cookie BEFORE updating state — the middleware
-        // checks this cookie on every /portal/* navigation, so it must exist
-        // before the login-page redirect fires.
-        if (idToken) {
+        // Step 5: If the server flipped the user's status (admin auto-approve
+        // or invite migration), make sure we have the freshest copy.
+        if (serverAutoApproved) {
           try {
-            const res = await fetch('/api/portal/auth/session', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idToken }),
-            });
-            if (res.ok) {
-              setSessionReady(true);
-              const data = await res.json().catch(() => null);
-              if (data?.autoApproved) {
-                try {
-                  const memberRef = doc(getDb(), 'members', firebaseUser.uid);
-                  const freshSnap = await getDoc(memberRef);
-                  if (freshSnap.exists()) {
-                    resolvedMember = { id: freshSnap.id, ...freshSnap.data() } as Member;
-                  }
-                } catch (err) {
-                  console.warn('Auth: Failed to refresh member after auto-approval:', err);
-                }
-              }
-            } else {
-              console.error('Auth: Session cookie creation returned', res.status);
-              setSessionReady(false);
+            const memberRef = doc(getDb(), 'members', firebaseUser.uid);
+            const freshSnap = await getDoc(memberRef);
+            if (freshSnap.exists()) {
+              resolvedMember = { id: freshSnap.id, ...freshSnap.data() } as Member;
             }
           } catch (err) {
-            console.error('Auth: Session cookie creation failed:', err);
-            setSessionReady(false);
+            console.warn('Auth: Failed to refresh member after auto-approval:', err);
           }
         }
 

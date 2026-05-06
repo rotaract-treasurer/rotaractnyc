@@ -53,14 +53,75 @@ export async function POST(request: Request) {
     }
 
     // Auto-approve invited members (they were pre-added by board)
+    let migratedFromInvite = false;
     if (!autoApproved && email) {
       try {
         const memberRef = adminDb.collection('members').doc(decoded.uid);
         const snap = await memberRef.get();
-        if (snap.exists) {
+
+        // Always look up any other docs that share this email — the board
+        // pre-creates invited members under an auto-generated id (since
+        // the user's uid doesn't exist yet), so we may need to merge or
+        // migrate them. Firestore rules block the client from reading
+        // those docs, so this must happen server-side via the Admin SDK.
+        const inviteQuery = await adminDb
+          .collection('members')
+          .where('email', '==', email)
+          .limit(5)
+          .get();
+        const invitedDoc = inviteQuery.docs.find(
+          (d) => d.id !== decoded.uid && d.data()?.invitedAt,
+        );
+
+        if (!snap.exists && invitedDoc) {
+          // No uid-keyed doc yet — migrate the invited doc to the uid key.
+          const inviteData = invitedDoc.data() || {};
+          const migratedMember: Record<string, any> = {
+            ...inviteData,
+            displayName: decoded.name || inviteData.displayName || '',
+            photoURL: decoded.picture || inviteData.photoURL || '',
+            status: 'active',
+            updatedAt: new Date().toISOString(),
+          };
+          if (inviteData.onboardingComplete === undefined) {
+            migratedMember.onboardingComplete = false;
+          }
+          await memberRef.set(migratedMember);
+          await invitedDoc.ref.delete();
+          autoApproved = true;
+          migratedFromInvite = true;
+          console.info(`Auto-migrated invited member: ${email}`);
+        } else if (snap.exists && invitedDoc) {
+          // Self-created pending doc already exists alongside an invited
+          // doc (e.g. user signed in before a previous version of this
+          // route handled the migration). Merge the invite's role / title
+          // / committee onto the uid-keyed doc, activate it, and drop the
+          // orphan.
+          const existing = snap.data() || {};
+          const inviteData = invitedDoc.data() || {};
+          const merged: Record<string, any> = {
+            ...inviteData,
+            ...existing,
+            role: inviteData.role || existing.role || 'member',
+            boardTitle: inviteData.boardTitle || existing.boardTitle,
+            committee: inviteData.committee || existing.committee,
+            memberType: inviteData.memberType || existing.memberType,
+            invitedAt: inviteData.invitedAt || existing.invitedAt,
+            status: 'active',
+            updatedAt: new Date().toISOString(),
+          };
+          // Strip undefineds (Firestore rejects them)
+          Object.keys(merged).forEach((k) => merged[k] === undefined && delete merged[k]);
+          await memberRef.set(merged, { merge: true });
+          await invitedDoc.ref.delete();
+          autoApproved = true;
+          migratedFromInvite = true;
+          console.info(`Auto-merged invited member onto existing uid doc: ${email}`);
+        } else if (snap.exists) {
+          // No invited doc — just flip pending → active if this user was
+          // previously invited under their own uid.
           const data = snap.data();
           if (data?.status === 'pending' && data?.invitedAt) {
-            // This member was invited — auto-activate so they can complete onboarding
             await memberRef.update({ status: 'active' });
             autoApproved = true;
             console.info(`Auto-approved invited member: ${email}`);
@@ -71,7 +132,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, autoApproved });
+    return NextResponse.json({ success: true, autoApproved, migratedFromInvite });
   } catch (error: any) {
     const message = error?.message || String(error);
     console.error('Session creation error:', message);
