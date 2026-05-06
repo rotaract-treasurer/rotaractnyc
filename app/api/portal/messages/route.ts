@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import { FieldValue } from 'firebase-admin/firestore';
 import { escapeHtml } from '@/lib/utils/sanitize';
+import { sendPushToMember, isPushAllowed } from '@/lib/push';
 
 // Get messages for current user (inbox + sent)
 export async function GET(request: NextRequest) {
@@ -81,6 +82,18 @@ export async function POST(request: NextRequest) {
     };
 
     const docRef = await adminDb.collection('messages').add(message);
+
+    // Fire-and-forget push notification to the recipient (respects per-member
+    // preferences). We don't await — if FCM is slow it shouldn't block the
+    // sender's UI; failures are logged inside sendPushToMember.
+    if (await isPushAllowed(recipientId, 'messages')) {
+      sendPushToMember(recipientId, {
+        title: `New message from ${senderData?.displayName || 'a member'}`,
+        body: String(content).slice(0, 140),
+        url: '/portal/messages',
+        tag: `message-${recipientId}`,
+      }).catch((err) => console.warn('[push] message notify failed:', err));
+    }
 
     // Don't include createdAt (FieldValue sentinel) in response — it can't be serialised
     const { createdAt, ...responseSafe } = message;

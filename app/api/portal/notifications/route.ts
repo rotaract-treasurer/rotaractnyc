@@ -13,6 +13,12 @@ const VALID_KEYS = [
   'announcements',
   'weeklyDigest',
   'boardEventDigest',
+  // Push channel toggles (separate from email above)
+  'pushEnabled',
+  'pushMessages',
+  'pushAnnouncements',
+  'pushEvents',
+  'pushDues',
 ] as const;
 
 type PreferenceKey = (typeof VALID_KEYS)[number];
@@ -24,6 +30,11 @@ const DEFAULT_PREFERENCES: Record<PreferenceKey, boolean> = {
   announcements: true,
   weeklyDigest: false,
   boardEventDigest: true,
+  pushEnabled: true,
+  pushMessages: true,
+  pushAnnouncements: true,
+  pushEvents: true,
+  pushDues: true,
 };
 
 /** Authenticate the request and return the member's UID. */

@@ -76,6 +76,46 @@ self.addEventListener('message', (event) => {
 });
 
 // ---------------------------------------------------------------------------
+// Push — fallback handler for non-FCM web-push payloads, and for clicks on
+// notifications shown by the FCM SW (so a single tab handler works).
+// ---------------------------------------------------------------------------
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: 'Rotaract NYC', body: event.data ? event.data.text() : '' };
+  }
+  const title = payload.title || 'Rotaract NYC';
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: payload.tag,
+    data: { url: payload.url || '/portal' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/portal';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes('/portal') && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    }),
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Fetch — network-first for HTML, cache-first for static assets
 // ---------------------------------------------------------------------------
 self.addEventListener('fetch', (event) => {
@@ -92,8 +132,61 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip API and admin routes — always fetch fresh
-  if (url.pathname.includes('/api/') || url.pathname.includes('/admin/') || url.pathname.includes('/portal/')) {
+  // Always bypass: write APIs (POST/PUT/DELETE handled above already), auth/session
+  // routes, and the FCM service worker (served by its own dynamic route).
+  if (
+    url.pathname.startsWith('/api/portal/auth/') ||
+    url.pathname.startsWith('/api/auth/') ||
+    url.pathname === '/firebase-messaging-sw.js'
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Portal GETs — stale-while-revalidate against a dedicated cache so the
+  // member portal stays usable on flaky connections (e.g. event venue wifi).
+  // Authenticated routes are scoped per-session by Firebase's session cookie,
+  // so the cached responses are private to the device's logged-in user.
+  const isPortalRead =
+    url.pathname.startsWith('/portal') ||
+    url.pathname.startsWith('/api/portal/');
+
+  if (isPortalRead) {
+    const PORTAL_CACHE = CACHE_NAME + '-portal';
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(PORTAL_CACHE);
+        const cachedPromise = cache.match(request);
+        const networkPromise = fetch(request)
+          .then((res) => {
+            // Only cache successful, basic-origin responses
+            if (res && res.status === 200 && res.type === 'basic') {
+              cache.put(request, res.clone()).then(() => trimCache(PORTAL_CACHE, MAX_PAGE_ENTRIES));
+            }
+            return res;
+          })
+          .catch(async () => {
+            const cached = await cachedPromise;
+            if (cached) return cached;
+            // For navigations, fall back to the offline page so members get
+            // a branded experience instead of a Chrome dino.
+            if (request.mode === 'navigate') {
+              return caches.match('/offline.html');
+            }
+            return new Response(JSON.stringify({ error: 'offline' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          });
+        const cached = await cachedPromise;
+        return cached || networkPromise;
+      })(),
+    );
+    return;
+  }
+
+  // Skip remaining /api/ and /admin/ routes — always fetch fresh
+  if (url.pathname.includes('/api/') || url.pathname.includes('/admin/')) {
     event.respondWith(fetch(request));
     return;
   }

@@ -258,6 +258,25 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Reserve space at the bottom of portal pages so content isn't hidden
+     behind the mobile bottom-nav (h-16 + safe-area inset). */
+  .pb-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+  }
+  @media (min-width: 1024px) {
+    .pb-bottom-nav {
+      padding-bottom: 0;
+    }
+  }
+  /* When installed as a PWA, hide UI bits that only make sense in a browser */
+  @media (display-mode: standalone) {
+    .hide-in-standalone {
+      display: none !important;
+    }
+  }
   .animation-delay-200 {
     animation-delay: 200ms;
   }

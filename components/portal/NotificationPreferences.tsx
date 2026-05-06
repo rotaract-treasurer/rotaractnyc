@@ -3,6 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/hooks/useFirestore';
 import { useToast } from '@/hooks/useToast';
+import {
+  enablePushNotifications,
+  disablePushNotifications,
+  isPushSupported,
+} from '@/lib/firebase/messaging';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -13,6 +18,11 @@ interface NotificationPreferences {
   announcements: boolean;
   weeklyDigest: boolean;
   boardEventDigest: boolean;
+  pushEnabled: boolean;
+  pushMessages: boolean;
+  pushAnnouncements: boolean;
+  pushEvents: boolean;
+  pushDues: boolean;
 }
 
 interface PreferenceItem {
@@ -52,6 +62,29 @@ const PREFERENCE_ITEMS: PreferenceItem[] = [
     label: 'Weekly Event Digest (Board only)',
     description:
       'Mondays — upcoming events, RSVP deltas, and PDF attendee rosters. Only sent to board members.',
+  },
+];
+
+const PUSH_PREFERENCE_ITEMS: PreferenceItem[] = [
+  {
+    key: 'pushMessages',
+    label: 'Direct Messages',
+    description: 'When another member sends you a message',
+  },
+  {
+    key: 'pushAnnouncements',
+    label: 'Announcements',
+    description: 'New club-wide announcements',
+  },
+  {
+    key: 'pushEvents',
+    label: 'Event Reminders',
+    description: 'Reminders for events you have RSVP\u2019d to',
+  },
+  {
+    key: 'pushDues',
+    label: 'Dues Reminders',
+    description: 'Push notification when dues are due',
   },
 ];
 
@@ -114,6 +147,10 @@ export default function NotificationPreferences() {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingUpdates = useRef<Partial<NotificationPreferences>>({});
 
@@ -143,6 +180,59 @@ export default function NotificationPreferences() {
       cancelled = true;
     };
   }, [toast]);
+
+  // Detect push support + current permission state on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supported = await isPushSupported();
+      if (cancelled) return;
+      setPushSupported(supported);
+      if (supported && typeof Notification !== 'undefined') {
+        setPushPermission(Notification.permission);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleEnablePush = useCallback(async () => {
+    setPushBusy(true);
+    try {
+      const token = await enablePushNotifications();
+      if (token) {
+        setPushToken(token);
+        setPushPermission('granted');
+        // Make sure the master switch flips on too
+        setPreferences((prev) => (prev ? { ...prev, pushEnabled: true } : prev));
+        pendingUpdates.current.pushEnabled = true;
+        toast('Push notifications enabled', 'success');
+      } else if (typeof Notification !== 'undefined') {
+        setPushPermission(Notification.permission);
+        if (Notification.permission === 'denied') {
+          toast('Notifications blocked. Enable them in browser settings.', 'error');
+        }
+      }
+    } catch (err) {
+      toast('Failed to enable push notifications', 'error');
+    } finally {
+      setPushBusy(false);
+    }
+  }, [toast]);
+
+  const handleDisablePush = useCallback(async () => {
+    setPushBusy(true);
+    try {
+      await disablePushNotifications(pushToken);
+      setPushToken(null);
+      setPreferences((prev) => (prev ? { ...prev, pushEnabled: false } : prev));
+      pendingUpdates.current.pushEnabled = false;
+      toast('Push notifications disabled', 'success');
+    } finally {
+      setPushBusy(false);
+    }
+  }, [pushToken, toast]);
 
   // Debounced save
   const flushUpdates = useCallback(async () => {
@@ -221,27 +311,96 @@ export default function NotificationPreferences() {
   }
 
   return (
-    <div className="divide-y divide-gray-100 dark:divide-gray-800">
-      {PREFERENCE_ITEMS.map((item) => (
-        <div
-          key={item.key}
-          className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
-        >
-          <div className="pr-4">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {item.label}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {item.description}
+    <div className="space-y-8">
+      {/* ── Email channel ── */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+          Email Notifications
+        </h3>
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          {PREFERENCE_ITEMS.map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+            >
+              <div className="pr-4">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {item.label}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {item.description}
+                </p>
+              </div>
+              <Toggle
+                checked={preferences[item.key]}
+                onChange={(val) => handleToggle(item.key, val)}
+                disabled={saving}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Push channel ── */}
+      <section>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Push Notifications
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+              Get real-time alerts on your phone or desktop. Requires installing
+              the Rotaract NYC app from your browser&apos;s install prompt.
             </p>
           </div>
-          <Toggle
-            checked={preferences[item.key]}
-            onChange={(val) => handleToggle(item.key, val)}
-            disabled={saving}
-          />
+          {!pushSupported ? (
+            <span className="text-xs text-gray-400 italic shrink-0">Not supported</span>
+          ) : pushPermission === 'denied' ? (
+            <span className="text-xs text-red-500 shrink-0">Blocked in browser</span>
+          ) : preferences.pushEnabled && pushPermission === 'granted' ? (
+            <button
+              type="button"
+              onClick={handleDisablePush}
+              disabled={pushBusy}
+              className="text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+            >
+              {pushBusy ? 'Working…' : 'Disable'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEnablePush}
+              disabled={pushBusy}
+              className="text-xs font-semibold text-white bg-cranberry hover:bg-cranberry-700 px-3 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {pushBusy ? 'Enabling…' : 'Enable Push'}
+            </button>
+          )}
         </div>
-      ))}
+
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          {PUSH_PREFERENCE_ITEMS.map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+            >
+              <div className="pr-4">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {item.label}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {item.description}
+                </p>
+              </div>
+              <Toggle
+                checked={preferences[item.key]}
+                onChange={(val) => handleToggle(item.key, val)}
+                disabled={saving || !preferences.pushEnabled || pushPermission !== 'granted'}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
 
       {saving && (
         <p className="text-xs text-gray-400 dark:text-gray-500 pt-3 text-right">

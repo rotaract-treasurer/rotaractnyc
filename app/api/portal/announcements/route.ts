@@ -3,6 +3,7 @@ import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { cookies } from 'next/headers';
 import { escapeHtml } from '@/lib/utils/sanitize';
+import { sendPushToMembers } from '@/lib/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,35 @@ export async function POST(request: NextRequest) {
     };
 
     const docRef = await adminDb.collection('announcements').add(doc);
+
+    // Fan-out push notification to all eligible members. Audience controls
+    // who's targeted; we filter by role for board-only announcements.
+    (async () => {
+      try {
+        let query: FirebaseFirestore.Query = adminDb
+          .collection('members')
+          .where('status', '==', 'active');
+        if (audience === 'board') {
+          query = query.where('role', 'in', ['board', 'treasurer', 'president']);
+        }
+        const snap = await query.get();
+        const uids = snap.docs.map((d) => d.id);
+        if (uids.length > 0) {
+          await sendPushToMembers(
+            uids,
+            {
+              title: doc.title,
+              body: String(msgBody).replace(/<[^>]+>/g, '').slice(0, 140),
+              url: '/portal/announcements',
+              tag: `announcement-${docRef.id}`,
+            },
+            'announcements',
+          );
+        }
+      } catch (err) {
+        console.warn('[push] announcement fan-out failed:', err);
+      }
+    })();
 
     const { createdAt, ...responseSafe } = doc;
     return NextResponse.json(

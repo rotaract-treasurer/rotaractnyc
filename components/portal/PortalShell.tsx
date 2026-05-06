@@ -7,10 +7,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth';
 import { useDues } from '@/hooks/useDues';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import Avatar from '@/components/ui/Avatar';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
 import DuesBanner from '@/components/portal/DuesBanner';
 import AnnouncementBanner from '@/components/portal/AnnouncementBanner';
+import MobileBottomNav from '@/components/portal/MobileBottomNav';
+import InstallPrompt from '@/components/portal/InstallPrompt';
 import Spinner from '@/components/ui/Spinner';
 import { TutorialProvider } from '@/components/portal/tutorial';
 import { cn } from '@/lib/utils/cn';
@@ -207,6 +210,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { member, signOut, loading } = useAuth();
   const { status: duesStatus } = useDues();
+  const unread = useUnreadCounts(!!member);
   const sidebarRef = useRef<HTMLElement>(null);
   const signOutDialogRef = useRef<HTMLDivElement>(null);
   const signOutTriggerRef = useRef<HTMLButtonElement>(null);
@@ -408,7 +412,9 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Sidebar footer — user card + actions */}
-        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800/60 p-3 space-y-1">
+        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800/60 p-3 space-y-2">
+          {/* Install-app CTA (only renders if installable & not yet installed) */}
+          <InstallPrompt />
           {/* User profile card */}
           <Link
             href="/portal/profile"
@@ -478,19 +484,21 @@ export default function PortalShell({ children }: { children: React.ReactNode })
 
       {/* ═══ Main content area ═══ */}
       <div className="lg:ml-[272px]">
-        {/* Mobile hamburger — floating top-left, only when sidebar closed */}
+        {/* Mobile hamburger — kept as a hidden a11y trigger; mobile users open the
+            sidebar via the bottom-nav "More" tab instead. Visible only when JS
+            is disabled or bottom-nav fails to render (defensive fallback). */}
         <button
           ref={hamburgerRef}
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden fixed top-4 left-4 z-30 p-2.5 rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-200/80 dark:border-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors"
+          className="sr-only lg:hidden"
           aria-label="Open navigation menu"
           aria-expanded={sidebarOpen}
         >
-          <svg className="w-5 h-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+          Open menu
         </button>
 
         {/* Page content */}
-        <main id="main-content" tabIndex={-1} {...pullBind()} className="p-4 pt-16 lg:pt-8 lg:p-8 pb-safe">
+        <main id="main-content" tabIndex={-1} {...pullBind()} className="p-4 lg:pt-8 lg:p-8 pb-bottom-nav">
           {/* Pull-to-refresh indicator */}
           <div style={indicatorStyle} className="lg:hidden">
             {(pullDistance > 0 || isPullRefreshing) && (
@@ -502,6 +510,13 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom nav — iOS/Android-style tab bar */}
+      <MobileBottomNav
+        unreadMessages={unread.messages}
+        unreadAnnouncements={unread.announcements}
+        onOpenMore={() => setSidebarOpen(true)}
+      />
     </div>
     </TutorialProvider>
   );

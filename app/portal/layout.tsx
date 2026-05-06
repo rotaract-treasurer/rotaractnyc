@@ -39,9 +39,16 @@ function PortalContent({ children }: { children: React.ReactNode }) {
 
   const isAdminOrBoard = member?.role === 'board' || member?.role === 'president' || member?.role === 'treasurer';
 
-  // Update manifest link for admin/board users
+  // Swap the web app manifest based on context:
+  //   - Board / Admin   → /admin-manifest.json (event scanning, broadcasts, etc.)
+  //   - Active member   → /member-manifest.json (events, messages, hours, dues)
+  //   - Public / pre-auth → fall back to the public /manifest.json
   useEffect(() => {
-    const manifestHref = isAdminOrBoard ? '/admin-manifest.json' : '/manifest.json';
+    const manifestHref = isAdminOrBoard
+      ? '/admin-manifest.json'
+      : member
+        ? '/member-manifest.json'
+        : '/manifest.json';
     let link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!link) {
       link = document.createElement('link');
@@ -49,7 +56,15 @@ function PortalContent({ children }: { children: React.ReactNode }) {
       document.head.appendChild(link);
     }
     link.href = manifestHref;
-  }, [isAdminOrBoard]);
+    // Keep the theme-color meta in sync so the install card uses the cranberry brand.
+    let themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!themeMeta) {
+      themeMeta = document.createElement('meta');
+      themeMeta.name = 'theme-color';
+      document.head.appendChild(themeMeta);
+    }
+    themeMeta.content = '#9B1B30';
+  }, [isAdminOrBoard, member]);
 
   // Update document.title on route change
   useEffect(() => {

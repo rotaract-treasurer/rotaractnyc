@@ -1,0 +1,50 @@
+{
+  "name": "Rotaract NYC — Member Portal",
+  "short_name": "Rotaract Portal",
+  "description": "Your Rotaract NYC member hub — events, messages, service hours, and dues.",
+  "id": "/portal",
+  "start_url": "/portal",
+  "scope": "/portal/",
+  "lang": "en-US",
+  "display": "standalone",
+  "background_color": "#9B1B30",
+  "theme_color": "#9B1B30",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "categories": ["social", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Events",
+      "short_name": "Events",
+      "description": "Upcoming events & RSVPs",
+      "url": "/portal/events",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Member messages",
+      "url": "/portal/messages",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log Service Hours",
+      "short_name": "Log Hours",
+      "description": "Add new service hours",
+      "url": "/portal/service-hours",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Announcements",
+      "short_name": "News",
+      "description": "Latest club announcements",
+      "url": "/portal/announcements",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
