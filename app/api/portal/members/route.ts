@@ -33,25 +33,68 @@ async function getMemberRole(uid: string) {
 }
 
 // ─── GET members (portal-only) ───
+//
+// • GET /api/portal/members            → list of active members (directory)
+// • GET /api/portal/members?id=<uid>   → single member document
 export async function GET(request: NextRequest) {
   try {
-    await verifySession();
+    const decoded = await verifySession();
 
-    // Only return active members to protect the directory
+    const id = new URL(request.url).searchParams.get('id');
+
+    // ── Single member fetch ──
+    if (id) {
+      const doc = await adminDb.collection('members').doc(id).get();
+      if (!doc.exists) {
+        return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+      }
+
+      const data = doc.data() || {};
+      const isSelf = decoded.uid === id;
+
+      // Caller's role determines whether sensitive fields are returned
+      const callerRole = await getMemberRole(decoded.uid);
+      const isBoard =
+        !!callerRole &&
+        ['president', 'board', 'treasurer'].includes(callerRole);
+
+      // Hide sensitive fields from non-board peers (everyone other than self
+      // or board+ admins). The directory is portal-only so basic profile
+      // info is shared, but contact / admin-only fields are restricted.
+      if (!isSelf && !isBoard) {
+        delete data.roleEmail;
+        delete data.address;
+        delete data.birthday;
+        delete data.whatsAppPhone;
+        delete data.whatsAppSameAsPhone;
+      }
+
+      return NextResponse.json(
+        serializeDoc({ id: doc.id, uid: doc.id, ...data }),
+      );
+    }
+
+    // ── Directory list (active members only) ──
     const snapshot = await adminDb
       .collection('members')
       .where('status', '==', 'active')
       .orderBy('displayName')
       .get();
 
-    const members = snapshot.docs.map((doc) => serializeDoc({
-      uid: doc.id,
-      ...doc.data(),
-    }));
+    const members = snapshot.docs.map((doc) =>
+      serializeDoc({
+        id: doc.id,
+        uid: doc.id,
+        ...doc.data(),
+      }),
+    );
 
     return NextResponse.json(members);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching members:', error);
+    if (error?.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
   }
 }

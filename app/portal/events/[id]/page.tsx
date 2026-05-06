@@ -65,6 +65,14 @@ export default function PortalEventDetailPage() {
     quantity: number; amountCents: number; tierId: string | null; createdAt: string;
   }>>([]);
   const [purchaserSummary, setPurchaserSummary] = useState<{ totalRevenueCents: number; totalRevenue: number; guestCount: number; memberCount: number; totalTickets: number } | null>(null);
+  const [donations, setDonations] = useState<Array<{
+    id: string; donorName: string; donorEmail: string | null;
+    amountCents: number; message: string | null; createdAt: string;
+  }>>([]);
+  const [donationSummary, setDonationSummary] = useState<{
+    count: number; totalCents: number; eventTotalCents: number;
+    eventTotalCount: number; fundraisingGoalCents: number | null;
+  } | null>(null);
   const { data: rsvps } = useRsvps(id);
 
   const canManageEvents = member && ['board', 'president', 'treasurer'].includes(member.role);
@@ -122,6 +130,13 @@ export default function PortalEventDetailPage() {
         if (data?.summary) setPurchaserSummary(data.summary);
       }).catch((err) => {
         console.error('Failed to load purchasers:', err);
+      });
+      apiGet(`/api/portal/events/${id}/donations`).then((data) => {
+        if (Array.isArray(data?.donations)) setDonations(data.donations);
+        if (data?.summary) setDonationSummary(data.summary);
+      }).catch((err) => {
+        // Non-fatal: just log; the panel will hide when no data
+        console.error('Failed to load event donations:', err);
       });
     }
   }, [canManageEvents, id, rsvps?.length, liveGuestRsvps?.length]);
@@ -728,6 +743,58 @@ export default function PortalEventDetailPage() {
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">Pending</span>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Donations Received — admin only. Hidden when there are no
+              donations to keep the page clean for events without any. */}
+          {canManageEvents && event.acceptsDonations && donations.length > 0 && donationSummary && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6">
+              <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+                <h3 className="font-display font-semibold text-gray-900 dark:text-white text-lg">
+                  Donations Received
+                  <span className="text-gray-400 dark:text-gray-500 font-normal text-base ml-2">
+                    ({donationSummary.eventTotalCount} {donationSummary.eventTotalCount === 1 ? 'donation' : 'donations'})
+                  </span>
+                </h3>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Raised</p>
+                  <p className="text-2xl font-display font-bold text-cranberry">
+                    {formatCurrency(donationSummary.eventTotalCents)}
+                  </p>
+                  {donationSummary.fundraisingGoalCents && donationSummary.fundraisingGoalCents > 0 && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      of {formatCurrency(donationSummary.fundraisingGoalCents)} goal
+                      {' · '}
+                      {Math.min(100, Math.round((donationSummary.eventTotalCents / donationSummary.fundraisingGoalCents) * 100))}%
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {donations.map((d) => (
+                  <div key={d.id} className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{d.donorName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {d.donorEmail || 'No email'}
+                          {d.createdAt ? ` · ${formatDate(d.createdAt)}` : ''}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatCurrency(d.amountCents)}
+                      </span>
+                    </div>
+                    {d.message && (
+                      <blockquote className="text-xs italic text-gray-600 dark:text-gray-400 border-l-2 border-cranberry/40 pl-3 py-0.5">
+                        &ldquo;{d.message}&rdquo;
+                      </blockquote>
+                    )}
                   </div>
                 ))}
               </div>
