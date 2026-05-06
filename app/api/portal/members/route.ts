@@ -309,3 +309,61 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update member' }, { status: 500 });
   }
 }
+
+// ─── DELETE — remove a member (president only) ───
+// Used to clean up duplicates (e.g. an orphaned invited doc whose UID-keyed
+// counterpart has since been migrated) and to remove members entirely. Matches
+// the Firestore rule `allow delete: if isPresident();`.
+export async function DELETE(request: NextRequest) {
+  const rateLimitResult = await rateLimit(getRateLimitKey(request, 'portal-members-delete'), { max: 20, windowSec: 60 });
+  if (!rateLimitResult.allowed) return rateLimitResponse(rateLimitResult.resetAt);
+
+  try {
+    const decoded = await verifySession();
+    const role = await getMemberRole(decoded.uid);
+    if (role !== 'president') {
+      return NextResponse.json({ error: 'Only the president can delete members' }, { status: 403 });
+    }
+
+    // Accept memberId from JSON body OR ?memberId= query param
+    let memberId: string | undefined;
+    try {
+      const body = await request.json();
+      memberId = body?.memberId;
+    } catch {
+      /* no body */
+    }
+    if (!memberId) {
+      memberId = new URL(request.url).searchParams.get('memberId') || undefined;
+    }
+    if (!memberId) {
+      return NextResponse.json({ error: 'memberId required' }, { status: 400 });
+    }
+
+    if (memberId === decoded.uid) {
+      return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
+    }
+
+    const memberRef = adminDb.collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    const wasBoardOrActive =
+      memberDoc.data()?.status === 'active' ||
+      BOARD_ROLES.includes((memberDoc.data()?.role || '') as any);
+
+    await memberRef.delete();
+
+    if (wasBoardOrActive) revalidateMemberPages();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting member:', error);
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.json({ error: 'Failed to delete member' }, { status: 500 });
+  }
+}

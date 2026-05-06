@@ -10,6 +10,7 @@ import SearchInput from '@/components/ui/SearchInput';
 import Tabs from '@/components/ui/Tabs';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
+import { useToast } from '@/components/ui/Toast';
 import AddMemberModal from '@/components/portal/AddMemberModal';
 import ImportMembersModal from '@/components/portal/ImportMembersModal';
 import MemberCard from '@/components/portal/MemberCard';
@@ -23,7 +24,7 @@ const roleColors: Record<string, 'cranberry' | 'gold' | 'azure' | 'gray'> = {
 };
 
 type ViewMode = 'grid' | 'table';
-type DirectoryTab = 'active' | 'alumni' | 'all';
+type DirectoryTab = 'active' | 'pending' | 'alumni' | 'all';
 
 /** Extract a 4-digit year from an ISO date string or return null. */
 function yearFromDate(date: string | undefined | null): number | null {
@@ -48,13 +49,27 @@ export default function DirectoryPage() {
 
   const { member: currentMember } = useAuth();
   const { data: allMembers, loading } = useAllMembers();
+  const { toast } = useToast();
 
   const isAdmin = currentMember && ['president', 'board', 'treasurer'].includes(currentMember.role);
+  const isPresident = currentMember?.role === 'president';
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   // Derived counts for tabs
   const allList = (allMembers || []) as Member[];
   const activeList = useMemo(() => allList.filter((m) => m.status === 'active'), [allList]);
   const alumniList = useMemo(() => allList.filter((m) => m.status === 'alumni'), [allList]);
+  const pendingList = useMemo(() => allList.filter((m) => m.status === 'pending'), [allList]);
+
+  // Detect duplicate emails so admins can spot orphan invited docs
+  const duplicateEmails = useMemo(() => {
+    const counts = new Map<string, number>();
+    allList.forEach((m) => {
+      const e = (m.email || '').toLowerCase();
+      if (e) counts.set(e, (counts.get(e) || 0) + 1);
+    });
+    return new Set(Array.from(counts.entries()).filter(([, n]) => n > 1).map(([e]) => e));
+  }, [allList]);
 
   // Unique alumni years (descending) for the year dropdown
   const alumniYears = useMemo(() => {
@@ -70,8 +85,9 @@ export default function DirectoryPage() {
   const tabMembers = useMemo(() => {
     if (activeTab === 'active') return activeList;
     if (activeTab === 'alumni') return alumniList;
+    if (activeTab === 'pending') return pendingList;
     return allList; // 'all'
-  }, [activeTab, activeList, alumniList, allList]);
+  }, [activeTab, activeList, alumniList, pendingList, allList]);
 
   // Apply alumni-year filter, then search
   const filtered = useMemo(() => {
@@ -101,9 +117,64 @@ export default function DirectoryPage() {
 
   const tabs = [
     { id: 'active', label: 'Active Members', count: activeList.length },
+    ...(isAdmin && pendingList.length > 0
+      ? [{ id: 'pending', label: 'Pending', count: pendingList.length }]
+      : []),
     { id: 'alumni', label: 'Alumni', count: alumniList.length },
     { id: 'all', label: 'All', count: allList.length },
   ];
+
+  // ── Admin actions ─────────────────────────────────────────────────────
+  async function approveMember(m: Member) {
+    if (busyId) return;
+    setBusyId(m.id);
+    try {
+      const res = await fetch('/api/portal/members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: m.id, status: 'active' }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to approve member');
+      }
+      toast(`${m.displayName || m.firstName || 'Member'} approved`, 'success');
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      toast(err?.message || 'Failed to approve member', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteMember(m: Member) {
+    if (busyId) return;
+    if (
+      !confirm(
+        `Delete ${m.displayName || m.email || 'this member'}? This permanently removes their member record.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(m.id);
+    try {
+      const res = await fetch('/api/portal/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: m.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to delete member');
+      }
+      toast(`${m.displayName || 'Member'} deleted`, 'success');
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      toast(err?.message || 'Failed to delete member', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <>
@@ -211,19 +282,78 @@ export default function DirectoryPage() {
       ) : viewMode === 'grid' ? (
         /* ── Grid view ── */
         <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filtered.map((m) => (
-              <MemberCard
-                key={m.id}
-                member={m}
-                viewerRole={currentMember?.role}
-                onMessage={() => (window.location.href = `/portal/messages?to=${m.id}`)}
-              />
-            ))}
-          </div>
-          <p className="text-center text-sm text-gray-400 dark:text-gray-500 pt-2">
-            Showing {filtered.length} member{filtered.length !== 1 ? 's' : ''}
-          </p>
+          {/* Pending tab uses a dedicated admin layout with approve / delete */}
+          {activeTab === 'pending' && isAdmin ? (
+            <div className="space-y-3">
+              {filtered.map((m) => {
+                const isDup = duplicateEmails.has((m.email || '').toLowerCase());
+                return (
+                  <div
+                    key={m.id}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-4 flex items-center gap-4"
+                  >
+                    <Avatar src={m.photoURL} alt={m.displayName} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2 flex-wrap">
+                        {m.displayName || `${m.firstName || ''} ${m.lastName || ''}`.trim() || m.email}
+                        <Badge variant="gold">Pending</Badge>
+                        {m.role !== 'member' && <Badge variant={roleColors[m.role] || 'gray'}>{m.role}</Badge>}
+                        {m.boardTitle && <Badge variant="azure">{m.boardTitle}</Badge>}
+                        {isDup && <Badge variant="red">Duplicate email</Badge>}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{m.email}</p>
+                      {m.committee && (
+                        <p className="text-xs text-gray-400 mt-0.5">Committee · {m.committee}</p>
+                      )}
+                      {(m as any).invitedAt && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Invited {new Date((m as any).invitedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        onClick={() => approveMember(m)}
+                        disabled={busyId === m.id}
+                      >
+                        {busyId === m.id ? 'Working…' : 'Approve'}
+                      </Button>
+                      {isPresident && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => deleteMember(m)}
+                          disabled={busyId === m.id}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-center text-sm text-gray-400 dark:text-gray-500 pt-2">
+                Showing {filtered.length} pending member{filtered.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {filtered.map((m) => (
+                  <MemberCard
+                    key={m.id}
+                    member={m}
+                    viewerRole={currentMember?.role}
+                    onMessage={() => (window.location.href = `/portal/messages?to=${m.id}`)}
+                  />
+                ))}
+              </div>
+              <p className="text-center text-sm text-gray-400 dark:text-gray-500 pt-2">
+                Showing {filtered.length} member{filtered.length !== 1 ? 's' : ''}
+              </p>
+            </>
+          )}
         </>
       ) : (
         /* ── Table view ── */
@@ -250,7 +380,9 @@ export default function DirectoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map((m) => (
+                {filtered.map((m) => {
+                  const isDup = duplicateEmails.has((m.email || '').toLowerCase());
+                  return (
                   <tr
                     key={m.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
@@ -259,9 +391,12 @@ export default function DirectoryPage() {
                       <div className="flex items-center gap-3">
                         <Avatar src={m.photoURL} alt={m.displayName} size="sm" />
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                          <p className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1.5 flex-wrap">
                             {m.displayName}
                             {m.status === 'alumni' && <Badge variant="gold">Alumni</Badge>}
+                            {m.status === 'pending' && <Badge variant="gold">Pending</Badge>}
+                            {m.status === 'inactive' && <Badge variant="gray">Inactive</Badge>}
+                            {isAdmin && isDup && <Badge variant="red">Duplicate email</Badge>}
                           </p>
                           <p className="text-xs text-gray-400 truncate">{m.email}</p>
                         </div>
@@ -277,7 +412,26 @@ export default function DirectoryPage() {
                       {m.occupation || '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2 flex-wrap">
+                        {isAdmin && m.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            onClick={() => approveMember(m)}
+                            disabled={busyId === m.id}
+                          >
+                            {busyId === m.id ? '…' : 'Approve'}
+                          </Button>
+                        )}
+                        {isPresident && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteMember(m)}
+                            disabled={busyId === m.id}
+                          >
+                            Delete
+                          </Button>
+                        )}
                         {m.linkedIn && (
                           <a href={m.linkedIn} target="_blank" rel="noopener noreferrer">
                             <Button size="sm" variant="ghost">
@@ -293,7 +447,8 @@ export default function DirectoryPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
