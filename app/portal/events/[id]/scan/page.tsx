@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import jsQR from 'jsqr';
 import { useAuth } from '@/lib/firebase/auth';
 import { apiPost } from '@/hooks/useFirestore';
 
@@ -137,6 +138,7 @@ export default function ScanPage() {
   const { member } = useAuth();
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<any>(null);
@@ -155,9 +157,15 @@ export default function ScanPage() {
   const [torchOn, setTorchOn] = useState(false);
   const [focusSupported, setFocusSupported] = useState(false);
 
-  // Check BarcodeDetector support
+  // jsQR works in every modern browser, including iOS Safari. We still keep
+  // a `browserSupported` flag for the (extremely unlikely) case where
+  // `getUserMedia` is unavailable, but assume support by default.
   useEffect(() => {
-    setBrowserSupported('BarcodeDetector' in window);
+    setBrowserSupported(
+      typeof navigator !== 'undefined' &&
+        !!navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia === 'function',
+    );
   }, []);
 
   // Cleanup on unmount
@@ -298,8 +306,15 @@ export default function ScanPage() {
   );
 
   const startScanning = useCallback(
-    (stream: MediaStream, detector: any) => {
+    (_stream: MediaStream, detector: any) => {
       if (!videoRef.current) return;
+
+      // Lazily create a hidden canvas for jsQR pixel sampling.
+      if (!canvasRef.current) {
+        canvasRef.current = document.createElement('canvas');
+      }
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       const scan = async () => {
         const video = videoRef.current;
@@ -308,10 +323,31 @@ export default function ScanPage() {
           return;
         }
         try {
-          const barcodes: any[] = await detector.detect(video);
-          for (const barcode of barcodes) {
-            if (barcode.rawValue) {
-              await handleDetected(barcode.rawValue);
+          if (detector) {
+            // Fast path: native BarcodeDetector (Chrome / Edge / Safari 17.4+).
+            const barcodes: any[] = await detector.detect(video);
+            for (const barcode of barcodes) {
+              if (barcode.rawValue) {
+                await handleDetected(barcode.rawValue);
+              }
+            }
+          } else if (ctx) {
+            // Fallback: jsQR on every other browser, including iOS Safari.
+            // Downscale to ~640px max width to keep CPU usage reasonable.
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            if (vw && vh) {
+              const scale = Math.min(1, 640 / vw);
+              const w = Math.floor(vw * scale);
+              const h = Math.floor(vh * scale);
+              if (canvas.width !== w) canvas.width = w;
+              if (canvas.height !== h) canvas.height = h;
+              ctx.drawImage(video, 0, 0, w, h);
+              const imgData = ctx.getImageData(0, 0, w, h);
+              const code = jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
+              if (code?.data) {
+                await handleDetected(code.data);
+              }
             }
           }
         } catch {
@@ -328,7 +364,17 @@ export default function ScanPage() {
   const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
-      const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      // Prefer the native BarcodeDetector when available (faster, less CPU).
+      // Fall back to jsQR (handled inside startScanning) on iOS Safari and
+      // any other browser without BarcodeDetector.
+      let detector: any = null;
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        } catch {
+          detector = null;
+        }
+      }
       detectorRef.current = detector;
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -438,10 +484,11 @@ export default function ScanPage() {
           <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mx-auto mb-4">
             <IconWarning />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Browser Not Supported</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Camera Not Available</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            QR scanning requires the <strong>BarcodeDetector API</strong>, which is available in Chrome 83+, Edge 83+, and
-            Safari 17.4+. Please use a supported browser on your phone or laptop.
+            QR scanning needs camera access via your browser. This device or
+            browser doesn&apos;t expose a camera API. Try Safari or Chrome on
+            an iPhone/Android, or any modern desktop browser.
           </p>
         </div>
       </div>

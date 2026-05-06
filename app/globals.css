@@ -65,6 +65,17 @@
     background-repeat: no-repeat;
     padding-right: 2.5rem;
   }
+
+  /* iOS Safari zooms the page when an input's font-size is < 16px.
+     Force at least 16px on touch devices so focus never triggers a zoom.
+     Visual size is preserved on desktop because we target coarse pointers. */
+  @media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @layer components {
