@@ -76,6 +76,16 @@
       font-size: 16px !important;
     }
   }
+
+  /* Native form controls (especially input[type=date]/[time] on iOS Safari)
+     have a non-zero intrinsic min-width that can blow out narrow grid/flex
+     containers on phones. Force them to honour their parent's width. */
+  input,
+  textarea,
+  select {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 @layer components {

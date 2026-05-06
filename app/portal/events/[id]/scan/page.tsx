@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import jsQR from 'jsqr';
 import { useAuth } from '@/lib/firebase/auth';
-import { apiPost } from '@/hooks/useFirestore';
+import { apiGet, apiPost } from '@/hooks/useFirestore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -147,6 +147,7 @@ export default function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [browserSupported, setBrowserSupported] = useState<boolean | null>(null);
+  const [eventName, setEventName] = useState<string | null>(null);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [processing, setProcessing] = useState(false);
   // Optional camera capabilities — populated after the stream starts.
@@ -167,6 +168,22 @@ export default function ScanPage() {
         typeof navigator.mediaDevices.getUserMedia === 'function',
     );
   }, []);
+
+  // Fetch the event title so the header can display "<Event Name>" instead
+  // of an opaque Firestore id. Best-effort — silent on failure.
+  useEffect(() => {
+    if (!eventId) return;
+    let cancelled = false;
+    apiGet(`/api/portal/events?id=${eventId}`)
+      .catch(() => apiGet(`/api/events?id=${eventId}`))
+      .then((data) => {
+        if (cancelled) return;
+        const ev = Array.isArray(data) ? data.find((e: any) => e?.id === eventId) : data;
+        if (ev?.title) setEventName(ev.title as string);
+      })
+      .catch(() => { /* non-fatal */ });
+    return () => { cancelled = true; };
+  }, [eventId]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -503,7 +520,9 @@ export default function ScanPage() {
       <div>
         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Event Check-in</p>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">QR Scanner</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Event ID: {eventId}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+          {eventName ?? 'Loading event\u2026'}
+        </p>
       </div>
 
       {/* Camera card */}

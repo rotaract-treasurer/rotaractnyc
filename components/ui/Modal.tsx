@@ -152,7 +152,7 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
         tabIndex={-1}
         className={cn(
           'relative z-10 w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl animate-scale-in',
-          'max-h-[90vh] flex flex-col overflow-hidden',
+          'max-h-[90vh] flex flex-col overflow-hidden min-w-0',
           modalSizes[size],
           className
         )}
@@ -173,8 +173,8 @@ export default function Modal({ open, onClose, children, title, size = 'md', cla
           </div>
         )}
         {noPadding
-          ? <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{children}</div>
-          : <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-6">{children}</div>
+          ? <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{children}</div>
+          : <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain min-h-0 min-w-0 p-6">{children}</div>
         }
       </div>
     </div>
