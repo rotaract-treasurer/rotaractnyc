@@ -40,9 +40,11 @@ service firebase.storage {
     }
 
     // ── Profile Photos ──
+    // Members can manage their own photo. Board admins can also upload/replace
+    // a photo on behalf of another member (e.g., onboarding assistance).
     match /profile-photos/{userId}/{fileName} {
       allow read: if isMember();
-      allow write: if isOwner(userId) && isImage() && isValidSize();
+      allow write: if (isOwner(userId) || isBoard()) && isImage() && isValidSize();
       allow delete: if isOwner(userId) || isBoard();
     }
 

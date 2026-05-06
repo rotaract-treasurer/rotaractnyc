@@ -89,9 +89,12 @@ interface SnapshotCounts {
   tickets: number;
   revenueCents: number;
   checkedIn: number;
+  /** Aggregate donations (denormalised on the event doc by the webhook). */
+  donationsTotalCents: number;
+  donationsCount: number;
 }
 
-function totalsToCounts(t: AttendeeTotals): SnapshotCounts {
+function totalsToCounts(t: AttendeeTotals, donationsTotalCents = 0, donationsCount = 0): SnapshotCounts {
   return {
     totalAttendees: t.totalAttendees,
     members: t.members,
@@ -99,6 +102,8 @@ function totalsToCounts(t: AttendeeTotals): SnapshotCounts {
     tickets: t.tickets,
     revenueCents: t.revenueCents,
     checkedIn: t.checkedIn,
+    donationsTotalCents,
+    donationsCount,
   };
 }
 
@@ -114,6 +119,10 @@ interface EventDoc {
   status: string;
   visibility?: string;
   isPublic?: boolean;
+  /** Aggregate counters maintained transactionally by the Stripe webhook. */
+  donationsTotalCents?: number;
+  donationsCount?: number;
+  acceptsDonations?: boolean;
 }
 
 // ── Main entry point ────────────────────────────────────────────────────────
@@ -168,6 +177,9 @@ export async function runWeeklyEventDigest(
       status: d.status || 'published',
       visibility: d.visibility,
       isPublic: d.isPublic,
+      donationsTotalCents: typeof d.donationsTotalCents === 'number' ? d.donationsTotalCents : 0,
+      donationsCount: typeof d.donationsCount === 'number' ? d.donationsCount : 0,
+      acceptsDonations: !!d.acceptsDonations,
     };
   });
 
@@ -197,10 +209,14 @@ export async function runWeeklyEventDigest(
 
     // Delta = current vs. last run's snapshot.currentCounts
     const prev = snap.currentCounts;
+    const donationsTotalCents = ev.donationsTotalCents ?? 0;
+    const donationsCount = ev.donationsCount ?? 0;
     const delta = {
       rsvps: totals.totalAttendees - (prev?.totalAttendees ?? 0),
       tickets: totals.tickets - (prev?.tickets ?? 0),
       revenueCents: totals.revenueCents - (prev?.revenueCents ?? 0),
+      donationsTotalCents: donationsTotalCents - (prev?.donationsTotalCents ?? 0),
+      donationsCount: donationsCount - (prev?.donationsCount ?? 0),
     };
 
     // Skip recaps already sent
@@ -268,7 +284,7 @@ export async function runWeeklyEventDigest(
       dateLabel: formatHumanDate(ev.date),
       daysFromNow: days,
       location: ev.location,
-      totals: totalsToCounts(totals),
+      totals: totalsToCounts(totals, donationsTotalCents, donationsCount),
       delta,
       pdfAttached: attachPdf,
       isPastRecap,
@@ -372,7 +388,7 @@ export async function runWeeklyEventDigest(
 
       await adminDb.collection('digest_snapshots').doc(ev.id).set(
         {
-          currentCounts: totalsToCounts(totals),
+          currentCounts: totalsToCounts(totals, ev.donationsTotalCents ?? 0, ev.donationsCount ?? 0),
           previousCounts,
           lastSentAt: sentAt,
           lastIsoWeek: week,

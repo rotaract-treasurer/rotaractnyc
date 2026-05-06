@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost, apiPatch } from '@/hooks/useFirestore';
 import { useAuth } from '@/lib/firebase/auth';
+import { uploadFile, validateFile } from '@/lib/firebase/upload';
 import { useToast } from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import Spinner from '@/components/ui/Spinner';
 import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
 import Select from '@/components/ui/Select';
+import PhoneInput from '@/components/ui/PhoneInput';
 import MessageModal from '@/components/portal/MessageModal';
 import type { Member, MemberRole, MemberStatus } from '@/types';
 
@@ -57,12 +60,31 @@ export default function PortalMemberDetailPage() {
   const isPresident = currentMember?.role === 'president';
   const isSelf = currentMember?.id === id;
 
-  // Admin-edit form state
+  // Admin-edit form state (role/status/boardTitle)
   const [adminForm, setAdminForm] = useState({
     role: 'member' as MemberRole,
     status: 'active' as MemberStatus,
     boardTitle: '',
   });
+
+  // Admin profile-edit mode (firstName/lastName/bio/contact/etc.)
+  const [editMode, setEditMode] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    bio: '',
+    phone: '',
+    linkedIn: '',
+    committee: '',
+    occupation: '',
+    employer: '',
+    roleEmail: '',
+  });
+
+  // Admin photo upload
+  const photoRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const fetchMember = useCallback(async () => {
     setLoading(true);
@@ -73,6 +95,17 @@ export default function PortalMemberDetailPage() {
         role: (data?.role as MemberRole) || 'member',
         status: (data?.status as MemberStatus) || 'active',
         boardTitle: data?.boardTitle || '',
+      });
+      setProfileForm({
+        firstName: data?.firstName || '',
+        lastName: data?.lastName || '',
+        bio: data?.bio || '',
+        phone: data?.phone || '',
+        linkedIn: data?.linkedIn || '',
+        committee: data?.committee || '',
+        occupation: data?.occupation || '',
+        employer: data?.employer || '',
+        roleEmail: data?.roleEmail || '',
       });
     } catch {
       toast('Failed to load member profile', 'error');
@@ -106,6 +139,46 @@ export default function PortalMemberDetailPage() {
       toast(err?.message || 'Failed to update member', 'error');
     } finally {
       setSavingAdmin(false);
+    }
+  }
+
+  async function handleAdminPhotoChange() {
+    const file = photoRef.current?.files?.[0];
+    if (!file || !member) return;
+    const err = validateFile(file, { maxSizeMB: 5, allowedTypes: ['image/'] });
+    if (err) {
+      toast(err, 'error');
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const { url } = await uploadFile(file, 'profile-photos', member.id);
+      await apiPatch('/api/portal/members', { memberId: member.id, photoURL: url });
+      toast('Profile photo updated', 'success');
+      await fetchMember();
+    } catch (e: any) {
+      toast(e?.message || 'Upload failed', 'error');
+    } finally {
+      setUploadingPhoto(false);
+      if (photoRef.current) photoRef.current.value = '';
+    }
+  }
+
+  async function saveProfileChanges() {
+    if (!member) return;
+    setSavingProfile(true);
+    try {
+      await apiPatch('/api/portal/members', {
+        memberId: member.id,
+        ...profileForm,
+      });
+      toast('Profile updated', 'success');
+      setEditMode(false);
+      await fetchMember();
+    } catch (err: any) {
+      toast(err?.message || 'Failed to update profile', 'error');
+    } finally {
+      setSavingProfile(false);
     }
   }
 
@@ -170,7 +243,37 @@ export default function PortalMemberDetailPage() {
       {/* Profile Header */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row items-start gap-6">
-          <Avatar src={member.photoURL} alt={member.displayName} size="xl" />
+          <div className="relative shrink-0">
+            <Avatar src={member.photoURL} alt={member.displayName} size="xl" />
+            {/* Admin (or self) photo upload overlay */}
+            {(isBoard || isSelf) && (
+              <>
+                <input
+                  type="file"
+                  ref={photoRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAdminPhotoChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => photoRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  title={isSelf ? 'Change your photo' : 'Change member photo (admin)'}
+                  className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-cranberry text-white shadow-lg ring-2 ring-white dark:ring-gray-900 flex items-center justify-center hover:bg-cranberry-700 transition-colors disabled:opacity-60"
+                >
+                  {uploadingPhoto ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
               {member.displayName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Member'}
@@ -342,6 +445,114 @@ export default function PortalMemberDetailPage() {
               <Button size="sm">Edit My Profile</Button>
             </Link>
           </div>
+        </div>
+      )}
+
+      {/* Admin: edit profile fields on behalf of this member */}
+      {isBoard && !isSelf && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-display font-bold text-gray-900 dark:text-white">Edit Profile</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Update this member&apos;s name, bio, contact info, and committee on their behalf.
+              </p>
+            </div>
+            {!editMode ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditMode(true)}>
+                Edit Profile
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditMode(false);
+                  // Reset form to current member values
+                  setProfileForm({
+                    firstName: member.firstName || '',
+                    lastName: member.lastName || '',
+                    bio: member.bio || '',
+                    phone: member.phone || '',
+                    linkedIn: member.linkedIn || '',
+                    committee: member.committee || '',
+                    occupation: member.occupation || '',
+                    employer: member.employer || '',
+                    roleEmail: member.roleEmail || '',
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+
+          {editMode && (
+            <>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input
+                  label="First Name"
+                  value={profileForm.firstName}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, firstName: e.target.value }))}
+                />
+                <Input
+                  label="Last Name"
+                  value={profileForm.lastName}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, lastName: e.target.value }))}
+                />
+              </div>
+              <Textarea
+                label="Bio"
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm((f) => ({ ...f, bio: e.target.value }))}
+                rows={3}
+              />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input
+                  label="Committee"
+                  value={profileForm.committee}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, committee: e.target.value }))}
+                />
+                <PhoneInput
+                  label="Phone"
+                  value={profileForm.phone}
+                  onChange={(v) => setProfileForm((f) => ({ ...f, phone: v }))}
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input
+                  label="Occupation"
+                  value={profileForm.occupation}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, occupation: e.target.value }))}
+                />
+                <Input
+                  label="Employer"
+                  value={profileForm.employer}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, employer: e.target.value }))}
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input
+                  label="LinkedIn URL"
+                  type="url"
+                  value={profileForm.linkedIn}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, linkedIn: e.target.value }))}
+                  placeholder="https://linkedin.com/in/..."
+                />
+                <Input
+                  label="Role Email (e.g. treasurer@…)"
+                  type="email"
+                  value={profileForm.roleEmail}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, roleEmail: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-800">
+                <Button onClick={saveProfileChanges} loading={savingProfile}>
+                  Save Profile
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

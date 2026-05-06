@@ -260,4 +260,55 @@ describe('runWeeklyEventDigest', () => {
     const r2 = await runWeeklyEventDigest({ now });
     expect(r2.pastEvents).toBe(0);
   });
+
+  it('includes per-event donation totals and snapshots them for next-week deltas', async () => {
+    const now = new Date('2026-05-04T13:00:00Z');
+    state.events.push({
+      id: 'gala1',
+      title: 'Spring Gala',
+      slug: 'spring-gala',
+      date: new Date(now.getTime() + 10 * 86_400_000).toISOString(),
+      status: 'published',
+      acceptsDonations: true,
+      donationsTotalCents: 125000, // $1,250
+      donationsCount: 6,
+    });
+    state.members.push({
+      id: 'm1', role: 'board', status: 'active',
+      email: 'board@example.com', displayName: 'Board',
+    });
+    // Previous snapshot already recorded $1,000 / 4 gifts → expect Δ +$250 / +2
+    state.digest_snapshots['gala1'] = {
+      currentCounts: {
+        totalAttendees: 0, members: 0, guests: 0, tickets: 0,
+        revenueCents: 0, checkedIn: 0,
+        donationsTotalCents: 100000,
+        donationsCount: 4,
+      },
+    };
+    mockGetEventAttendees.mockResolvedValue({
+      rows: [],
+      totals: { members: 0, guests: 0, tickets: 0, revenueCents: 0, checkedIn: 0, totalAttendees: 0 },
+    });
+
+    const r = await runWeeklyEventDigest({ now });
+    expect(r.sent).toBe(1);
+
+    const html = mockSendEmail.mock.calls[0][0].html as string;
+    const text = mockSendEmail.mock.calls[0][0].text as string;
+    // Per-event line includes total raised and gift count
+    expect(html).toContain('$1250.00');
+    expect(html).toMatch(/6 gifts/);
+    // Delta of +$250 since last week
+    expect(html).toContain('+$250.00');
+    // Header summary aggregates donations
+    expect(html).toMatch(/in donations \(6\)/);
+    // Plain-text fallback also includes donations line
+    expect(text).toContain('$1250.00 donations');
+
+    // Snapshot rolled forward for next week
+    expect(state.digest_snapshots['gala1'].currentCounts.donationsTotalCents).toBe(125000);
+    expect(state.digest_snapshots['gala1'].currentCounts.donationsCount).toBe(6);
+    expect(state.digest_snapshots['gala1'].previousCounts.donationsTotalCents).toBe(100000);
+  });
 });

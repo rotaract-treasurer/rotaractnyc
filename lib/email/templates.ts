@@ -999,12 +999,17 @@ export interface DigestEventRow {
     revenueCents: number;
     checkedIn: number;
     totalAttendees: number;
+    /** Aggregate donations attributed to this event (Stripe webhook). */
+    donationsTotalCents: number;
+    donationsCount: number;
   };
   /** Delta vs. last digest. Zero when first observed. */
   delta: {
     rsvps: number;
     tickets: number;
     revenueCents: number;
+    donationsTotalCents: number;
+    donationsCount: number;
   };
   /** True if a PDF roster is attached for this event. */
   pdfAttached: boolean;
@@ -1075,10 +1080,18 @@ function digestEventCard(row: DigestEventRow): string {
             </tr>
             <tr>
               <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
-                <strong style="color:${TEXT_DARK};">${fmtMoney(row.totals.revenueCents)}</strong> revenue
+                <strong style="color:${TEXT_DARK};">${fmtMoney(row.totals.revenueCents)}</strong> ticket revenue
                 &nbsp; ${fmtMoneyDelta(row.delta.revenueCents)}
               </td>
             </tr>
+            ${row.totals.donationsCount > 0 || row.delta.donationsTotalCents !== 0 ? `
+            <tr>
+              <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
+                <strong style="color:${TEXT_DARK};">${fmtMoney(row.totals.donationsTotalCents)}</strong> donations
+                (${row.totals.donationsCount} ${row.totals.donationsCount === 1 ? 'gift' : 'gifts'})
+                &nbsp; ${fmtMoneyDelta(row.delta.donationsTotalCents)}
+              </td>
+            </tr>` : ''}
             ${row.isPastRecap ? `
             <tr>
               <td style="padding:6px 0; font-size:13px; color:${TEXT_BODY};">
@@ -1118,6 +1131,8 @@ export function weeklyEventDigestEmail(params: {
 
   const totalAttendees = upcoming.reduce((s, e) => s + e.totals.totalAttendees, 0);
   const totalRevenue = upcoming.reduce((s, e) => s + e.totals.revenueCents, 0);
+  const totalDonations = [...upcoming, ...past].reduce((s, e) => s + e.totals.donationsTotalCents, 0);
+  const totalDonationCount = [...upcoming, ...past].reduce((s, e) => s + e.totals.donationsCount, 0);
 
   return {
     subject: `${SITE.shortName} — Weekly Event Digest (${weekLabel})`,
@@ -1129,7 +1144,10 @@ export function weeklyEventDigestEmail(params: {
         <p style="margin:0; font-size:15px; color:${TEXT_DARK};">
           <strong>${upcoming.length}</strong> upcoming event${upcoming.length === 1 ? '' : 's'}
           &nbsp;·&nbsp; <strong>${totalAttendees}</strong> RSVPs
-          &nbsp;·&nbsp; <strong>${fmtMoney(totalRevenue)}</strong> projected revenue
+          &nbsp;·&nbsp; <strong>${fmtMoney(totalRevenue)}</strong> projected ticket revenue
+          ${totalDonationCount > 0
+            ? `&nbsp;·&nbsp; <strong>${fmtMoney(totalDonations)}</strong> in donations (${totalDonationCount})`
+            : ''}
         </p>
       `)}
 
@@ -1141,16 +1159,19 @@ export function weeklyEventDigestEmail(params: {
     `, `Weekly event digest — ${upcoming.length} upcoming event${upcoming.length === 1 ? '' : 's'}, ${totalAttendees} RSVPs.`),
     text:
       `Weekly Event Digest — ${weekLabel}\n\n` +
-      `${upcoming.length} upcoming event(s), ${totalAttendees} RSVPs, ${fmtMoney(totalRevenue)} projected revenue.\n\n` +
+      `${upcoming.length} upcoming event(s), ${totalAttendees} RSVPs, ${fmtMoney(totalRevenue)} projected ticket revenue` +
+      `${totalDonationCount > 0 ? `, ${fmtMoney(totalDonations)} in donations (${totalDonationCount})` : ''}.\n\n` +
       upcoming.map((e) => (
         `• ${e.title} — ${e.dateLabel}\n` +
         `  ${e.totals.totalAttendees} RSVPs (Δ ${e.delta.rsvps >= 0 ? '+' : ''}${e.delta.rsvps}) · ` +
         `${e.totals.tickets} tickets · ${fmtMoney(e.totals.revenueCents)} revenue` +
+        `${e.totals.donationsCount > 0 ? ` · ${fmtMoney(e.totals.donationsTotalCents)} donations (${e.totals.donationsCount})` : ''}` +
         (e.pdfAttached ? '  [PDF attached]' : '')
       )).join('\n\n') +
       (past.length > 0
         ? `\n\nPost-event recaps:\n` + past.map((e) =>
-            `• ${e.title} — ${e.dateLabel}: ${e.totals.checkedIn}/${e.totals.totalAttendees} checked in, ${fmtMoney(e.totals.revenueCents)} revenue`
+            `• ${e.title} — ${e.dateLabel}: ${e.totals.checkedIn}/${e.totals.totalAttendees} checked in, ${fmtMoney(e.totals.revenueCents)} revenue` +
+            `${e.totals.donationsCount > 0 ? `, ${fmtMoney(e.totals.donationsTotalCents)} donations (${e.totals.donationsCount})` : ''}`
           ).join('\n')
         : '') +
       `\n\nManage notifications: ${SITE.url}/portal/settings\n\n--\n${SITE.name}`,

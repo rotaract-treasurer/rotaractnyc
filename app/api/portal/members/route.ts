@@ -239,6 +239,41 @@ export async function PATCH(request: NextRequest) {
 
     const updates: Record<string, any> = { updatedAt: new Date().toISOString() };
 
+    // Profile fields that board+ admins may edit on behalf of another member.
+    // Mirrors the whitelist on /api/portal/profile but applied to memberId.
+    const PROFILE_FIELDS = [
+      'firstName',
+      'lastName',
+      'bio',
+      'phone',
+      'linkedIn',
+      'committee',
+      'occupation',
+      'employer',
+      'memberType',
+      'photoURL',
+      'address',
+      'birthday',
+      'whatsAppPhone',
+      'whatsAppSameAsPhone',
+      'interests',
+      'roleEmail',
+    ] as const;
+    for (const key of PROFILE_FIELDS) {
+      if (body[key] !== undefined) {
+        const val = body[key];
+        updates[key] = typeof val === 'string' ? val.trim() : val;
+      }
+    }
+    // Recompute displayName when first/last name change
+    if (body.firstName !== undefined || body.lastName !== undefined) {
+      const existing = memberDoc.data() || {};
+      const first = (body.firstName ?? existing.firstName ?? '').toString().trim();
+      const last = (body.lastName ?? existing.lastName ?? '').toString().trim();
+      const dn = `${first} ${last}`.trim();
+      if (dn) updates.displayName = dn;
+    }
+
     if (status && ['pending', 'active', 'inactive', 'alumni'].includes(status)) {
       updates.status = status;
     }
@@ -277,7 +312,10 @@ export async function PATCH(request: NextRequest) {
       'role' in updates ||
       'status' in updates ||
       'boardTitle' in updates ||
-      'boardOrder' in updates;
+      'boardOrder' in updates ||
+      'displayName' in updates ||
+      'photoURL' in updates ||
+      'bio' in updates;
     if (affectsLeadership) revalidateMemberPages();
 
     // If approving a pending member, send welcome email
