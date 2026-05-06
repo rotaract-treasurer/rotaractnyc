@@ -110,4 +110,36 @@ describe('POST /api/donate', () => {
     const data = await res.json();
     expect(data.error).toMatch(/name and email/i);
   });
+
+  it('attributes donation to an event when eventId/eventTitle/eventSlug provided', async () => {
+    const res = await POST(
+      makeRequest({
+        ...DONOR,
+        amount: '50',
+        eventId: 'evt_abc',
+        eventTitle: 'Spring Gala',
+        eventSlug: 'spring-gala',
+      }),
+    );
+    expect(res.status).toBe(200);
+    const args = mockCreate.mock.calls[0][0];
+    expect(args.metadata).toMatchObject({
+      type: 'donation',
+      eventId: 'evt_abc',
+      eventTitle: 'Spring Gala',
+      eventSlug: 'spring-gala',
+    });
+    expect(args.line_items[0].price_data.product_data.name).toMatch(/Spring Gala/);
+    expect(args.success_url).toMatch(/\/events\/spring-gala\?donation=success/);
+    expect(args.cancel_url).toMatch(/\/events\/spring-gala\?donation=cancelled/);
+  });
+
+  it('falls back to /donate redirects when no event context is provided', async () => {
+    const res = await POST(makeRequest({ ...DONOR, amount: '25' }));
+    expect(res.status).toBe(200);
+    const args = mockCreate.mock.calls[0][0];
+    expect(args.success_url).toMatch(/\/donate\?session_id=/);
+    expect(args.cancel_url).toMatch(/\/donate\?cancelled=true/);
+    expect(args.metadata).not.toHaveProperty('eventId');
+  });
 });

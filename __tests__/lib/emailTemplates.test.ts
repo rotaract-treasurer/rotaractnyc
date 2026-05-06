@@ -478,6 +478,13 @@ describe('donationThankYouEmail', () => {
   it('has correct subject', () => {
     expect(donationThankYouEmail('Owen', 5000).subject).toContain('Rotaract NYC');
   });
+
+  it('mentions the event when an event title is provided', () => {
+    const { html, text, subject } = donationThankYouEmail('Owen', 5000, 'Spring Gala');
+    expect(subject).toContain('Spring Gala');
+    expect(html).toContain('Spring Gala');
+    expect(text).toContain('Spring Gala');
+  });
 });
 
 // ── XSS escape coverage across member templates ──────────────────────────────

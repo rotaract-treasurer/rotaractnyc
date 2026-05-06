@@ -37,6 +37,10 @@ const navigation = [
     href: '/gallery',
   },
   {
+    label: 'Donate',
+    href: '/donate',
+  },
+  {
     label: 'Contact',
     href: '/contact',
   },

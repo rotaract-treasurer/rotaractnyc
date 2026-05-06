@@ -11,6 +11,7 @@ import GuestRsvpForm from '@/components/public/GuestRsvpForm';
 import PublicEventActions from '@/components/public/PublicEventActions';
 import EventWaitlistForm from '@/components/public/EventWaitlistForm';
 import EventDescription from '@/components/public/EventDescription';
+import EventDonateSection from '@/components/public/EventDonateSection';
 
 export const revalidate = 120; // 2 min — event details change more frequently
 
@@ -161,6 +162,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </div>
 
             <EventDescription text={event.description} />
+
+            {/* Donations — opt-in per event */}
+            {(event as any).acceptsDonations && (
+              <div className="mt-8">
+                <EventDonateSection
+                  eventId={event.id}
+                  eventTitle={event.title}
+                  eventSlug={event.slug}
+                  fundraisingGoalCents={(event as any).fundraisingGoalCents}
+                  donationsTotalCents={(event as any).donationsTotalCents}
+                  donationsCount={(event as any).donationsCount}
+                  suggestedDonationCents={(event as any).suggestedDonationCents}
+                />
+              </div>
+            )}
 
             {/* ── Sold-out banner (event-level capacity + tier-level) ── */}
             {(() => {

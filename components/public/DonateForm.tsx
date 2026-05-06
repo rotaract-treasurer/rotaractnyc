@@ -7,14 +7,36 @@ import Modal from '@/components/ui/Modal';
 
 const STRIPE_CHECKOUT_PREFIX = 'https://checkout.stripe.com/';
 
-const presets = [
+const defaultPresets = [
   { amount: 25, label: 'Supplies for a service day', emoji: '🎒' },
   { amount: 50, label: 'Meals for 10 families', emoji: '🍽️' },
   { amount: 100, label: 'Full project sponsorship', emoji: '🌍' },
 ];
 
-export default function DonateForm() {
+interface DonateFormProps {
+  /** When set, the donation is attributed to this event in Stripe metadata + webhook. */
+  eventId?: string;
+  /** Used in the Stripe product name + thank-you copy. */
+  eventTitle?: string;
+  /** Used to redirect back to the event page after Stripe checkout. */
+  eventSlug?: string;
+  /** Optional override for preset donation tiers (in dollars). */
+  presetAmounts?: number[];
+  /** Hide the page intro / wrapper styling — useful when embedding inside a card. */
+  compact?: boolean;
+}
+
+export default function DonateForm({
+  eventId,
+  eventTitle,
+  eventSlug,
+  presetAmounts,
+  compact = false,
+}: DonateFormProps = {}) {
   const searchParams = useSearchParams();
+  const presets = presetAmounts && presetAmounts.length > 0
+    ? presetAmounts.map((amount) => ({ amount, label: `$${amount}`, emoji: '💛' }))
+    : defaultPresets;
   const [selected, setSelected] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [donorName, setDonorName] = useState('');
@@ -87,6 +109,9 @@ export default function DonateForm() {
         donorEmail: trimmedEmail,
         idempotencyKey,
       };
+      if (eventId) body.eventId = eventId;
+      if (eventTitle) body.eventTitle = eventTitle;
+      if (eventSlug) body.eventSlug = eventSlug;
       if (selected) {
         body.amount = String(selected);
       } else if (customAmount) {
@@ -123,7 +148,7 @@ export default function DonateForm() {
   };
 
   return (
-    <div className="container-page max-w-3xl text-center">
+    <div className={compact ? 'text-center' : 'container-page max-w-3xl text-center'}>
       {verifying && (
         <div className="mb-8 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center">
           <p className="text-gray-600 dark:text-gray-400">Verifying your donation…</p>
@@ -156,15 +181,15 @@ export default function DonateForm() {
         </div>
       )}
 
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-10">
+      <div className={`${compact ? 'p-6' : 'p-10'} bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800`}>
         <div className="text-5xl mb-4">💛</div>
         <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-4">
-          Every Dollar Makes a Difference
+          {eventTitle ? `Support ${eventTitle}` : 'Every Dollar Makes a Difference'}
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-          Donations to Rotaract NYC support our community service projects, including food bank
-          drives, park cleanups, educational programs, and international service initiatives.
-          100% of donations go directly to our project funds.
+          {eventTitle
+            ? `Make a tax-deductible donation toward ${eventTitle}. Every contribution helps us cover event costs and fund the community programs this event supports.`
+            : 'Donations to Rotaract NYC support our community service projects, including food bank drives, park cleanups, educational programs, and international service initiatives. 100% of donations go directly to our project funds.'}
         </p>
 
         <div className="grid sm:grid-cols-3 gap-4 mb-6" role="radiogroup" aria-label="Donation amount presets">

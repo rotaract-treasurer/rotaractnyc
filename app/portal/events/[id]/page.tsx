@@ -15,6 +15,7 @@ import CreateEventModal from '@/components/portal/CreateEventModal';
 import EventActionBar from '@/components/portal/EventActionBar';
 import EventQRCode from '@/components/portal/EventQRCode';
 import EventDescription from '@/components/public/EventDescription';
+import EventDonateSection from '@/components/public/EventDonateSection';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 import type { RotaractEvent, RSVPStatus, PaymentSettings } from '@/types';
 
@@ -737,7 +738,20 @@ export default function PortalEventDetailPage() {
         {/* ── Sidebar ── */}
         <div className="lg:sticky lg:top-6 space-y-4">
           <EventRegistration event={event} currentRSVP={currentRSVP} onRSVP={handleRSVP} onPurchaseTicket={handlePurchaseTicket} onCancelTicket={handleCancelTicket} attendeeCount={goingCount} />
-          
+
+          {/* Donations — opt-in per event */}
+          {event.acceptsDonations && !isPast && (
+            <EventDonateSection
+              eventId={event.id}
+              eventTitle={event.title}
+              eventSlug={event.slug}
+              fundraisingGoalCents={event.fundraisingGoalCents}
+              donationsTotalCents={event.donationsTotalCents}
+              donationsCount={event.donationsCount}
+              suggestedDonationCents={event.suggestedDonationCents}
+            />
+          )}
+
           {/* QR Code for check-in */}
           {!isPast && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800 p-5">

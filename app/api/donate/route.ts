@@ -22,7 +22,17 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetAt);
 
   try {
-    const { amount, customAmount, embedded, donorName, donorEmail, idempotencyKey } = await request.json();
+    const {
+      amount,
+      customAmount,
+      embedded,
+      donorName,
+      donorEmail,
+      idempotencyKey,
+      eventId,
+      eventTitle,
+      eventSlug,
+    } = await request.json();
     const useEmbeddedCheckout = embedded === true;
 
     const safeDonorName = donorName || 'Anonymous';
@@ -34,6 +44,17 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Optional: scope this donation to a specific event
+    const safeEventId = typeof eventId === 'string' && eventId.length > 0 && eventId.length < 128
+      ? eventId
+      : '';
+    const safeEventTitle = typeof eventTitle === 'string' && eventTitle.length > 0
+      ? eventTitle.slice(0, 200)
+      : '';
+    const safeEventSlug = typeof eventSlug === 'string' && eventSlug.length > 0
+      ? eventSlug.slice(0, 200)
+      : '';
 
     let cents: number;
     let description: string;
@@ -53,12 +74,16 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
 
+    const productName = safeEventTitle
+      ? `Donation — ${safeEventTitle}`
+      : 'Donation to Rotaract NYC';
+
     const lineItems = [
       {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Donation to Rotaract NYC',
+            name: productName,
             description,
           },
           unit_amount: cents,
@@ -67,15 +92,26 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const metadata = {
+    const metadata: Record<string, string> = {
       type: 'donation',
       amountCents: String(cents),
       donorName: safeDonorName,
       donorEmail: safeDonorEmail,
     };
+    if (safeEventId) metadata.eventId = safeEventId;
+    if (safeEventTitle) metadata.eventTitle = safeEventTitle;
+    if (safeEventSlug) metadata.eventSlug = safeEventSlug;
 
     // 30-minute expiry for donation checkout sessions
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
+
+    // When tied to an event, redirect back to the event page on success/cancel.
+    const successPath = safeEventSlug
+      ? `/events/${encodeURIComponent(safeEventSlug)}?donation=success&session_id={CHECKOUT_SESSION_ID}`
+      : `/donate?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelPath = safeEventSlug
+      ? `/events/${encodeURIComponent(safeEventSlug)}?donation=cancelled`
+      : `/donate?cancelled=true`;
 
     if (useEmbeddedCheckout) {
       const session = await stripe.checkout.sessions.create(
@@ -84,7 +120,7 @@ export async function POST(request: NextRequest) {
           ui_mode: 'embedded',
           line_items: lineItems,
           expires_at: expiresAt,
-          return_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
+          return_url: `${SITE_URL}${successPath}`,
           metadata,
         },
         idempotencyKey
@@ -101,8 +137,8 @@ export async function POST(request: NextRequest) {
         mode: 'payment',
         line_items: lineItems,
         expires_at: expiresAt,
-        success_url: `${SITE_URL}/donate?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${SITE_URL}/donate?cancelled=true`,
+        success_url: `${SITE_URL}${successPath}`,
+        cancel_url: `${SITE_URL}${cancelPath}`,
         metadata,
       },
       idempotencyKey

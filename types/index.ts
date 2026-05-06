@@ -102,6 +102,17 @@ export interface RotaractEvent {
   waitlistEnabled?: boolean;
   isPublic: boolean;
   status: 'draft' | 'published' | 'cancelled';
+  // ── Donations (optional, opt-in per event) ──
+  /** When true, the event accepts donations alongside (or instead of) tickets. */
+  acceptsDonations?: boolean;
+  /** Optional fundraising goal in cents — used to render a progress bar. */
+  fundraisingGoalCents?: number;
+  /** Suggested preset donation amounts (in cents). Falls back to global presets. */
+  suggestedDonationCents?: number[];
+  /** Sum of all donations attributed to this event (cents). Maintained by webhook. */
+  donationsTotalCents?: number;
+  /** Count of donation transactions attributed to this event. Maintained by webhook. */
+  donationsCount?: number;
   // Recurrence fields
   isRecurring?: boolean;
   recurrence?: RecurrenceRule;

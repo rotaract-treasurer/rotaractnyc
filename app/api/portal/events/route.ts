@@ -163,6 +163,8 @@ export async function POST(request: NextRequest) {
       status,
       isRecurring,
       recurrence,
+      acceptsDonations,
+      fundraisingGoalCents,
     } = body;
 
     // Validate required fields
@@ -204,6 +206,13 @@ export async function POST(request: NextRequest) {
       attendeeCount: 0,
       isPublic: isPublic ?? true,
       status: status || 'draft',
+      acceptsDonations: acceptsDonations === true,
+      fundraisingGoalCents:
+        typeof fundraisingGoalCents === 'number' && fundraisingGoalCents > 0
+          ? Math.round(fundraisingGoalCents)
+          : null,
+      donationsTotalCents: 0,
+      donationsCount: 0,
       isRecurring: isRecurring || false,
       recurrence: isRecurring && recurrence ? recurrence : null,
       recurrenceParentId: null,

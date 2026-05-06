@@ -466,6 +466,10 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
     : '';
   const amountCents = session.amount_total || 0;
 
+  // Optional event attribution (set when donation came from an event page)
+  const eventId = typeof session.metadata?.eventId === 'string' ? session.metadata.eventId : '';
+  const eventTitle = typeof session.metadata?.eventTitle === 'string' ? session.metadata.eventTitle : '';
+
   // Persist donor to `donors` collection (CRM)
   if (donorEmail) {
     try {
@@ -480,11 +484,39 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
     }
   }
 
+  // Attribute donation to the event when provided
+  if (eventId) {
+    try {
+      const eventRef = adminDb.collection('events').doc(eventId);
+      const donationRef = eventRef.collection('donations').doc(session.id);
+      await adminDb.runTransaction(async (tx) => {
+        const existing = await tx.get(donationRef);
+        if (existing.exists) return; // idempotent — already recorded
+        tx.set(donationRef, {
+          stripeSessionId: session.id,
+          donorName,
+          donorEmail: donorEmail || null,
+          amountCents,
+          createdAt: new Date().toISOString(),
+        });
+        tx.update(eventRef, {
+          donationsTotalCents: FieldValue.increment(amountCents),
+          donationsCount: FieldValue.increment(1),
+          updatedAt: new Date().toISOString(),
+        });
+      });
+    } catch (err) {
+      console.error('Failed to attribute donation to event', eventId, err);
+    }
+  }
+
   await createTransaction({
     type: 'income',
     category: 'Donations',
     amount: amountCents,
-    description: `Donation — $${(amountCents / 100).toFixed(2)}`,
+    description: eventTitle
+      ? `Donation (${eventTitle}) — $${(amountCents / 100).toFixed(2)}`
+      : `Donation — $${(amountCents / 100).toFixed(2)}`,
     date: new Date().toISOString(),
     createdBy: 'stripe',
     createdAt: new Date().toISOString(),
@@ -502,7 +534,13 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
       donorName,
       {
         targetType: 'donation',
-        details: { amountCents, donorEmail: donorEmail || 'unknown', stripeSessionId: session.id },
+        targetId: eventId || undefined,
+        details: {
+          amountCents,
+          donorEmail: donorEmail || 'unknown',
+          stripeSessionId: session.id,
+          ...(eventId ? { eventId, eventTitle } : {}),
+        },
       },
     );
   } catch (err) {
@@ -512,7 +550,7 @@ async function handleDonationCheckout(session: Stripe.Checkout.Session): Promise
   // Send thank-you email to donor
   if (donorEmail) {
     try {
-      const content = donationThankYouEmail(donorName, amountCents);
+      const content = donationThankYouEmail(donorName, amountCents, eventTitle || undefined);
       await sendEmail({ to: donorEmail, subject: content.subject, html: content.html, text: content.text });
     } catch (err) {
       console.error('Failed to send donation thank-you email:', err);

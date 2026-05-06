@@ -197,6 +197,10 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
   const [isPublic, setIsPublic] = useState(true);
   const [status, setStatus] = useState<'draft' | 'published' | 'cancelled'>('draft');
 
+  // Donations (optional, opt-in)
+  const [acceptsDonations, setAcceptsDonations] = useState(false);
+  const [fundraisingGoal, setFundraisingGoal] = useState('');
+
   // Pricing
   const [memberPrice, setMemberPrice] = useState('');
   const [guestPrice, setGuestPrice] = useState('');
@@ -265,6 +269,10 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
       setCapacity(event.capacity ? String(event.capacity) : '');
       setIsPublic(event.isPublic ?? true);
       setStatus(event.status || 'draft');
+      setAcceptsDonations(event.acceptsDonations ?? false);
+      setFundraisingGoal(
+        event.fundraisingGoalCents != null ? String(event.fundraisingGoalCents / 100) : '',
+      );
       if (event.pricing) {
         setMemberPrice(String(event.pricing.memberPrice / 100));
         setGuestPrice(String(event.pricing.guestPrice / 100));
@@ -337,6 +345,8 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
     setCapacity('');
     setIsPublic(true);
     setStatus('draft');
+    setAcceptsDonations(false);
+    setFundraisingGoal('');
     setMemberPrice('');
     setGuestPrice('');
     setEarlyBirdPrice('');
@@ -538,6 +548,11 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
         capacity: capacity ? parseInt(capacity) : undefined,
         isPublic,
         status,
+        acceptsDonations,
+        fundraisingGoalCents:
+          acceptsDonations && fundraisingGoal
+            ? Math.max(0, Math.round(parseFloat(fundraisingGoal) * 100))
+            : undefined,
         isRecurring,
         recurrence,
       };
@@ -1207,6 +1222,39 @@ export default function CreateEventModal({ open, onClose, onSaved, event }: Crea
                     <p className="text-xs text-gray-500 dark:text-gray-400">Visible on the public website</p>
                   </div>
                 </div>
+              </div>
+
+              {/* ── Donations ── */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/40 p-4 space-y-4">
+                <div className="flex items-start gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={acceptsDonations}
+                      onChange={(e) => setAcceptsDonations(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cranberry-500/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-cranberry-600" />
+                  </label>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Accept Donations</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Show a “Donate to this event” button on the event page — useful for fundraisers or when guests want to give beyond a ticket.
+                    </p>
+                  </div>
+                </div>
+                {acceptsDonations && (
+                  <Input
+                    label="Fundraising Goal (optional)"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 5000"
+                    value={fundraisingGoal}
+                    onChange={(e) => setFundraisingGoal(e.target.value)}
+                    helperText="In dollars. When set, a progress bar will show donor activity toward the goal."
+                  />
+                )}
               </div>
             </div>
           </div>
