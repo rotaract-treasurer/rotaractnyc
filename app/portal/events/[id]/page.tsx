@@ -348,6 +348,7 @@ export default function PortalEventDetailPage() {
   const isPast = new Date(event.date) < new Date();
 
   return (
+    <>
     <div className="max-w-4xl mx-auto space-y-6 page-enter pb-28 lg:pb-6">
       {/* Back */}
       <button onClick={() => router.back()} className="group text-sm text-gray-500 hover:text-cranberry transition-colors flex items-center gap-1.5">
@@ -746,6 +747,12 @@ export default function PortalEventDetailPage() {
           )}
         </div>
       </div>
+    </div>
+    {/* Modals must live outside the page-enter div — its translateY animation
+        creates a new containing block that confines position:fixed children
+        (the backdrop) to the div, so the modal renders below the page rather
+        than centered on the viewport. Same pattern used in portal/page.tsx
+        and portal/documents/page.tsx. */}
 
       {canManageEvents && (
         <CreateEventModal open={showEditModal} onClose={() => setShowEditModal(false)} event={event} onSaved={() => { fetchEvent(); }} />
@@ -807,6 +814,6 @@ export default function PortalEventDetailPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
