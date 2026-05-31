@@ -394,14 +394,14 @@ async function main() {
   );
 
   // ── Reminder mode ───────────────────────────────────────────────────────
-  // Sends the time-sensitive reminder template to the ALUMNI segment only
-  // (members & past attendees are excluded). Ticket buyers stay suppressed.
+  // Sends the time-sensitive reminder template. Target is controlled by
+  // --list:
+  //   --list=members (default) → alumni from the members/alumni roster
+  //   --list=past              → prior 2023/2025 gala attendees
+  //   --list=both              → both of the above
+  // Ticket buyers are always suppressed (live from Firestore).
   if (reminder) {
-    const alumni = MEMBERS_AND_ALUMNI.filter((r) => r.audience === 'alumni');
-    const seg = resolveSegment('Alumni reminder', alumni, suppression);
-    printSegmentSummary(seg);
-
-    const buildReminder = (firstName: string) =>
+    const buildReminder = (firstName: string, isPastAttendee: boolean) =>
       galaReminderEmail({
         firstName,
         ticketUrl,
@@ -410,7 +410,32 @@ async function main() {
         eventTime: DEFAULT_EVENT_TIME,
         eventVenue: DEFAULT_EVENT_VENUE,
         alumni: true,
+        pastAttendee: isPastAttendee,
       });
+
+    // Resolve which reminder segments to send.
+    const reminderSegments: Array<{
+      seg: ResolvedSegment<{ email: string; firstName: string }>;
+      isPast: boolean;
+    }> = [];
+
+    if (listArg === 'past' || listArg === 'both') {
+      const past = resolveSegment('Past attendees reminder', PAST_ATTENDEES, suppression);
+      reminderSegments.push({ seg: past, isPast: true });
+    }
+    if (listArg === 'members' || listArg === 'both') {
+      const alumni = MEMBERS_AND_ALUMNI.filter((r) => r.audience === 'alumni');
+      // Also suppress anyone already on the past-attendees list so nobody
+      // gets two reminders if --list=both is used.
+      const alumniSuppression = new Set(suppression);
+      if (listArg === 'both') {
+        PAST_ATTENDEES.forEach((r) => alumniSuppression.add(norm(r.email)));
+      }
+      const seg = resolveSegment('Alumni reminder', alumni, alumniSuppression);
+      reminderSegments.push({ seg, isPast: false });
+    }
+
+    reminderSegments.forEach(({ seg }) => printSegmentSummary(seg));
 
     if (testEmail) {
       if (!send) {
@@ -418,7 +443,8 @@ async function main() {
         return;
       }
       console.log(`\n📨 Sending TEST reminder to ${testEmail}…`);
-      const built = buildReminder('Friend');
+      const isPast = listArg === 'past';
+      const built = buildReminder('Friend', isPast);
       const r = await sendEmail({
         to: testEmail,
         subject: `[TEST · reminder] ${built.subject}`,
@@ -435,40 +461,42 @@ async function main() {
       return;
     }
 
-    console.log(`\n📨 Sending "${seg.label}" → ${seg.recipients.length} recipients…`);
-    let sent = 0;
-    let failed = 0;
-    for (let i = 0; i < seg.recipients.length; i += CHUNK_SIZE) {
-      const chunk = seg.recipients.slice(i, i + CHUNK_SIZE);
-      const results = await Promise.allSettled(
-        chunk.map((r) => {
-          const built = buildReminder(r.firstName);
-          return sendEmail({
-            to: r.email,
-            subject: built.subject,
-            html: built.html,
-            text: built.text,
-            attachments: posterAttachment ? [posterAttachment] : undefined,
-          }).then((res) => ({ res, email: r.email }));
-        }),
-      );
-      for (const settled of results) {
-        if (settled.status === 'fulfilled' && settled.value.res.success) {
-          sent++;
-          console.log(`   ✅ ${settled.value.email}`);
-        } else {
-          failed++;
-          const reason =
-            settled.status === 'fulfilled' ? settled.value.res.error : String(settled.reason);
-          const who = settled.status === 'fulfilled' ? settled.value.email : '(unknown)';
-          console.log(`   ❌ ${who} — ${reason}`);
+    for (const { seg, isPast } of reminderSegments) {
+      console.log(`\n📨 Sending "${seg.label}" → ${seg.recipients.length} recipients…`);
+      let sent = 0;
+      let failed = 0;
+      for (let i = 0; i < seg.recipients.length; i += CHUNK_SIZE) {
+        const chunk = seg.recipients.slice(i, i + CHUNK_SIZE);
+        const results = await Promise.allSettled(
+          chunk.map((r) => {
+            const built = buildReminder(r.firstName, isPast);
+            return sendEmail({
+              to: r.email,
+              subject: built.subject,
+              html: built.html,
+              text: built.text,
+              attachments: posterAttachment ? [posterAttachment] : undefined,
+            }).then((res) => ({ res, email: r.email }));
+          }),
+        );
+        for (const settled of results) {
+          if (settled.status === 'fulfilled' && settled.value.res.success) {
+            sent++;
+            console.log(`   ✅ ${settled.value.email}`);
+          } else {
+            failed++;
+            const reason =
+              settled.status === 'fulfilled' ? settled.value.res.error : String(settled.reason);
+            const who = settled.status === 'fulfilled' ? settled.value.email : '(unknown)';
+            console.log(`   ❌ ${who} — ${reason}`);
+          }
+        }
+        if (i + CHUNK_SIZE < seg.recipients.length) {
+          await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
         }
       }
-      if (i + CHUNK_SIZE < seg.recipients.length) {
-        await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
-      }
+      console.log(`   → done: ${sent} sent, ${failed} failed`);
     }
-    console.log(`   → done: ${sent} sent, ${failed} failed`);
     return;
   }
 

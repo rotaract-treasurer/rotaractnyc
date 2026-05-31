@@ -1412,6 +1412,8 @@ export function galaReminderEmail(
   params: GalaInviteParams & {
     /** If true, uses warmer "alumni" framing. Defaults to true for this send. */
     alumni?: boolean;
+    /** If true, uses "we'd love to have you back" framing for prior gala attendees. */
+    pastAttendee?: boolean;
   },
 ): { subject: string; html: string; text: string } {
   const firstName = params.firstName?.trim() || 'there';
@@ -1421,6 +1423,16 @@ export function galaReminderEmail(
   const venue = params.eventVenue ?? GALA_DEFAULTS.eventVenue;
   const ticketUrl = params.ticketUrl;
   const donateUrl = params.donateUrl ?? `${SITE.url}/donate`;
+  const isPast = !!params.pastAttendee;
+
+  // Prior gala attendees get a "welcome back" line; alumni get the
+  // "alumni who built this club" line.
+  const openerHtml = isPast
+    ? `A quick nudge — the <strong>2026 Rotaract NYC Gala</strong> is just days away, and we'd love to have you back. We're celebrating <strong>30 years</strong> of the Rotaract Club at the United Nations, and last year's guests made the night what it was.`
+    : `A quick nudge — the <strong>2026 Rotaract NYC Gala</strong> is just days away, and we'd hate for you to miss it. We're celebrating <strong>30 years</strong> of the Rotaract Club at the United Nations, and the alumni who built this club belong in the room.`;
+  const openerText = isPast
+    ? `A quick nudge — the 2026 Rotaract NYC Gala is just days away, and we'd love to have you back. We're celebrating 30 years of the Rotaract Club at the United Nations, and last year's guests made the night what it was.`
+    : `A quick nudge — the 2026 Rotaract NYC Gala is just days away, and we'd hate for you to miss it. We're celebrating 30 years of the Rotaract Club at the United Nations, and the alumni who built this club belong in the room.`;
 
   const subject = `${safeName}, just days until the Rotaract NYC Gala — seats are going fast`;
   const preview =
@@ -1430,7 +1442,7 @@ export function galaReminderEmail(
     subject,
     html: wrapTemplate(`
       ${h1(`${safeName}, the gala is almost here.`)}
-      ${p(`A quick nudge — the <strong>2026 Rotaract NYC Gala</strong> is just days away, and we'd hate for you to miss it. We're celebrating <strong>30 years</strong> of the Rotaract Club at the United Nations, and the alumni who built this club belong in the room.`)}
+      ${p(openerHtml)}
       ${p(`A handful of seats are still open, but they're filling up quickly. If you've been meaning to grab yours, now's the moment.`)}
       ${galaDetailsCard(date, time, venue)}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 8px 0 24px;">
@@ -1451,7 +1463,7 @@ export function galaReminderEmail(
     `, preview),
     text:
       `${firstName}, the gala is almost here.\n\n` +
-      `A quick nudge — the 2026 Rotaract NYC Gala is just days away, and we'd hate for you to miss it. We're celebrating 30 years of the Rotaract Club at the United Nations, and the alumni who built this club belong in the room.\n\n` +
+      `${openerText}\n\n` +
       `A handful of seats are still open, but they're filling up quickly. If you've been meaning to grab yours, now's the moment.\n\n` +
       `THE 2026 ROTARACT NYC GALA\n` +
       `When:   ${date} · ${time}\n` +
