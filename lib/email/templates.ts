@@ -1216,9 +1216,9 @@ interface GalaInviteParams {
 }
 
 const GALA_DEFAULTS = {
-  eventDate: 'Saturday, June 6, 2026',
-  eventTime: '7:00 PM – 11:00 PM',
-  eventVenue: 'New York City — venue details on the event page',
+  eventDate: 'Friday, June 5, 2026',
+  eventTime: '7:00 PM – 10:00 PM',
+  eventVenue: 'Foursome NYC',
   posterPath: '/rotaract-gala-2026-poster.jpg',
 } as const;
 
@@ -1436,7 +1436,7 @@ export function galaReminderEmail(
 
   const subject = `${safeName}, just days until the Rotaract NYC Gala — seats are going fast`;
   const preview =
-    `Saturday, June 6 is almost here. A few seats are left — reserve yours before they're gone.`;
+    `Friday, June 5 is almost here. A few seats are left — reserve yours before they're gone.`;
 
   return {
     subject,

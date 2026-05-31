@@ -83,9 +83,9 @@ const db = getFirestore();
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const DEFAULT_GALA_SLUG = 'fundraiser-gala-30th-year-celebration';
-const DEFAULT_EVENT_DATE = 'Saturday, June 6, 2026';
-const DEFAULT_EVENT_TIME = '7:00 PM – 11:00 PM';
-const DEFAULT_EVENT_VENUE = 'New York City — full address on the event page';
+const DEFAULT_EVENT_DATE = 'Friday, June 5, 2026';
+const DEFAULT_EVENT_TIME = '7:00 PM – 10:00 PM';
+const DEFAULT_EVENT_VENUE = 'Foursome NYC';
 const POSTER_PATH = path.resolve(__dirname, '../public/rotaract-gala-2026-poster.jpg');
 const POSTER_FILENAME = 'Rotaract-NYC-Gala-2026-Invitation.jpg';
 
