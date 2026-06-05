@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { useAuth } from '@/lib/firebase/auth';
-import { apiGet } from '@/hooks/useFirestore';
+import { apiGet, apiPost } from '@/hooks/useFirestore';
 import { useToast } from '@/components/ui/Toast';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
@@ -31,6 +31,7 @@ interface Purchaser {
   invitedBy?: string | null;
   notes?: string | null;
   memberId?: string | null;
+  rsvpId?: string | null;
 }
 
 interface Summary {
@@ -63,6 +64,8 @@ export default function EventAttendeesPage() {
   const [filterKind, setFilterKind] = useState<FilterKind>('all');
   const [filterPay, setFilterPay] = useState<FilterPay>('all');
   const [filterCheck, setFilterCheck] = useState<FilterCheck>('all');
+  // Person keys currently mid-flight so we can disable the button + show a spinner.
+  const [checkingIn, setCheckingIn] = useState<Set<string>>(new Set());
 
   const canManage = member && ['board', 'president', 'treasurer'].includes(member.role);
 
@@ -130,6 +133,63 @@ export default function EventAttendeesPage() {
       return true;
     });
   }, [purchasers, search, filterKind, filterPay, filterCheck]);
+
+  /* ── Manual check-in ── */
+  // One person can span several order rows (e.g. two separate purchases). We
+  // key by person so toggling check-in updates every matching row and the
+  // summary count stays in sync with the per-person totals from the API.
+  const personKey = (p: Purchaser) =>
+    p.kind === 'member'
+      ? `member:${p.memberId || p.rsvpId || p.id}`
+      : `guest:${(p.email || '').toLowerCase() || p.rsvpId || p.id}`;
+
+  const countCheckedIn = (rows: Purchaser[]) => {
+    const seen = new Set<string>();
+    for (const r of rows) if (r.checkedIn) seen.add(personKey(r));
+    return seen.size;
+  };
+
+  const handleToggleCheckIn = async (p: Purchaser) => {
+    const key = personKey(p);
+    if (checkingIn.has(key)) return;
+    const next = !p.checkedIn;
+    const snapshot = purchasers; // captured for revert on failure
+    const nowIso = new Date().toISOString();
+
+    setCheckingIn((s) => new Set(s).add(key));
+
+    // Optimistically flip every row belonging to this person.
+    const optimistic = purchasers.map((r) =>
+      personKey(r) === key
+        ? { ...r, checkedIn: next, checkedInAt: next ? nowIso : null }
+        : r,
+    );
+    setPurchasers(optimistic);
+    setSummary((sm) => (sm ? { ...sm, checkedInCount: countCheckedIn(optimistic) } : sm));
+
+    try {
+      await apiPost(`/api/portal/events/${id}/manual-checkin`, {
+        kind: p.kind,
+        checkedIn: next,
+        memberId: p.memberId ?? null,
+        rsvpId: p.rsvpId ?? null,
+        email: p.email ?? null,
+        name: p.name ?? null,
+      });
+      toast(next ? `${p.name} checked in` : `Check-in undone for ${p.name}`);
+    } catch (err: any) {
+      // Roll back to the pre-click snapshot.
+      setPurchasers(snapshot);
+      setSummary((sm) => (sm ? { ...sm, checkedInCount: countCheckedIn(snapshot) } : sm));
+      toast(err?.message || 'Check-in failed — please try again', 'error');
+    } finally {
+      setCheckingIn((s) => {
+        const n = new Set(s);
+        n.delete(key);
+        return n;
+      });
+    }
+  };
 
   /* ── Exports ── */
   const handleExportCSV = () => {
@@ -305,6 +365,27 @@ export default function EventAttendeesPage() {
             <Button
               size="sm"
               variant="secondary"
+              onClick={() => router.push(`/portal/events/${id}/scan`)}
+            >
+              <svg
+                className="w-4 h-4 mr-1.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Scan QR
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleExportCSV}
               loading={exporting === 'csv'}
               disabled={!!exporting}
@@ -420,7 +501,9 @@ export default function EventAttendeesPage() {
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
           Showing <strong className="text-gray-900 dark:text-white">{filtered.length}</strong> of{' '}
-          {purchasers.length} attendees. Exports use the current filtered view.
+          {purchasers.length} attendees. Search a name and tap{' '}
+          <strong className="text-gray-900 dark:text-white">Check in</strong> to mark attendance, or use{' '}
+          <strong className="text-gray-900 dark:text-white">Scan QR</strong> for tickets. Exports use the current filtered view.
         </p>
       </div>
 
@@ -450,6 +533,7 @@ export default function EventAttendeesPage() {
                   <th className="text-right font-semibold px-4 py-3">Paid</th>
                   <th className="text-center font-semibold px-4 py-3">Status</th>
                   <th className="text-left font-semibold px-4 py-3">Registered</th>
+                  <th className="text-center font-semibold px-4 py-3">Check-in</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -505,22 +589,18 @@ export default function EventAttendeesPage() {
                               Free
                             </span>
                           )}
-                          {p.checkedIn && (
-                            <span
-                              title={
-                                p.checkedInAt
-                                  ? `Checked in at ${new Date(p.checkedInAt).toLocaleString()}`
-                                  : 'Checked in'
-                              }
-                              className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full"
-                            >
-                              ✓ In
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                         {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <CheckInButton
+                          checkedIn={!!p.checkedIn}
+                          checkedInAt={p.checkedInAt}
+                          busy={checkingIn.has(personKey(p))}
+                          onClick={() => handleToggleCheckIn(p)}
+                        />
                       </td>
                     </tr>
                   );
@@ -581,5 +661,64 @@ function Select({
         </option>
       ))}
     </select>
+  );
+}
+
+/* ── Manual check-in toggle ──
+ * Big, tap-friendly door button. Green when checked in (shows time, tap to
+ * undo); cranberry "Check in" otherwise. Shows a spinner while the request
+ * is in flight. */
+function CheckInButton({
+  checkedIn,
+  checkedInAt,
+  busy,
+  onClick,
+}: {
+  checkedIn: boolean;
+  checkedInAt?: string | null;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  const time =
+    checkedIn && checkedInAt
+      ? new Date(checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+      : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      title={
+        checkedIn
+          ? time
+            ? `Checked in at ${time} · tap to undo`
+            : 'Checked in · tap to undo'
+          : 'Tap to check in'
+      }
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait ${
+        checkedIn
+          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60'
+          : 'bg-cranberry text-white hover:bg-cranberry/90'
+      }`}
+    >
+      {busy ? (
+        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      ) : checkedIn ? (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      )}
+      <span className="whitespace-nowrap">
+        {busy ? 'Saving…' : checkedIn ? (time ? `In · ${time}` : 'Checked in') : 'Check in'}
+      </span>
+    </button>
   );
 }

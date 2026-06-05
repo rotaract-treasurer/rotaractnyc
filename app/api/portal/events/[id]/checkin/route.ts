@@ -63,43 +63,97 @@ export async function POST(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Verify member exists
-    try {
-      await adminAuth.getUser(memberId);
-    } catch {
-      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
-    }
-
-    const rsvpRef = adminDb.collection('rsvps').doc(`${memberId}_${eventId}`);
-    const rsvpDoc = await rsvpRef.get();
     const now = new Date().toISOString();
     const eventName = eventDoc.data()?.title || 'Event';
 
-    // Resolve a friendly display name for the scanner UI. Prefer the member's
-    // own profile, fall back to whatever the RSVP captured at booking time.
-    let memberDisplayName: string | undefined;
-    try {
-      const memberSnap = await adminDb.collection('members').doc(memberId).get();
-      if (memberSnap.exists) {
-        const md = memberSnap.data() as { displayName?: string; firstName?: string; lastName?: string };
-        memberDisplayName =
-          md.displayName ||
-          [md.firstName, md.lastName].filter(Boolean).join(' ').trim() ||
-          undefined;
+    // ── Resolve the ticket holder ────────────────────────────────────────
+    // A QR's holder id (`m`) is EITHER a Firebase member UID (member tickets)
+    // or a lowercased email (guest tickets — the Stripe webhook signs guest
+    // QRs against the buyer's email). Firebase UIDs never contain '@', so its
+    // presence cleanly identifies a guest ticket. Both kinds use the identical
+    // HMAC scheme, so the signature check above already passed for either.
+    //
+    // We resolve the holder to: the Firestore doc to mark checked-in, its
+    // current data (if any), a display name for the scanner UI, and the base
+    // fields to use if the doc has to be created.
+    const isGuest = memberId.includes('@');
+
+    let targetRef: FirebaseFirestore.DocumentReference;
+    let targetData: FirebaseFirestore.DocumentData | undefined;
+    let displayName: string | undefined;
+    let baseFields: Record<string, unknown>;
+
+    if (isGuest) {
+      // Guests live in `guest_rsvps`, keyed by (eventId, email) rather than a
+      // deterministic id, so we look the doc up.
+      const email = memberId.toLowerCase();
+      const guestSnap = await adminDb
+        .collection('guest_rsvps')
+        .where('eventId', '==', eventId)
+        .where('email', '==', email)
+        .limit(1)
+        .get();
+      if (!guestSnap.empty) {
+        targetRef = guestSnap.docs[0].ref;
+        targetData = guestSnap.docs[0].data();
+        displayName = (targetData?.name as string) || undefined;
+      } else {
+        // No RSVP doc yet (rare — the webhook normally creates one). The valid
+        // signature proves we issued this ticket, so honour it and create a
+        // doc so the check-in persists and appears on the roster.
+        targetRef = adminDb.collection('guest_rsvps').doc();
+        targetData = undefined;
       }
-    } catch {
-      // Non-fatal — the scanner just won't show a name.
+      baseFields = {
+        eventId,
+        email,
+        name: displayName || 'Guest',
+        status: 'going',
+        ticketType: 'guest',
+        paymentStatus: 'paid',
+        paidAmount: 0,
+        quantity: 1,
+        createdAt: now,
+      };
+    } else {
+      // Member ticket — verify the Firebase account exists.
+      try {
+        await adminAuth.getUser(memberId);
+      } catch {
+        return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+      }
+      targetRef = adminDb.collection('rsvps').doc(`${memberId}_${eventId}`);
+      const snap = await targetRef.get();
+      targetData = snap.exists ? snap.data() : undefined;
+
+      // Resolve a friendly display name for the scanner UI. Prefer the
+      // member's own profile, fall back to whatever the RSVP captured at
+      // booking time.
+      try {
+        const memberSnap = await adminDb.collection('members').doc(memberId).get();
+        if (memberSnap.exists) {
+          const md = memberSnap.data() as { displayName?: string; firstName?: string; lastName?: string };
+          displayName =
+            md.displayName ||
+            [md.firstName, md.lastName].filter(Boolean).join(' ').trim() ||
+            undefined;
+        }
+      } catch {
+        // Non-fatal — the scanner just won't show a name.
+      }
+      if (!displayName && targetData) {
+        displayName = (targetData as { memberName?: string }).memberName;
+      }
+      baseFields = { memberId, eventId, status: 'going' };
     }
-    if (!memberDisplayName && rsvpDoc.exists) {
-      memberDisplayName = (rsvpDoc.data() as { memberName?: string }).memberName;
-    }
-    const memberPayload = memberDisplayName ? { displayName: memberDisplayName } : undefined;
+
+    const memberPayload = displayName ? { displayName } : undefined;
 
     if (ticketNumber) {
       // ── Per-ticket check-in (numbered QR codes) ──────────────────────────
       // checkedInTickets is an array of ticket numbers that have already been
       // scanned. Each ticket number can only be used once.
-      const existing = rsvpDoc.exists ? (rsvpDoc.data()?.checkedInTickets as number[] | undefined) ?? [] : [];
+      const existing = (targetData?.checkedInTickets as number[] | undefined) ?? [];
 
       if (existing.includes(ticketNumber)) {
         return NextResponse.json({
@@ -108,24 +162,22 @@ export async function POST(
           ticketNumber,
           eventName,
           member: memberPayload,
-          checkedInAt: rsvpDoc.data()?.checkedInAt || now,
+          checkedInAt: targetData?.checkedInAt || now,
         });
       }
 
       // Mark this specific ticket as used.
-      if (rsvpDoc.exists) {
-        await rsvpRef.update({
+      if (targetData) {
+        await targetRef.update({
           // FieldValue.arrayUnion is idempotent — safe against duplicate delivery.
           checkedInTickets: FieldValue.arrayUnion(ticketNumber),
           // Set the top-level flag on the first ever scan for admin-list compat.
           checkedIn: true,
-          checkedInAt: rsvpDoc.data()?.checkedInAt || now,
+          checkedInAt: targetData.checkedInAt || now,
         });
       } else {
-        await rsvpRef.set({
-          memberId,
-          eventId,
-          status: 'going',
+        await targetRef.set({
+          ...baseFields,
           checkedIn: true,
           checkedInAt: now,
           checkedInTickets: [ticketNumber],
@@ -135,20 +187,20 @@ export async function POST(
       return NextResponse.json({ success: true, ticketNumber, eventName, member: memberPayload, checkedInAt: now });
     } else {
       // ── Legacy single-ticket check-in (no ticket number) ─────────────────
-      if (rsvpDoc.exists && rsvpDoc.data()?.checkedIn) {
+      if (targetData?.checkedIn) {
         return NextResponse.json({
           success: true,
           alreadyCheckedIn: true,
           eventName,
           member: memberPayload,
-          checkedInAt: rsvpDoc.data()?.checkedInAt || now,
+          checkedInAt: targetData.checkedInAt || now,
         });
       }
 
-      if (rsvpDoc.exists) {
-        await rsvpRef.update({ checkedIn: true, checkedInAt: now });
+      if (targetData) {
+        await targetRef.update({ checkedIn: true, checkedInAt: now });
       } else {
-        await rsvpRef.set({ memberId, eventId, status: 'going', checkedIn: true, checkedInAt: now });
+        await targetRef.set({ ...baseFields, checkedIn: true, checkedInAt: now });
       }
 
       return NextResponse.json({ success: true, eventName, member: memberPayload, checkedInAt: now });
