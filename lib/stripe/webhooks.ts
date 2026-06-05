@@ -20,6 +20,7 @@ import { logAuditEvent } from '@/lib/services/auditLog';
 import { sendEmail } from '@/lib/email/send';
 import { guestTicketConfirmationEmail, memberTicketConfirmationEmail, donationThankYouEmail } from '@/lib/email/templates';
 import { generateTicketQRCodeUrls } from '@/lib/utils/qrcode';
+import { notifyAdminsTicketPurchase } from '@/lib/notifications';
 
 /**
  * Idempotency: check if we already processed a Stripe event.
@@ -354,6 +355,20 @@ async function handleMemberEventTicket(session: Stripe.Checkout.Session): Promis
   } catch (err) {
     console.error('Failed to send member ticket confirmation email:', err);
   }
+
+  // Notify board/admins of the sale so they get a live feed (best-effort).
+  try {
+    const event = await fetchEventData(eventId);
+    await notifyAdminsTicketPurchase({
+      buyerName: memberName,
+      quantity,
+      eventTitle: event?.title || 'an event',
+      eventId,
+      amountCents: session.amount_total || 0,
+    });
+  } catch (err) {
+    console.error('Failed to notify admins of member ticket sale:', err);
+  }
 }
 
 /** Handle guest event ticket checkout completion */
@@ -476,6 +491,20 @@ async function handleGuestEventTicket(session: Stripe.Checkout.Session): Promise
     tierLabel,
     quantity,
   );
+
+  // Notify board/admins of the sale so they get a live feed (best-effort).
+  try {
+    const event = await fetchEventData(eventId);
+    await notifyAdminsTicketPurchase({
+      buyerName: guestName || 'A guest',
+      quantity,
+      eventTitle: event?.title || 'an event',
+      eventId,
+      amountCents: session.amount_total || 0,
+    });
+  } catch (err) {
+    console.error('Failed to notify admins of guest ticket sale:', err);
+  }
 }
 
 /** Handle donation checkout completion */

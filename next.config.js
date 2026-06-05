@@ -3,25 +3,40 @@ const fs = require('fs');
 const path = require('path');
 
 const nextConfig = {
-  // Inject a date-stamp into sw.js at build time so the cache version stays current
+  // Inject a UNIQUE build version into sw.js at build time so the cache version
+  // changes on every deployment. Using just the date (YYYY-MM-DD) meant two
+  // deploys on the same day shared a cache version and the PWA never updated.
+  // We now combine the date with the Git commit SHA (on Vercel) or a build
+  // timestamp so each deploy produces a distinct service worker → the browser
+  // detects the byte change, installs it, and PWARegister auto-activates it.
   generateBuildId: async () => {
     const buildDate = new Date().toISOString().slice(0, 10); // e.g. 2026-04-06
+    const commit =
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.GITHUB_SHA ||
+      process.env.SOURCE_VERSION ||
+      '';
+    const suffix = commit
+      ? commit.slice(0, 8)
+      : Date.now().toString(36); // local builds: timestamp keeps it unique
+    const buildVersion = `${buildDate}.${suffix}`;
+
     const swPath = path.join(__dirname, 'public', 'sw.js');
     try {
       let sw = fs.readFileSync(swPath, 'utf8');
       sw = sw.replace(
         /const CACHE_VERSION = '[^']+';/,
-        `const CACHE_VERSION = '${buildDate}';`
+        `const CACHE_VERSION = '${buildVersion}';`
       );
       sw = sw.replace(
         /^\/\/ @version .+$/m,
-        `// @version ${buildDate}`
+        `// @version ${buildVersion}`
       );
       fs.writeFileSync(swPath, sw, 'utf8');
     } catch (e) {
       console.warn('Could not update sw.js version:', e.message);
     }
-    return buildDate;
+    return buildVersion;
   },
   images: {
     remotePatterns: [

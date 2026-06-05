@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, serializeDoc } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { notifyNewArticle } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,6 +126,21 @@ export async function POST(request: NextRequest) {
 
     const docRef = await adminDb.collection('articles').add(articleData);
 
+    // If published on creation, push-notify members (best-effort, non-blocking).
+    if (articleData.isPublished) {
+      (async () => {
+        try {
+          await notifyNewArticle({
+            title: articleData.title,
+            slug: articleData.slug,
+            excerpt: articleData.excerpt,
+          });
+        } catch (err) {
+          console.warn('[push] new-article fan-out failed:', err);
+        }
+      })();
+    }
+
     return NextResponse.json({
       success: true,
       article: { id: docRef.id, ...articleData },
@@ -199,6 +215,21 @@ export async function PUT(request: NextRequest) {
     }
 
     await docRef.update(updates);
+
+    // Push-notify members the first time an article goes from draft → published.
+    if (updates.isPublished === true && !wasPublished) {
+      (async () => {
+        try {
+          await notifyNewArticle({
+            title: updates.title ?? existing.title,
+            slug: updates.slug ?? existing.slug,
+            excerpt: updates.excerpt ?? existing.excerpt,
+          });
+        } catch (err) {
+          console.warn('[push] article publish fan-out failed:', err);
+        }
+      })();
+    }
 
     return NextResponse.json({
       success: true,

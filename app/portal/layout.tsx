@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/lib/firebase/auth';
 import PortalShell from '@/components/portal/PortalShell';
+import PushManager from '@/components/portal/PushManager';
+import NotificationPrompt from '@/components/portal/NotificationPrompt';
 
 // Pages that render their own chrome (no sidebar / auth gate)
 const SHELL_EXCLUDED = ['/portal/login', '/portal/onboarding', '/portal/onboarding/success'];
@@ -73,7 +75,13 @@ function PortalContent({ children }: { children: React.ReactNode }) {
     document.title = `${pageLabel} — Rotaract NYC`;
   }, [pathname]);
 
-  return skipShell ? <>{children}</> : <PortalShell>{children}</PortalShell>;
+  return (
+    <>
+      {member && <PushManager />}
+      {member && !skipShell && <NotificationPrompt />}
+      {skipShell ? <>{children}</> : <PortalShell>{children}</PortalShell>}
+    </>
+  );
 }
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {

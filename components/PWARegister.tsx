@@ -1,82 +1,92 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
+/**
+ * Registers the PWA service worker and keeps it self-updating.
+ *
+ * Behaviour (auto-update, no user prompt):
+ *  - Registers `/sw.js`.
+ *  - When a new service worker finishes installing and is waiting, we
+ *    immediately tell it to `skipWaiting()` so it activates right away.
+ *  - When the new worker takes control (`controllerchange`), we reload the
+ *    page once so the user is running the latest deployed version.
+ *  - We proactively call `registration.update()` on an interval and whenever
+ *    the tab regains focus, so an installed PWA that stays open for days still
+ *    picks up new deploys instead of waiting for a cold start.
+ *
+ * The service worker version is stamped at build time (see next.config.js),
+ * so every deployment ships a byte-different `/sw.js`, which is what triggers
+ * the browser's update detection.
+ */
 export default function PWARegister() {
-  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
-
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    let refreshing = false;
+    // Only reload when WE activate an update — never on the initial install,
+    // where the first worker claims the page and fires `controllerchange` too.
+    let updateActivated = false;
+    let updateInterval: ReturnType<typeof setInterval> | undefined;
+
+    // Tell a waiting worker to activate immediately.
+    const activateWaiting = (worker: ServiceWorker | null) => {
+      if (!worker) return;
+      updateActivated = true;
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    };
 
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
-        // If there's already a waiting worker when we load, show the banner
-        if (registration.waiting) {
-          setWaitingWorker(registration.waiting);
-          setShowUpdateBanner(true);
+        // A new worker was already waiting when this page loaded — activate it.
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          activateWaiting(registration.waiting);
         }
 
-        // Listen for new service workers installing
+        // Watch for a new worker installing and auto-activate it once ready.
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (!newWorker) return;
 
           newWorker.addEventListener('statechange', () => {
-            // When the new worker is installed and waiting, prompt the user
+            // Only auto-activate updates (there is already a controller). On a
+            // brand-new install there is no controller and nothing to refresh.
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              setWaitingWorker(newWorker);
-              setShowUpdateBanner(true);
+              activateWaiting(newWorker);
             }
           });
+        });
+
+        // Check for a new service worker periodically (every 30 min) and when
+        // the tab becomes visible again.
+        const checkForUpdate = () => {
+          registration.update().catch(() => {
+            /* offline or transient — ignore */
+          });
+        };
+        updateInterval = setInterval(checkForUpdate, 30 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkForUpdate();
         });
       })
       .catch((err) => {
         console.warn('SW registration failed:', err);
       });
 
-    // When the new SW takes over, reload so the user gets the latest version
-    let refreshing = false;
+    // When an update we activated takes over, reload once to run the latest
+    // version. Guarded so the initial install's claim() doesn't reload.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
+      if (refreshing || !updateActivated) return;
       refreshing = true;
       window.location.reload();
     });
+
+    return () => {
+      if (updateInterval) clearInterval(updateInterval);
+    };
   }, []);
 
-  const handleUpdate = () => {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    }
-  };
-
-  if (!showUpdateBanner) return null;
-
-  return (
-    <div
-      role="alert"
-      className="fixed bottom-4 left-4 right-4 z-[9999] mx-auto flex max-w-md items-center justify-between gap-3 rounded-xl bg-[#9B1B30] px-5 py-3 text-white shadow-lg sm:left-auto sm:right-6 sm:bottom-6"
-    >
-      <span className="text-sm font-medium">New version available!</span>
-      <button
-        onClick={handleUpdate}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/30"
-      >
-        <svg aria-hidden="true"
-          className="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="23 4 23 10 17 10" />
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-        </svg>
-        Refresh
-      </button>
-    </div>
-  );
+  // Updates apply silently — nothing to render.
+  return null;
 }

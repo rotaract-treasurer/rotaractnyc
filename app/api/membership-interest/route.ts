@@ -3,6 +3,7 @@ import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
 import { sendEmail } from '@/lib/email/send';
 import { membershipInterestEmail } from '@/lib/email/templates';
 import { isValidEmail } from '@/lib/utils/sanitize';
+import { notifyAdminsMembershipInterest } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,15 @@ export async function POST(request: Request) {
     if (!result.success) {
       console.info('Membership interest (email not sent):', fullName, email);
     }
+
+    // Push-notify board/admins so they can follow up (best-effort, non-blocking).
+    (async () => {
+      try {
+        await notifyAdminsMembershipInterest({ name: fullName, email });
+      } catch (err) {
+        console.warn('[push] membership-interest admin notify failed:', err);
+      }
+    })();
 
     return NextResponse.json({ success: true, message: 'Interest submitted successfully.' });
   } catch (error: any) {

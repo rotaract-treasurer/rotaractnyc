@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import type { RecurrenceRule, RecurrenceFrequency } from '@/types';
 import { rateLimit, getRateLimitKey, rateLimitResponse } from '@/lib/rateLimit';
+import { notifyNewEvent } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -274,6 +275,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Push-notify members about a newly published public event (best-effort,
+    // non-blocking). We mark the parent doc as notified so a later edit/PATCH
+    // doesn't re-announce it. Recurring series only announce the parent once.
+    if (eventData.isPublic && eventData.status === 'published') {
+      (async () => {
+        try {
+          await notifyNewEvent({
+            id: parentId,
+            title: eventData.title,
+            slug: eventData.slug,
+            description: eventData.description,
+          });
+          await adminDb
+            .collection('events')
+            .doc(parentId)
+            .update({ membersNotifiedAt: new Date().toISOString() });
+        } catch (err) {
+          console.warn('[push] new-event fan-out failed:', err);
+        }
+      })();
+    }
+
     return NextResponse.json(
       { id: parentId, ...eventData, totalOccurrences: createdEvents.length },
       { status: 201 },
@@ -334,6 +357,28 @@ export async function PATCH(request: NextRequest) {
     revalidatePath('/events');
     if (previous.slug) revalidatePath(`/events/${previous.slug}`);
     if (updated.data()?.slug) revalidatePath(`/events/${updated.data()?.slug}`);
+
+    // If this edit just made the event publicly published for the first time,
+    // push-notify members (best-effort, non-blocking). Guard on
+    // membersNotifiedAt so we never announce the same event twice.
+    const updatedData = updated.data() || {};
+    const previouslyAnnounceable = previous.status === 'published' && previous.isPublic;
+    const nowAnnounceable = updatedData.status === 'published' && updatedData.isPublic;
+    if (nowAnnounceable && !previouslyAnnounceable && !previous.membersNotifiedAt) {
+      (async () => {
+        try {
+          await notifyNewEvent({
+            id: updated.id,
+            title: updatedData.title,
+            slug: updatedData.slug,
+            description: updatedData.description,
+          });
+          await docRef.update({ membersNotifiedAt: new Date().toISOString() });
+        } catch (err) {
+          console.warn('[push] event publish fan-out failed:', err);
+        }
+      })();
+    }
 
     return NextResponse.json(serializeDoc({ id: updated.id, ...updated.data() }));
   } catch (err: any) {

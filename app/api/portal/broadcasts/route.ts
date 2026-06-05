@@ -14,6 +14,7 @@ import { sendBulkEmail } from '@/lib/email/send';
 import { wrapTemplate } from '@/lib/email/templates';
 import { SITE } from '@/lib/constants';
 import { FieldValue } from 'firebase-admin/firestore';
+import { notifyBroadcast } from '@/lib/notifications';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -268,7 +269,7 @@ export async function POST(request: NextRequest) {
 
     // ── Save broadcast record ──
 
-    await adminDb.collection('broadcasts').add({
+    const broadcastRef = await adminDb.collection('broadcasts').add({
       subject: subject.trim(),
       body: rawBody,
       segment,
@@ -278,6 +279,21 @@ export async function POST(request: NextRequest) {
       sentByName: sender.name,
       sentAt: FieldValue.serverTimestamp(),
     });
+
+    // ── Companion push notification (best-effort, non-blocking) ──
+    // Mirrors the email blast so members who don't check email still see it.
+    // Per-member push opt-outs are honoured inside notifyBroadcast.
+    (async () => {
+      try {
+        await notifyBroadcast({
+          subject: subject.trim(),
+          recipientUids: memberUids,
+          broadcastId: broadcastRef.id,
+        });
+      } catch (err) {
+        console.warn('[push] broadcast fan-out failed:', err);
+      }
+    })();
 
     return NextResponse.json({ success: true, recipientCount: recipients.length });
   } catch (err) {

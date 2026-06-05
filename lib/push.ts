@@ -13,6 +13,16 @@
 import { getMessaging } from 'firebase-admin/messaging';
 import { adminDb } from './firebase/admin';
 
+/** Roles that count as "admins" / board members for operational alerts. */
+export const ADMIN_PUSH_ROLES = [
+  'admin',
+  'president',
+  'board',
+  'treasurer',
+  'secretary',
+  'vice-president',
+];
+
 export interface PushPayload {
   title: string;
   body: string;
@@ -64,6 +74,69 @@ export async function isPushAllowed(
   } catch {
     return true;
   }
+}
+
+/**
+ * Master-switch check only (ignores per-category prefs). Used for operational
+ * alerts to admins where the category isn't part of the member-facing
+ * preferences UI. Defaults to true when no prefs doc exists.
+ */
+async function isPushMasterEnabled(uid: string): Promise<boolean> {
+  try {
+    const doc = await adminDb.collection('notification_preferences').doc(uid).get();
+    if (!doc.exists) return true;
+    return (doc.data() as NotificationPreferences).pushEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
+/** Return the uids of all active members. */
+export async function getActiveMemberUids(): Promise<string[]> {
+  const snap = await adminDb
+    .collection('members')
+    .where('status', '==', 'active')
+    .get();
+  return snap.docs.map((d) => d.id);
+}
+
+/**
+ * Return the uids of all active board/admin members. Filters status in memory
+ * to avoid requiring a (role, status) composite index.
+ */
+export async function getAdminUids(): Promise<string[]> {
+  const snap = await adminDb
+    .collection('members')
+    .where('role', 'in', ADMIN_PUSH_ROLES)
+    .get();
+  return snap.docs
+    .filter((d) => d.data()?.status === 'active')
+    .map((d) => d.id);
+}
+
+/**
+ * Send an operational push to every board/admin member. Respects each admin's
+ * master push switch but not per-category prefs (these are internal alerts —
+ * e.g. a ticket sale — that don't map to the member-facing categories).
+ * Returns the number of tokens that were successfully delivered to.
+ */
+export async function sendPushToAdmins(payload: PushPayload): Promise<number> {
+  const uids = await getAdminUids();
+  if (uids.length === 0) return 0;
+
+  let sent = 0;
+  const CHUNK = 25;
+  for (let i = 0; i < uids.length; i += CHUNK) {
+    const chunk = uids.slice(i, i + CHUNK);
+    const results = await Promise.all(
+      chunk.map(async (uid) => {
+        if (!(await isPushMasterEnabled(uid))) return 0;
+        return sendPushToMember(uid, payload);
+      }),
+    );
+    sent += results.reduce((a, b) => a + b, 0);
+  }
+  return sent;
 }
 
 /**
