@@ -505,8 +505,14 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               <Spinner className="w-5 h-5 text-cranberry" />
             )}
           </div>
-          {duesStatus === 'UNPAID' && <div className="mb-6"><DuesBanner status={duesStatus} memberType={member?.memberType} /></div>}
-          <AnnouncementBanner />
+          {/* Constrain the banners to the same max-w-5xl content column the
+              majority of portal pages (events, dues, finance, articles, …)
+              use, so they line up with the page content instead of spanning
+              the full main area and looking mismatched. */}
+          <div className="max-w-5xl mx-auto">
+            {duesStatus === 'UNPAID' && <div className="mb-6"><DuesBanner status={duesStatus} memberType={member?.memberType} /></div>}
+            <AnnouncementBanner />
+          </div>
           {children}
         </main>
       </div>
