@@ -535,14 +535,14 @@ export default function PortalEventDetailPage() {
                         className={`rounded-xl p-4 border ${expired || soldOut ? 'opacity-60 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30' : 'border-cranberry-100 dark:border-cranberry-900/40 bg-cranberry-50/30 dark:bg-cranberry-900/10'}`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-gray-900 dark:text-white">{tier.label}</h4>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <h4 className="font-semibold text-gray-900 dark:text-white truncate min-w-0">{tier.label}</h4>
                               {expired && <Badge variant="gray">Expired</Badge>}
                               {soldOut && <Badge variant="cranberry">Sold Out</Badge>}
                             </div>
                             {tier.description && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{tier.description}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 break-words">{tier.description}</p>
                             )}
                             {tier.deadline && !expired && (
                               <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
